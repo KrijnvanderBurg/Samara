@@ -12,7 +12,7 @@ It includes:
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, Literal, Self
 
 from pydantic import Field, model_validator
 from pyspark.sql import DataFrame
@@ -34,20 +34,27 @@ class ExtractSpark(ExtractModel, ABC):
     batch and streaming extractions. Manages a data registry for extracted DataFrames.
 
     Attributes:
-        model_cls: The model class used for configuration
-        model: The configuration model for this extraction
-        data_registry: Registry for storing extracted DataFrames
-        spark: SparkHandler instance for Spark operations
+        options: PySpark reader options
     """
 
-    data_registry: ClassVar[DataFrameRegistry] = DataFrameRegistry()
+    model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
+
+    _schema_parsed: StructType
     options: dict[str, Any] = Field(..., description="PySpark reader options as key-value pairs")
 
     def __init__(self, **data: Any) -> None:
-        """Initialize the model and SparkHandler."""
+        """Initialize ExtractSpark with data and set up runtime instances.
+
+        Creates the Pydantic model with provided data and then initializes
+        non-Pydantic instance attributes for DataFrameRegistry and SparkHandler.
+
+        Args:
+            **data: Pydantic model initialization data
+        """
         super().__init__(**data)
+        # Set up non-Pydantic attributes that shouldn't be in schema
+        self.data_registry: DataFrameRegistry = DataFrameRegistry()
         self.spark: SparkHandler = SparkHandler()
-        self._schema_parsed: StructType | None = None
 
     @model_validator(mode="after")
     def parse_schema(self) -> Self:

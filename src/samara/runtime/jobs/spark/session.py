@@ -15,6 +15,7 @@ import logging
 from typing import Any
 
 from pyspark.sql import SparkSession
+
 from samara.types import Singleton
 from samara.utils.logger import get_logger
 

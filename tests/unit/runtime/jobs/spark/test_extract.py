@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch
 import pytest
 from pydantic import ValidationError
 from pyspark.sql.types import StringType, StructField, StructType
+
 from samara.runtime.jobs.models.model_extract import ExtractMethod
 from samara.runtime.jobs.spark.extract import ExtractFileSpark
 
@@ -235,13 +236,13 @@ class TestExtractFileSparkExtract:
         mock_session = Mock()
         mock_session.read = mock_read
 
-        with patch("samara.runtime.jobs.spark.extract.ExtractSpark.spark") as mock_spark_handler:
-            mock_spark_handler.session = mock_session
-            mock_spark_handler.add_configs = Mock()
+        extract_file_spark.spark = Mock()
+        extract_file_spark.spark.session = mock_session
+        extract_file_spark.spark.add_configs = Mock()
 
-            extract_file_spark.extract()
+        extract_file_spark.extract()
 
-            mock_read.load.assert_called_once()
+        mock_read.load.assert_called_once()
 
     def test_extract__with_streaming_method__creates_streaming_query(
         self, valid_extract_config: dict[str, Any]
@@ -255,13 +256,13 @@ class TestExtractFileSparkExtract:
         mock_session = Mock()
         mock_session.readStream = mock_read_stream
 
-        with patch("samara.runtime.jobs.spark.extract.ExtractSpark.spark") as mock_spark_handler:
-            mock_spark_handler.session = mock_session
-            mock_spark_handler.add_configs = Mock()
+        extract_streaming.spark = Mock()
+        extract_streaming.spark.session = mock_session
+        extract_streaming.spark.add_configs = Mock()
 
-            extract_streaming.extract()
+        extract_streaming.extract()
 
-            mock_read_stream.load.assert_called_once()
+        mock_read_stream.load.assert_called_once()
 
     def test_extract__with_invalid_method__raises_value_error(self, extract_file_spark: ExtractFileSpark) -> None:
         """Test extract method raises ValueError for unsupported extraction method."""
