@@ -31,7 +31,7 @@ class AggregationColumn(BaseModel):
     column_name: str = Field(..., description="Name of the column to aggregate", min_length=1)
     agg_function: str = Field(
         ...,
-        description="Aggregation function to apply (sum, avg, count, min, max, first, last, collect_list, collect_set, etc.)",
+        description=("Aggregation function (sum, avg, count, min, max, first, last, etc.)"),
         min_length=1,
     )
     alias: str = Field(
