@@ -90,6 +90,29 @@ class TestSparkHandler:
 
         mock_session.return_value.stop.assert_called_once()
 
+    def test_session_deleter_when_none(self) -> None:
+        """Test session deletion when session is None."""
+        spark_handler = SparkHandler()
+        spark_handler._session = None
+
+        # Should not raise error when deleting None session
+        del spark_handler.session
+
+        # Verify session is still None
+        assert spark_handler._session is None
+
+    @patch("pyspark.sql.SparkSession")
+    def test_session_setter(self, mock_session: Mock) -> None:
+        """Test session setter."""
+        spark_handler = SparkHandler()
+        new_session = Mock(spec=SparkSession)
+        new_session.sparkContext.appName = "test_app"
+        new_session.version = "3.5.0"
+
+        spark_handler.session = new_session
+
+        assert spark_handler._session == new_session
+
     @patch("pyspark.sql.SparkSession")
     def test_add_configs(self, mock_session: Mock) -> None:
         """Test adding configurations."""

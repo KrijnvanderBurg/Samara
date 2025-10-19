@@ -1,0 +1,107 @@
+{
+    "alert": {
+        "channels": [],
+        "triggers": []
+    },
+    "runtime": {
+        "id": "test-runtime",
+        "description": "E2E test for agg (aggregation) transform",
+        "enabled": true,
+        "jobs": [
+            {
+                "id": "test-job",
+                "description": "Agg test job - aggregating sales data across all rows",
+                "enabled": true,
+                "engine_type": "spark",
+                "extracts": [
+                    {
+                        "id": "extract-test",
+                        "extract_type": "file",
+                        "data_format": "json",
+                        "location": "tests/e2e/job/agg/extract-test/input_data.json",
+                        "method": "batch",
+                        "options": {
+                            "multiLine": false
+                        },
+                        "schema": ""
+                    }
+                ],
+                "transforms": [
+                    {
+                        "id": "transform-test",
+                        "upstream_id": "extract-test",
+                        "options": {},
+                        "functions": [
+                            {
+                                "function_type": "agg",
+                                "arguments": {
+                                    "aggregations": [
+                                        {
+                                            "column_name": "sales",
+                                            "agg_function": "sum",
+                                            "alias": "total_sales"
+                                        },
+                                        {
+                                            "column_name": "sales",
+                                            "agg_function": "avg",
+                                            "alias": "avg_sales"
+                                        },
+                                        {
+                                            "column_name": "quantity",
+                                            "agg_function": "sum",
+                                            "alias": "total_quantity"
+                                        },
+                                        {
+                                            "column_name": "order_id",
+                                            "agg_function": "count",
+                                            "alias": "total_orders"
+                                        },
+                                        {
+                                            "column_name": "sales",
+                                            "agg_function": "min",
+                                            "alias": "min_sale"
+                                        },
+                                        {
+                                            "column_name": "sales",
+                                            "agg_function": "max",
+                                            "alias": "max_sale"
+                                        },
+                                        {
+                                            "column_name": "customer_rating",
+                                            "agg_function": "avg",
+                                            "alias": "avg_rating"
+                                        },
+                                        {
+                                            "column_name": "quantity",
+                                            "agg_function": "max",
+                                            "alias": ""
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "loads": [
+                    {
+                        "id": "load-test",
+                        "upstream_id": "transform-test",
+                        "load_type": "file",
+                        "data_format": "json",
+                        "location": "tests/e2e/job/agg/load-test",
+                        "method": "batch",
+                        "mode": "overwrite",
+                        "options": {},
+                        "schema_export": "tests/e2e/job/agg/schema_export.json"
+                    }
+                ],
+                "hooks": {
+                    "onStart": [],
+                    "onError": [],
+                    "onSuccess": [],
+                    "onFinally": []
+                }
+            }
+        ]
+    }
+}

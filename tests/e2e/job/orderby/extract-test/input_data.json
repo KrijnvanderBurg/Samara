@@ -1,0 +1,8 @@
+[
+    {"product_id": 1, "product_name": "Laptop", "category": "Electronics", "price": 1200.00, "stock": 15},
+    {"product_id": 2, "product_name": "Mouse", "category": "Electronics", "price": 25.00, "stock": 150},
+    {"product_id": 3, "product_name": "Desk", "category": "Furniture", "price": 350.00, "stock": 8},
+    {"product_id": 4, "product_name": "Chair", "category": "Furniture", "price": 200.00, "stock": 20},
+    {"product_id": 5, "product_name": "Monitor", "category": "Electronics", "price": 300.00, "stock": 25},
+    {"product_id": 6, "product_name": "Bookshelf", "category": "Furniture", "price": 150.00, "stock": 12}
+]

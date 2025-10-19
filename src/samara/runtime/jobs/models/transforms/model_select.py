@@ -14,7 +14,8 @@ import logging
 from typing import Literal
 
 from pydantic import Field
-from samara.runtime.jobs.models.model_transform import ArgsModel
+
+from samara.runtime.jobs.models.model_transform import ArgsModel, FunctionModel
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
@@ -30,7 +31,7 @@ class SelectArgs(ArgsModel):
     columns: list[str] = Field(..., description="List of column names to select from the DataFrame", min_length=1)
 
 
-class SelectFunctionModel:
+class SelectFunctionModel(FunctionModel[SelectArgs]):
     """Configuration model for column selection transform operations.
 
     This model defines the structure for configuring a column selection

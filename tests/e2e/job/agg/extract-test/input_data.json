@@ -1,0 +1,12 @@
+[
+    {"order_id": 1, "product": "Laptop", "category": "Electronics", "region": "North", "sales": 1000, "quantity": 2, "customer_rating": 4.5},
+    {"order_id": 2, "product": "Mouse", "category": "Electronics", "region": "South", "sales": 25, "quantity": 5, "customer_rating": 4.0},
+    {"order_id": 3, "product": "Keyboard", "category": "Electronics", "region": "North", "sales": 75, "quantity": 3, "customer_rating": 4.8},
+    {"order_id": 4, "product": "Desk", "category": "Furniture", "region": "East", "sales": 300, "quantity": 1, "customer_rating": 4.2},
+    {"order_id": 5, "product": "Chair", "category": "Furniture", "region": "West", "sales": 150, "quantity": 2, "customer_rating": 4.6},
+    {"order_id": 6, "product": "Monitor", "category": "Electronics", "region": "North", "sales": 400, "quantity": 1, "customer_rating": 4.7},
+    {"order_id": 7, "product": "Lamp", "category": "Furniture", "region": "South", "sales": 50, "quantity": 4, "customer_rating": 3.9},
+    {"order_id": 8, "product": "Tablet", "category": "Electronics", "region": "East", "sales": 600, "quantity": 1, "customer_rating": 4.3},
+    {"order_id": 9, "product": "Bookshelf", "category": "Furniture", "region": "West", "sales": 200, "quantity": 1, "customer_rating": 4.4},
+    {"order_id": 10, "product": "Headphones", "category": "Electronics", "region": "North", "sales": 100, "quantity": 2, "customer_rating": 4.9}
+]

@@ -1,0 +1,69 @@
+{
+    "alert": {
+        "channels": [],
+        "triggers": []
+    },
+    "runtime": {
+        "id": "test-runtime",
+        "description": "",
+        "enabled": true,
+        "jobs": [
+            {
+                "id": "test-job",
+                "description": "",
+                "enabled": true,
+                "engine_type": "spark",
+                "extracts": [
+                    {
+                        "id": "extract-test",
+                        "extract_type": "file",
+                        "data_format": "json",
+                        "location": "tests/e2e/job/orderby/extract-test/input_data.json",
+                        "method": "batch",
+                        "options": {
+                            "multiLine": true
+                        },
+                        "schema": "tests/e2e/job/orderby/extract-test/input_schema.json"
+                    }
+                ],
+                "transforms": [
+                    {
+                        "id": "transform-test",
+                        "upstream_id": "extract-test",
+                        "options": {},
+                        "functions": [
+                            {
+                                "function_type": "orderby",
+                                "arguments": {
+                                    "columns": [
+                                        {"column_name": "category", "order": "asc"},
+                                        {"column_name": "price", "order": "desc"}
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "loads": [
+                    {
+                        "id": "load-test",
+                        "upstream_id": "transform-test",
+                        "load_type": "file",
+                        "data_format": "json",
+                        "location": "tests/e2e/job/orderby/load-test",
+                        "method": "batch",
+                        "mode": "overwrite",
+                        "options": {},
+                        "schema_export": "tests/e2e/job/orderby/schema_export.json"
+                    }
+                ],
+                "hooks": {
+                    "onStart": [],
+                    "onError": [],
+                    "onSuccess": [],
+                    "onFinally": []
+                }
+            }
+        ]
+    }
+}

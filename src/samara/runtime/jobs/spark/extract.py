@@ -39,7 +39,6 @@ class ExtractSpark(ExtractModel, ABC):
 
     model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
 
-    _schema_parsed: StructType
     options: dict[str, Any] = Field(..., description="PySpark reader options as key-value pairs")
 
     def __init__(self, **data: Any) -> None:
@@ -55,6 +54,7 @@ class ExtractSpark(ExtractModel, ABC):
         # Set up non-Pydantic attributes that shouldn't be in schema
         self.data_registry: DataFrameRegistry = DataFrameRegistry()
         self.spark: SparkHandler = SparkHandler()
+        self._schema_parsed: StructType | None = None
 
     @model_validator(mode="after")
     def parse_schema(self) -> Self:

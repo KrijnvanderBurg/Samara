@@ -1,0 +1,81 @@
+{
+    "alert": {
+        "channels": [],
+        "triggers": []
+    },
+    "runtime": {
+        "id": "test-runtime",
+        "description": "E2E test for groupBy transform with aggregations",
+        "enabled": true,
+        "jobs": [
+            {
+                "id": "test-job",
+                "description": "GroupBy test job - aggregating sales data by category and region",
+                "enabled": true,
+                "engine_type": "spark",
+                "extracts": [
+                    {
+                        "id": "extract-test",
+                        "extract_type": "file",
+                        "data_format": "parquet",
+                        "location": "tests/e2e/job/groupby/extract-test/input_data.parquet",
+                        "method": "batch",
+                        "options": {},
+                        "schema": ""
+                    }
+                ],
+                "transforms": [
+                    {
+                        "id": "transform-test",
+                        "upstream_id": "extract-test",
+                        "options": {},
+                        "functions": [
+                            {
+                                "function_type": "groupby",
+                                "arguments": {
+                                    "columns": ["category", "region"],
+                                    "aggregations": [
+                                        {
+                                            "column_name": "sales",
+                                            "agg_function": "sum",
+                                            "alias": "total_sales"
+                                        },
+                                        {
+                                            "column_name": "quantity",
+                                            "agg_function": "sum",
+                                            "alias": "total_quantity"
+                                        },
+                                        {
+                                            "column_name": "product",
+                                            "agg_function": "count",
+                                            "alias": "product_count"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "loads": [
+                    {
+                        "id": "load-test",
+                        "upstream_id": "transform-test",
+                        "load_type": "file",
+                        "data_format": "parquet",
+                        "location": "tests/e2e/job/groupby/load-test",
+                        "method": "batch",
+                        "mode": "overwrite",
+                        "options": {},
+                        "schema_export": "tests/e2e/job/groupby/schema_export.json"
+                    }
+                ],
+                "hooks": {
+                    "onStart": [],
+                    "onError": [],
+                    "onSuccess": [],
+                    "onFinally": []
+                }
+            }
+        ]
+    }
+}

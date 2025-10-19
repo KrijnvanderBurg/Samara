@@ -44,6 +44,42 @@ Configuration reference for Spark engine.
 
 Condition uses Spark SQL syntax: `AND`, `OR`, `NOT`, `=`, `!=`, `>`, `<`, `>=`, `<=`, `IN`, `LIKE`, `IS NULL`
 
+### Agg
+
+```jsonc
+{
+    "function_type": "agg",
+    "arguments": {
+        "aggregations": [
+            {"column_name": "sales", "agg_function": "sum", "alias": "total_sales"},
+            {"column_name": "sales", "agg_function": "avg", "alias": "avg_sales"},
+            {"column_name": "quantity", "agg_function": "max", "alias": "max_quantity"},
+            {"column_name": "order_id", "agg_function": "count", "alias": "total_orders"}
+        ]
+    }
+}
+```
+
+Applies aggregation functions across the entire DataFrame without grouping, returning a single row with aggregated results. Common aggregation functions: `sum`, `avg`, `count`, `min`, `max`, `first`, `last`, `collect_list`, `collect_set`, `countDistinct`, `stddev`, `variance`, `approx_count_distinct`, `kurtosis`, `skewness`. The `alias` field is optional; if not provided, defaults to `{column_name}_{agg_function}`.
+
+### GroupBy
+
+```jsonc
+{
+    "function_type": "groupby",
+    "arguments": {
+        "columns": ["category", "region"],
+        "aggregations": [
+            {"column_name": "sales", "agg_function": "sum", "alias": "total_sales"},
+            {"column_name": "quantity", "agg_function": "avg", "alias": "avg_quantity"},
+            {"column_name": "order_id", "agg_function": "count", "alias": "order_count"}
+        ]
+    }
+}
+```
+
+Groups data by specified columns and applies aggregation functions. Common aggregation functions: `sum`, `avg`, `count`, `min`, `max`, `first`, `last`, `collect_list`, `collect_set`, `countDistinct`, `stddev`, `variance`. The `alias` field is optional; if not provided, defaults to `{column_name}_{agg_function}`.
+
 ### Cast
 
 ```jsonc
@@ -79,6 +115,22 @@ Empty `columns: []` deduplicates on all columns.
     "function_type": "join", "arguments": { "other_upstream_id": "extract-orders", "on": ["customer_id"], "how": "inner"}
 }
 ```
+
+### OrderBy
+
+```jsonc
+{
+    "function_type": "orderby",
+    "arguments": {
+        "columns": [
+            {"column_name": "category", "order": "asc"},
+            {"column_name": "price", "order": "desc"}
+        ]
+    }
+}
+```
+
+Sorts the DataFrame by one or more columns. Each column can be sorted in ascending (`asc`) or descending (`desc`) order. The `order` field is optional and defaults to `asc` if not specified. Multiple columns are sorted in the order they appear in the configuration.
 
 ### With Column
 

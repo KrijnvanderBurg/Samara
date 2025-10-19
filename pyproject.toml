@@ -9,7 +9,7 @@ packages = [{ include = "samara", from = "src" }]
 [tool.poetry.dependencies]
 python = "^3.13"
 pyspark = "^4.0.1"
-pandas = "^2.3.0"i
+pandas = "^2.3.0"
 pyarrow = "20.0.0"
 numpy = "<2.0.0"
 pyyaml = "^6.0.1"

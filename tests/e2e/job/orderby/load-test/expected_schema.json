@@ -1,0 +1,10 @@
+{
+    "type": "struct",
+    "fields": [
+        {"name": "product_id", "type": "integer", "nullable": true, "metadata": {}},
+        {"name": "product_name", "type": "string", "nullable": true, "metadata": {}},
+        {"name": "category", "type": "string", "nullable": true, "metadata": {}},
+        {"name": "price", "type": "double", "nullable": true, "metadata": {}},
+        {"name": "stock", "type": "integer", "nullable": true, "metadata": {}}
+    ]
+}
