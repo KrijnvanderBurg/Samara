@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import ValidationError
+
 from samara.runtime.jobs.models.model_load import LoadMethod
 from samara.runtime.jobs.spark.load import LoadFileSpark
 
@@ -223,12 +224,13 @@ class TestLoadFileSparkLoad:
         mock_dataframe.write = Mock()
         mock_dataframe.write.save = Mock()
 
-        with patch.object(LoadFileSpark, "data_registry", {load_file_spark.upstream_id: mock_dataframe}):
-            # Act & Assert - should complete without exception
-            load_file_spark.load()
+        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
 
-            # Verify the dataframe was copied to the load step
-            assert LoadFileSpark.data_registry[load_file_spark.id_] == mock_dataframe
+        # Act & Assert - should complete without exception
+        load_file_spark.load()
+
+        # Verify the dataframe was copied to the load step
+        assert load_file_spark.data_registry[load_file_spark.id_] == mock_dataframe
 
     def test_load__with_streaming_method__completes_successfully(self, valid_load_config: dict[str, Any]) -> None:
         """Test load method completes successfully for streaming loading."""
@@ -244,15 +246,13 @@ class TestLoadFileSparkLoad:
         mock_write_stream.start.return_value = mock_streaming_query
         mock_dataframe.writeStream = mock_write_stream
 
-        with (
-            patch.object(LoadFileSpark, "data_registry", {load_streaming.upstream_id: mock_dataframe}),
-            patch.object(LoadFileSpark, "streaming_query_registry", {}),
-        ):
-            # Act & Assert - should complete without exception
-            load_streaming.load()
+        load_streaming.data_registry[load_streaming.upstream_id] = mock_dataframe
 
-            # Verify the streaming query was registered
-            assert LoadFileSpark.streaming_query_registry[load_streaming.id_] == mock_streaming_query
+        # Act & Assert - should complete without exception
+        load_streaming.load()
+
+        # Verify the streaming query was registered
+        assert load_streaming.streaming_query_registry[load_streaming.id_] == mock_streaming_query
 
     def test_load__with_invalid_method__raises_value_error(self, load_file_spark: LoadFileSpark) -> None:
         """Test load method raises ValueError for unsupported loading method."""
@@ -261,10 +261,9 @@ class TestLoadFileSparkLoad:
         mock_method.value = "invalid_method"
         mock_dataframe = Mock()
 
-        with (
-            patch.object(LoadFileSpark, "data_registry", {load_file_spark.upstream_id: mock_dataframe}),
-            patch.object(load_file_spark, "method", mock_method),
-        ):
+        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
+
+        with patch.object(load_file_spark, "method", mock_method):
             # Assert
             with pytest.raises(ValueError):
                 # Act
@@ -280,11 +279,12 @@ class TestLoadFileSparkLoad:
         mock_dataframe.write = Mock()
         mock_dataframe.write.save = Mock()
 
-        with patch.object(LoadFileSpark, "data_registry", {load_file_spark.upstream_id: mock_dataframe}):
-            # Act
-            load_file_spark.load()
+        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
 
-            # Assert - no exception should be raised, load should complete
+        # Act
+        load_file_spark.load()
+
+        # Assert - no exception should be raised, load should complete
 
     def test_load__with_valid_schema_export__writes_schema_to_file(
         self, tmp_path: Path, load_file_spark: LoadFileSpark
@@ -301,11 +301,12 @@ class TestLoadFileSparkLoad:
         mock_dataframe.write = Mock()
         mock_dataframe.write.save = Mock()
 
-        with patch.object(LoadFileSpark, "data_registry", {load_file_spark.upstream_id: mock_dataframe}):
-            # Act
-            load_file_spark.load()
+        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
 
-            # Assert - schema file should exist and contain the expected schema
-            assert schema_file.exists()
-            written_schema = json.loads(schema_file.read_text(encoding="utf-8"))
-            assert written_schema == test_schema
+        # Act
+        load_file_spark.load()
+
+        # Assert - schema file should exist and contain the expected schema
+        assert schema_file.exists()
+        written_schema = json.loads(schema_file.read_text(encoding="utf-8"))
+        assert written_schema == test_schema

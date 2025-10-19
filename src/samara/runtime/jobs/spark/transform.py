@@ -13,7 +13,7 @@ for manipulating data between extraction and loading.
 """
 
 import logging
-from typing import Any, ClassVar
+from typing import Any
 
 from pydantic import Field
 
@@ -31,11 +31,28 @@ class TransformSpark(TransformModel[transform_function_spark_union]):
     Concrete implementation for DataFrame transformation.
 
     This class provides functionality for transforming data.
+
+    Attributes:
+        options: Transformation options as key-value pairs
     """
 
-    spark: ClassVar[SparkHandler] = SparkHandler()
-    data_registry: ClassVar[DataFrameRegistry] = DataFrameRegistry()
+    model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
+
     options: dict[str, Any] = Field(..., description="Transformation options as key-value pairs")
+
+    def __init__(self, **data: Any) -> None:
+        """Initialize TransformSpark with data and set up runtime instances.
+
+        Creates the Pydantic model with provided data and then initializes
+        non-Pydantic instance attributes for DataFrameRegistry and SparkHandler.
+
+        Args:
+            **data: Pydantic model initialization data
+        """
+        super().__init__(**data)
+        # Set up non-Pydantic attributes that shouldn't be in schema
+        self.data_registry: DataFrameRegistry = DataFrameRegistry()
+        self.spark: SparkHandler = SparkHandler()
 
     def transform(self) -> None:
         """

@@ -16,7 +16,7 @@ for writing processed data to target destinations.
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Literal
+from typing import Any, Literal
 
 from pydantic import Field
 from pyspark.sql.streaming.query import StreamingQuery
@@ -35,12 +35,29 @@ class LoadSpark(LoadModel, ABC):
 
     This class defines the interface for all loading implementations,
     supporting both batch and streaming loads to various destinations.
+
+    Attributes:
+        options: Options for the sink input
     """
 
-    spark: ClassVar[SparkHandler] = SparkHandler()
-    data_registry: ClassVar[DataFrameRegistry] = DataFrameRegistry()
-    streaming_query_registry: ClassVar[StreamingQueryRegistry] = StreamingQueryRegistry()
+    model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
+
     options: dict[str, Any] = Field(..., description="Options for the sink input.")
+
+    def __init__(self, **data: Any) -> None:
+        """Initialize LoadSpark with data and set up runtime instances.
+
+        Creates the Pydantic model with provided data and then initializes
+        non-Pydantic instance attributes for registries and SparkHandler.
+
+        Args:
+            **data: Pydantic model initialization data
+        """
+        super().__init__(**data)
+        # Set up non-Pydantic attributes that shouldn't be in schema
+        self.data_registry: DataFrameRegistry = DataFrameRegistry()
+        self.streaming_query_registry: StreamingQueryRegistry = StreamingQueryRegistry()
+        self.spark: SparkHandler = SparkHandler()
 
     @abstractmethod
     def _load_batch(self) -> None:

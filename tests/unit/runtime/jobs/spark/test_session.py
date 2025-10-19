@@ -2,6 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from pyspark.sql import SparkSession
+
 from samara.runtime.jobs.spark.session import SparkHandler
 
 
@@ -35,7 +36,13 @@ class TestSparkHandler:
     @patch.object(SparkSession, "Builder")
     def test_init_default(self, mock_builder: Mock) -> None:
         """Test default initialization of SparkHandler."""
-        SparkHandler()
+        spark_handler = SparkHandler()
+
+        # Builder should not be called during __init__ (lazy initialization)
+        mock_builder.assert_not_called()
+
+        # Access session property to trigger lazy initialization
+        _ = spark_handler.session
 
         mock_builder.assert_called_once()
         mock_builder.return_value.appName.assert_called_once_with(name="samara")
@@ -44,18 +51,34 @@ class TestSparkHandler:
     @patch.object(SparkSession, "Builder")
     def test_init_custom(self, mock_builder: Mock) -> None:
         """Test custom initialization of SparkHandler."""
-        SparkHandler(app_name="test_app", options={"spark.executor.memory": "1g"})
+        spark_handler = SparkHandler(app_name="test_app", options={"spark.executor.memory": "1g"})
+
+        # Builder should not be called during __init__ (lazy initialization)
+        mock_builder.assert_not_called()
+
+        # Access session property to trigger lazy initialization
+        _ = spark_handler.session
 
         mock_builder.assert_called_once()
         mock_builder.return_value.appName.assert_called_once_with(name="test_app")
         mock_builder.return_value.appName().config.assert_called_once_with(key="spark.executor.memory", value="1g")
 
     @patch.object(SparkSession, "Builder")
-    def test_session_getter(self, _: Mock) -> None:
+    def test_session_getter(self, mock_builder: Mock) -> None:
         """Test getting session property."""
         spark_handler = SparkHandler()
 
-        assert spark_handler._session == spark_handler.session
+        # Mock the builder chain to return a mock session
+        mock_session = Mock(spec=SparkSession)
+        # Since no options are provided, the chain is: Builder().appName().getOrCreate()
+        mock_builder.return_value.appName.return_value.getOrCreate.return_value = mock_session
+
+        # Access session property to trigger lazy initialization
+        session = spark_handler.session
+
+        # Session should be created and cached
+        assert session == mock_session
+        assert spark_handler._session == mock_session
 
     @patch("pyspark.sql.SparkSession")
     def test_session_deleter(self, mock_session: Mock) -> None:

@@ -15,6 +15,7 @@ import logging
 from typing import Any
 
 from pyspark.sql import SparkSession
+
 from samara.types import Singleton
 from samara.utils.logger import get_logger
 
@@ -30,11 +31,18 @@ class SparkHandler(metaclass=Singleton):
     This class uses the Singleton metaclass to ensure that only one instance
     is created regardless of how many times it's initialized.
 
+    The SparkSession is created lazily on first access to avoid unnecessary
+    initialization when Spark is not actually used.
+
     Attributes:
-        _session: The managed PySpark SparkSession instance
+        _session: The managed PySpark SparkSession instance (created lazily)
+        _app_name: Application name for the SparkSession
+        _init_options: Initial configuration options for the SparkSession
     """
 
-    _session: SparkSession
+    _session: SparkSession | None
+    _app_name: str
+    _init_options: dict[str, str]
 
     def __init__(
         self,
@@ -43,37 +51,43 @@ class SparkHandler(metaclass=Singleton):
     ) -> None:
         """Initialize the SparkHandler with app name and configuration options.
 
-        Creates a new SparkSession with the specified application name and
-        configuration options. If a SparkSession already exists, it will be
-        reused due to the singleton pattern.
+        Stores configuration for lazy initialization. The SparkSession is not
+        created until the session property is first accessed.
 
         Args:
             app_name: Name of the Spark application, used for tracking and monitoring
             options: Optional dictionary of Spark configuration options as key-value pairs
         """
-        logger.debug("Initializing SparkHandler with app_name: %s", app_name)
-
-        builder = SparkSession.Builder().appName(name=app_name)
-
-        if options:
-            for key, value in options.items():
-                logger.debug("Setting Spark config: %s = %s", key, value)
-                builder = builder.config(key=key, value=value)
-
-        logger.debug("Creating/retrieving SparkSession")
-        self.session = builder.getOrCreate()
-        logger.info("SparkHandler initialized successfully with app: %s", app_name)
+        logger.debug("Configuring SparkHandler with app_name: %s (lazy initialization)", app_name)
+        self._session = None
+        self._app_name = app_name
+        self._init_options = options or {}
 
     @property
     def session(self) -> SparkSession:
         """Get the current managed SparkSession instance.
 
-        Provides access to the singleton SparkSession instance managed by this handler.
-        This is the main entry point for all Spark operations.
+        Lazily creates the SparkSession on first access. This ensures that
+        Spark is only initialized when actually needed, not when the module
+        is imported.
 
         Returns:
             The current active SparkSession instance
         """
+        if self._session is None:
+            logger.debug("Creating SparkSession on first access - app_name: %s", self._app_name)
+
+            builder = SparkSession.Builder().appName(name=self._app_name)
+
+            if self._init_options:
+                for key, value in self._init_options.items():
+                    logger.debug("Setting Spark config: %s = %s", key, value)
+                    builder = builder.config(key=key, value=value)
+
+            logger.debug("Creating/retrieving SparkSession")
+            self._session = builder.getOrCreate()
+            logger.info("SparkHandler initialized successfully with app: %s", self._app_name)
+
         logger.debug("Accessing SparkSession instance")
         return self._session
 
@@ -102,10 +116,13 @@ class SparkHandler(metaclass=Singleton):
         This should be called when the SparkSession is no longer needed,
         typically at the end of the application lifecycle.
         """
-        logger.info("Stopping SparkSession: %s", self._session.sparkContext.appName)
-        self._session.stop()
-        del self._session
-        logger.info("SparkSession stopped and cleaned up successfully")
+        if self._session is not None:
+            logger.info("Stopping SparkSession: %s", self._session.sparkContext.appName)
+            self._session.stop()
+            self._session = None
+            logger.info("SparkSession stopped and cleaned up successfully")
+        else:
+            logger.debug("SparkSession was never initialized, nothing to stop")
 
     def add_configs(self, options: dict[str, Any]) -> None:
         """Add configuration options to the active SparkSession.

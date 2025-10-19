@@ -93,7 +93,6 @@ class SelectFunctionModel(FunctionModel):
 @TransformFunctionRegistry.register("select")
 class SelectFunction(Function[SelectFunctionModel]):
     """Selects specified columns from a DataFrame."""
-    model_cls = SelectFunctionModel
 
     def transform(self) -> Callable:
         """Returns a function that projects columns from a DataFrame."""

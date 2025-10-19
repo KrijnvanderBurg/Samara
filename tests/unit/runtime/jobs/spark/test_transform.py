@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import ValidationError
+
 from samara.runtime.jobs.spark.transform import TransformSpark
 
 # =========================================================================== #
@@ -185,12 +186,13 @@ class TestTransformSparkTransform:
         mock_dataframe = Mock()
         mock_dataframe.count.return_value = 10
 
-        with patch.object(TransformSpark, "data_registry", {transform_spark.upstream_id: mock_dataframe}):
-            # Act
-            transform_spark.transform()
+        transform_spark.data_registry[transform_spark.upstream_id] = mock_dataframe
 
-            # Assert - dataframe should be copied to transform name
-            assert TransformSpark.data_registry[transform_spark.id_] == mock_dataframe
+        # Act
+        transform_spark.transform()
+
+        # Assert - dataframe should be copied to transform name
+        assert transform_spark.data_registry[transform_spark.id_] == mock_dataframe
 
     def test_transform__with_single_function__applies_transformation(self, transform_config: dict[str, Any]) -> None:
         """Test transform method applies single transformation function."""
@@ -207,20 +209,19 @@ class TestTransformSparkTransform:
 
         mock_callable = Mock(return_value=mock_transformed_df)
 
-        with (
-            patch.object(TransformSpark, "data_registry", {transform.upstream_id: mock_dataframe}),
-            patch(
-                "samara.runtime.jobs.spark.transforms.select.SelectFunction.transform",
-                return_value=mock_callable,
-            ) as mock_transform_func,
-        ):
+        transform.data_registry[transform.upstream_id] = mock_dataframe
+
+        with patch(
+            "samara.runtime.jobs.spark.transforms.select.SelectFunction.transform",
+            return_value=mock_callable,
+        ) as mock_transform_func:
             # Act
             transform.transform()
 
             # Assert
             mock_transform_func.assert_called_once()
             mock_callable.assert_called_once_with(df=mock_dataframe)
-            assert TransformSpark.data_registry[transform.id_] == mock_transformed_df
+            assert transform.data_registry[transform.id_] == mock_transformed_df
 
     def test_transform__with_multiple_functions__applies_in_sequence(self, transform_config: dict[str, Any]) -> None:
         """Test transform method applies multiple transformation functions in sequence."""
@@ -243,8 +244,9 @@ class TestTransformSparkTransform:
         mock_select_callable = Mock(return_value=mock_df_after_select)
         mock_filter_callable = Mock(return_value=mock_df_after_filter)
 
+        transform.data_registry[transform.upstream_id] = mock_df_original
+
         with (
-            patch.object(TransformSpark, "data_registry", {transform.upstream_id: mock_df_original}),
             patch(
                 "samara.runtime.jobs.spark.transforms.select.SelectFunction.transform",
                 return_value=mock_select_callable,
@@ -263,4 +265,4 @@ class TestTransformSparkTransform:
             # Second function should receive result from first function
             mock_filter_callable.assert_called_once_with(df=mock_df_after_select)
             # Final result should be in registry
-            assert TransformSpark.data_registry[transform.id_] == mock_df_after_filter
+            assert transform.data_registry[transform.id_] == mock_df_after_filter

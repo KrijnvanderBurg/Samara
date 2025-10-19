@@ -29,7 +29,6 @@ class WithColumnFunction(WithColumnFunctionModel, FunctionSpark):
     Attributes:
         function: The name of the function (always "withColumn")
         model: Configuration model specifying the column name and expression
-        model_cls: The concrete model class used for configuration
         data_registry: Shared registry for accessing and storing DataFrames
 
     Example:
