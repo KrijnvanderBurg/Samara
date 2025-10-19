@@ -1,0 +1,54 @@
+@startuml Runtime Storage Architecture
+
+!define AzurePuml https://raw.githubusercontent.com/plantuml-stdlib/Azure-PlantUML/release/2-2/dist
+!includeurl AzurePuml/AzureCommon.puml
+!includeurl AzurePuml/DevOps/AzureDevOps.puml
+!includeurl AzurePuml/Databases/AzureDatabaseForPostgreSQL.puml
+!includeurl AzurePuml/Compute/AzureFunction.puml
+
+skinparam BoxPadding 10
+skinparam ParticipantPadding 20
+skinparam SequenceMessageAlign center
+skinparam maxMessageSize 200
+
+actor "Data Team" as team
+participant "Git Branch" as repo
+participant "CICD Pipeline" as pipeline
+participant "Git Branch\n(dev/acc/main)" as branch
+participant "Config API" as function
+database "Database" as db
+
+== Development & Validation ==
+team -> repo: Push runtime configs\n(*runtime*.yaml)
+repo -> pipeline: Trigger build validation
+activate pipeline
+
+loop For each *runtime*.yaml file
+    alt Validation failed
+        pipeline ->x pipeline: ❌   Fail pipeline
+    else Validation passed
+        pipeline -> pipeline: ✅   Continue
+    end
+end
+
+pipeline -> branch: Merge to branch
+deactivate pipeline
+branch -> function: Trigger webhook\nPOST webhook payload
+
+== Ingestion ==
+activate function
+function -> function: Parse payload →\nextract repo_id, branch
+function -> branch: Fetch all *runtime*.yaml files
+branch --> function: Return runtime configs
+
+note over function,db: Transaction: Atomic Replace
+function -> db: BEGIN TRANSACTION
+function -> db: DELETE all runtimes\nfor (repo_id, branch)
+loop For each runtime file
+    function -> db: INSERT runtime\n(repo_id, branch, filepath, config)
+end
+function -> db: COMMIT
+
+deactivate function
+
+@enduml
