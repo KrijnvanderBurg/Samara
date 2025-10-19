@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Samara"
-version = "0.1.1"
+version = "0.2.0"
 description = "Config Driven ETL Framework"
 authors = ["Krijn van der Burg"]
 readme = "README.md"
@@ -9,7 +9,7 @@ packages = [{ include = "samara", from = "src" }]
 [tool.poetry.dependencies]
 python = "^3.13"
 pyspark = "^4.0.1"
-pandas = "^2.3.0"
+pandas = "^2.3.0"i
 pyarrow = "20.0.0"
 numpy = "<2.0.0"
 pyyaml = "^6.0.1"
