@@ -64,22 +64,21 @@ Samara's documentation guides you through installation, configuration, and devel
 
 For complete documentation covering all aspects of Samara, visit the documentation home page.
 
-## 🔍 Example: Customer Order Analysis
-Running this command executes a complete pipeline that showcases Samara's key capabilities:
+## 🔍 Example: Product Cleanup Pipeline (YAML)
+Running this pipeline demonstrates data cleaning operations using YAML configuration format:
 
-- **Multi-format extraction**: Seamlessly reads from both CSV and JSON sources
-  - Source options like delimiters and headers are configurable through the configuration file
-  - Schema validation ensures data type safety and consistency across all sources
+- **Drop duplicates**: Removes duplicate product entries from the catalog
+  - Empty `columns: []` array means check all columns for duplicates
+  - Reduces 12 rows to 10 unique products
 
-- **Flexible transformation chain**: Performed in order as given
-  - First a `join` to combine both datasets on `customer_id`
-  - Then applies a `select` transform to project only needed columns
-  - Each transform function can be easily customized through its arguments
+- **Type casting**: Converts string columns to appropriate data types
+  - `price` converted from string to double for numeric operations
+  - `stock_quantity` converted to integer for inventory tracking
+  - `is_available` converted to boolean for logical operations
 
-- **Configurable loading**: Writes results as CSV with customizable settings
-  - Easily change to Parquet, Delta, or other formats by modifying `data_format`
-  - Output mode (overwrite/append) controlled by a simple parameter
-  - Output to multiple formats or locations by creating another load entry
+- **Column selection**: Projects only relevant columns for the final output
+  - Excludes `last_updated` field from final dataset
+  - Each column in the select list can be easily modified through configuration
 
 ### Configuration: [`examples/yaml_products_cleanup/job.yaml`](./examples/yaml_products_cleanup/job.yaml)
 **Flexible Configuration**: Define pipelines in YAML or JSON—both formats are fully supported and functionally equivalent. Choose the format that best fits your team preferences.
