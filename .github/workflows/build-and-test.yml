@@ -100,5 +100,5 @@ jobs:
             runtime_file=$(find "$dir" -maxdepth 1 -name "job.*")
             alert_file=$(find "$dir" -maxdepth 1 -name "alert.*")
             echo "Validating $(basename "$dir")..."
-            python -m samara validate --alert-filepath "$alert_file" --runtime-filepath "$runtime_file"
+            python -m samara --log-level WARNING validate --alert-filepath "$alert_file" --runtime-filepath "$runtime_file"
           done
