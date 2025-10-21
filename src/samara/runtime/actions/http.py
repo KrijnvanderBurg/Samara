@@ -12,10 +12,11 @@ import logging
 from typing import Any, Literal
 
 from pydantic import Field
-from samara.actions.base import ActionBase
+from typing_extensions import override
+
+from samara.runtime.actions.base import ActionBase
 from samara.utils.http import HttpBase
 from samara.utils.logger import get_logger
-from typing_extensions import override
 
 logger: logging.Logger = get_logger(__name__)
 

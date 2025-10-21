@@ -39,7 +39,7 @@
 # from pydantic import field_validator
 
 # from samara import BaseModel
-# from samara.actions.base import ActionBase
+# from samara.runtime.actions.base import ActionBase
 
 # logger = logging.getLogger(__name__)
 

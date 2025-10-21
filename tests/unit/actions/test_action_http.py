@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from samara.actions.http import HttpAction
+from samara.runtime.actions.http import HttpAction
 from samara.utils.http import Retry
 
 

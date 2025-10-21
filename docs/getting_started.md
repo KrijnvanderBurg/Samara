@@ -20,6 +20,29 @@ python -m samara run \
   --runtime-filepath="examples/join_select/job.jsonc"
 ```
 
+## Configuration Formats
+
+Samara supports both **YAML** and **JSON** (including JSONC with comments) configuration formats. Both formats are functionally equivalent—choose the one that best fits your team preferences.
+
+**YAML example:**
+```yaml
+runtime:
+  id: my-pipeline
+  enabled: true
+```
+
+**JSON example:**
+```json
+{
+  "runtime": {
+    "id": "my-pipeline",
+    "enabled": true
+  }
+}
+```
+
+All examples in this documentation use JSON/JSONC, but you can convert any configuration to YAML format. The framework automatically detects the format based on the file extension (`.yaml`/`.yml` or `.json`/`.jsonc`).
+
 ## Creating Your Own Pipeline
 The structure is as follows, all of the following fields are required
 

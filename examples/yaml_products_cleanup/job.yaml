@@ -1,0 +1,78 @@
+runtime:
+  id: product-cleanup-pipeline
+  description: ETL pipeline for cleaning and standardizing product catalog data
+  enabled: true
+  
+  jobs:
+    - id: clean-products
+      description: Remove duplicates, cast types, and select relevant columns from product data
+      enabled: true
+      engine_type: spark
+      
+      # Extract product data from CSV file
+      extracts:
+        - id: extract-products
+          extract_type: file
+          data_format: csv
+          location: examples/yaml_products_cleanup/products/
+          method: batch
+          options:
+            delimiter: ","
+            header: true
+            inferSchema: false
+          schema: examples/yaml_products_cleanup/products_schema.json
+      
+      # Transform the data: remove duplicates, cast types, and select columns
+      transforms:
+        - id: transform-clean-products
+          upstream_id: extract-products
+          options: {}
+          functions:
+            # Step 1: Remove duplicate rows based on all columns
+            - function_type: dropDuplicates
+              arguments:
+                columns: []  # Empty array means check all columns for duplicates
+            
+            # Step 2: Cast columns to appropriate data types
+            - function_type: cast
+              arguments:
+                columns:
+                  - column_name: price
+                    cast_type: double
+                  - column_name: stock_quantity
+                    cast_type: integer
+                  - column_name: is_available
+                    cast_type: boolean
+                  - column_name: last_updated
+                    cast_type: date
+            
+            # Step 3: Select only the columns we need for the output
+            - function_type: select
+              arguments:
+                columns:
+                  - product_id
+                  - product_name
+                  - category
+                  - price
+                  - stock_quantity
+                  - is_available
+      
+      # Load the cleaned data to output
+      loads:
+        - id: load-clean-products
+          upstream_id: transform-clean-products
+          load_type: file
+          data_format: csv
+          location: examples/yaml_products_cleanup/output
+          method: batch
+          mode: overwrite
+          options:
+            header: true
+          schema_export: ""
+      
+      # Event hooks for pipeline lifecycle
+      hooks:
+        onStart: []
+        onFailure: []
+        onSuccess: []
+        onFinally: []

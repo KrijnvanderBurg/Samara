@@ -1,10 +1,19 @@
 # Runtime
 
-The runtime system orchestrates ETL pipelines through configuration files. Define your data sources, transformations, and destinations in JSON—no coding required.
+The runtime system orchestrates ETL pipelines through configuration files. Define your data sources, transformations, and destinations in YAML or JSON—no coding required.
 
 ## Overview
 
 Samara's runtime executes data pipelines defined entirely through configuration. This declarative approach transforms data engineering from a programming task to a configuration exercise, making pipelines more maintainable and accessible.
+
+## Configuration Formats
+
+All runtime configurations can be written in either **YAML** or **JSON** format. Both formats are functionally equivalent:
+
+- **YAML** (`.yaml`, `.yml`): More readable, supports comments natively
+- **JSON/JSONC** (`.json`, `.jsonc`): Structured format, widely supported in tools
+
+The framework automatically detects the format based on the file extension. All examples in this documentation use JSON/JSONC, but can be converted to YAML format.
 
 ## How It Works
 
@@ -24,8 +33,9 @@ python -m samara run \
 
 ## Configuration Structure
 
-A Samara pipeline is defined by a JSON configuration file with this structure:
+A Samara pipeline is defined by a YAML or JSON configuration file with this structure:
 
+**JSON format:**
 ```jsonc
 {
     "runtime": {
@@ -37,6 +47,16 @@ A Samara pipeline is defined by a JSON configuration file with this structure:
         ]
     }
 }
+```
+
+**YAML format:**
+```yaml
+runtime:
+  id: unique-pipeline-id        # Unique identifier
+  description: Pipeline description
+  enabled: true                 # Enable/disable the entire runtime
+  jobs:
+    # Job definitions
 ```
 
 ## Jobs

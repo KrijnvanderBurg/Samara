@@ -6,6 +6,10 @@ This document describes the command-line interface (CLI) for Samara, providing d
 
 Samara provides a command-line interface to validate configurations and execute data pipelines. All commands follow the pattern `python -m samara [command] [options]`.
 
+## Configuration File Formats
+
+Samara accepts both **YAML** (`.yaml`, `.yml`) and **JSON** (`.json`, `.jsonc`) configuration files. Both formats are functionally equivalent, and the framework automatically detects the format based on the file extension. You can mix formats—for example, use YAML for runtime configuration and JSON for alert configuration, or vice versa.
+
 ## Commands
 
 ### validate
@@ -14,10 +18,10 @@ Validates configuration files and optionally tests alert routing rules without e
 
 ```bash
 python -m samara validate \
-    --alert-filepath="path/to/alerts.jsonc" \  # Path to alert configuration file
-    --runtime-filepath="path/to/job.jsonc" \   # Path to pipeline runtime configuration
-    [--test-exception="error message"] \     # Optional: Simulates an error to test alert routing
-    [--test-env-var="KEY=VALUE"]               # Optional: Set environment variables for testing triggers
+    --alert-filepath="path/to/alerts.yaml" \   # Path to alert configuration file (.yaml, .yml, .json, .jsonc)
+    --runtime-filepath="path/to/job.yaml" \    # Path to pipeline runtime configuration (.yaml, .yml, .json, .jsonc)
+    [--test-exception="error message"] \       # Optional: Simulates an error to test alert routing
+    [--test-env-var="KEY=VALUE"]                 # Optional: Set environment variables for testing triggers
 ```
 
 Example:
@@ -35,8 +39,8 @@ Executes the configured data pipeline using the provided configuration files.
 
 ```bash
 python -m samara run \
-    --alert-filepath path/to/alerts.jsonc \  # Path to alert configuration file
-    --runtime-filepath path/to/job.jsonc \   # Path to pipeline runtime configuration
+    --alert-filepath path/to/alerts.yaml \   # Path to alert configuration file (.yaml, .yml, .json, .jsonc)
+    --runtime-filepath path/to/job.yaml \    # Path to pipeline runtime configuration (.yaml, .yml, .json, .jsonc)
     [--log-level LEVEL]                      # Optional: Override logging level
 ```
 
