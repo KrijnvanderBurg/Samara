@@ -1,6 +1,17 @@
 # Alerting
 
-The alerting system enables configuration-driven notifications when pipeline errors occur. It consists of two components: [channels](./channels.md) define where alerts are sent, and [triggers](./triggers.md) define when to send them.
+# Alert System
+
+The alert system enables automated notifications when pipeline errors occur. Configure channels (where alerts go) and triggers (when alerts are sent) through YAML or JSON configuration files.
+
+## Configuration Formats
+
+Alert configurations can be written in either **YAML** or **JSON** format. Both formats are functionally equivalent:
+
+- **YAML** (`.yaml`, `.yml`): More readable, supports comments natively
+- **JSON/JSONC** (`.json`, `.jsonc`): Structured format, widely supported in tools
+
+The framework automatically detects the format based on the file extension.
 
 ## How It Works
 

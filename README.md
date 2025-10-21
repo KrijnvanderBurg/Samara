@@ -31,6 +31,8 @@ Samara transforms data engineering by shifting from custom code to declarative c
 
 The processing engine is abstracted away through configuration, making it easy to switch engines or run the same pipeline in different environments. The current version supports Apache Spark, with Polars support in development.
 
+**Flexible Configuration**: Define pipelines in YAML or JSON—both formats are fully supported and functionally equivalent. Choose the format that best fits your team preferences.
+
 ## ⚡ Quick Start
 
 ### Installation
