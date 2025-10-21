@@ -81,7 +81,7 @@ Running this command executes a complete pipeline that showcases Samara's key ca
   - Output mode (overwrite/append) controlled by a simple parameter
   - Output to multiple formats or locations by creating another load entry
 
-#### Configuration: [`examples/yaml_products_cleanup/job.yaml`](./examples/yaml_products_cleanup/job.yaml)
+### Configuration: [`examples/yaml_products_cleanup/job.yaml`](./examples/yaml_products_cleanup/job.yaml)
 **Flexible Configuration**: Define pipelines in YAML or JSON—both formats are fully supported and functionally equivalent. Choose the format that best fits your team preferences.
 ```yaml
 runtime:
