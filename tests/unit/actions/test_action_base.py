@@ -3,7 +3,8 @@
 from unittest.mock import patch
 
 import pytest
-from samara.actions.base import ActionBase
+
+from samara.runtime.actions.base import ActionBase
 
 
 class MockAction(ActionBase):

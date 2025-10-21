@@ -1,0 +1,13 @@
+product_id,product_name,category,price,stock_quantity,is_available,last_updated
+1001,Laptop Pro 15,Electronics,1299.99,25,true,2024-10-15
+1002,Wireless Mouse,Electronics,29.99,150,true,2024-10-16
+1003,Office Chair,Furniture,249.50,45,true,2024-10-14
+1001,Laptop Pro 15,Electronics,1299.99,25,true,2024-10-15
+1004,Standing Desk,Furniture,599.00,12,true,2024-10-17
+1005,USB-C Hub,Electronics,49.99,80,false,2024-10-13
+1002,Wireless Mouse,Electronics,29.99,150,true,2024-10-16
+1006,Ergonomic Keyboard,Electronics,79.99,60,true,2024-10-18
+1007,Monitor 27inch,Electronics,329.99,30,true,2024-10-19
+1008,Bookshelf,Furniture,159.99,20,true,2024-10-12
+1009,Desk Lamp,Furniture,39.99,100,true,2024-10-20
+1010,Cable Organizer,Electronics,14.99,200,true,2024-10-11

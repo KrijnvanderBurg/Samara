@@ -5,7 +5,7 @@
 
 # import pytest
 
-# from samara.actions.move_or_copy_job_files import (
+# from samara.runtime.actions.move_or_copy_job_files import (
 #     Checksum,
 #     DuplicateHandling,
 #     MoveOrCopyJobFiles,
