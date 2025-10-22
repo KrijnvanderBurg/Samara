@@ -1,4 +1,4 @@
-"""Unit tests for types, including Singleton and RegistryDecorator."""
+"""Unit tests for types, including Singleton."""
 
 import threading
 from typing import Any
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from samara.types import DataFrameRegistry, RegistryDecorator, RegistryInstance, Singleton, StreamingQueryRegistry
+from samara.types import DataFrameRegistry, RegistryInstance, Singleton, StreamingQueryRegistry
 
 
 class TestSingleton:
@@ -89,75 +89,6 @@ class TestSingleton:
         first_instance = instances[0]
         for instance in instances[1:]:
             assert instance is first_instance
-
-
-class TestRegistryDecorator:
-    """Tests for the RegistryDecorator class."""
-
-    def test_register_and_get_class(self) -> None:
-        """Test registering and retrieving a class."""
-
-        @RegistryDecorator.register("test_key")
-        class TestClass:
-            pass
-
-        result = RegistryDecorator.get("test_key")
-        assert result is TestClass
-
-    def test_get_nonexistent_key_raises_error(self) -> None:
-        """Test that getting a non-registered key raises KeyError."""
-        with pytest.raises(KeyError):
-            RegistryDecorator.get("nonexistent")
-
-    def test_multiple_classes_same_key(self) -> None:
-        """Test registering multiple classes with same key returns first."""
-
-        @RegistryDecorator.register("multi")
-        class FirstClass:
-            pass
-
-        @RegistryDecorator.register("multi")
-        class SecondClass:
-            pass
-
-        result = RegistryDecorator.get("multi")
-        assert result is FirstClass
-
-    def test_get_all_classes(self) -> None:
-        """Test getting all registered classes for a key."""
-
-        @RegistryDecorator.register("all_test")
-        class Class1:
-            pass
-
-        @RegistryDecorator.register("all_test")
-        class Class2:
-            pass
-
-        all_classes = RegistryDecorator.get_all("all_test")
-        assert len(all_classes) == 2
-        assert Class1 in all_classes
-        assert Class2 in all_classes
-
-    def test_get_all_nonexistent_key_raises_error(self) -> None:
-        """Test that get_all with non-existent key raises KeyError."""
-        with pytest.raises(KeyError):
-            RegistryDecorator.get_all("nonexistent")
-
-    def test_duplicate_registration_prevention(self) -> None:
-        """Test that duplicate registration of same class is prevented."""
-
-        class TestClass:
-            pass
-
-        # Register the same class twice with the same key
-        RegistryDecorator.register("dup_test")(TestClass)
-        RegistryDecorator.register("dup_test")(TestClass)
-
-        # Should only have one entry
-        all_classes = RegistryDecorator.get_all("dup_test")
-        assert len(all_classes) == 1
-        assert all_classes[0] is TestClass
 
 
 class TestRegistryInstance:

@@ -1,11 +1,8 @@
-"""Drop transform function.
+"""Drop transform - Remove columns from a DataFrame.
 
-This module provides a transform function for removing columns from a DataFrame,
-enabling column pruning in the ETL pipeline.
-
-The DropFunction is registered with the TransformFunctionRegistry under
-the name 'drop', making it available for use in configuration files.
-"""
+This module provides a transform function for removing unwanted columns from
+a DataFrame. The drop transform is registered with the TransformFunctionRegistry,
+enabling column pruning through configuration in data pipelines."""
 
 from collections.abc import Callable
 
@@ -16,28 +13,59 @@ from samara.runtime.jobs.spark.transforms.base import FunctionSpark
 
 
 class DropFunction(DropFunctionModel, FunctionSpark):
-    """Function that drops specified columns from a DataFrame.
+    """Remove specified columns from a DataFrame.
 
-    This transform function allows for removing unwanted columns from
-    a DataFrame, helping to reduce memory usage and focus on relevant data.
+    This transform function removes unwanted columns from a DataFrame,
+    enabling memory optimization and data focus in configuration-driven
+    pipelines. Columns to drop are specified through configuration.
 
     Attributes:
-        function: The name of the function (always "drop")
-        arguments: Container for the drop parameters
+        function: The name of the function (always "drop").
+        arguments: Container for drop parameters including the columns list.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "transforms": [
+                {
+                    "function": "drop",
+                    "arguments": {
+                        "columns": ["temp_col", "unused_field"]
+                    }
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        transforms:
+          - function: drop
+            arguments:
+              columns:
+                - temp_col
+                - unused_field
+        ```
+
+    Note:
+        Attempting to drop columns that do not exist will raise an error.
+        Specify only the columns you want to remove; the drop operation
+        is executed when the transform is applied to the DataFrame.
     """
 
     def transform(self) -> Callable:
-        """Apply the column drop transformation to the DataFrame.
+        """Return a callable that removes specified columns from a DataFrame.
 
-        This method extracts the columns to drop from the model
-        and applies the drop operation to the DataFrame, removing the specified columns.
+        Extracts the columns to drop from the model configuration and returns
+        a function that applies the drop operation to any DataFrame.
 
         Returns:
-            A callable function that performs the column removal when applied
-            to a DataFrame
+            A callable function that accepts a DataFrame and returns a new
+            DataFrame with the specified columns removed.
 
-        Examples:
-            Consider the following DataFrame:
+        Example:
+            Input DataFrame:
 
             ```
             +----+-------+---+--------+
@@ -48,13 +76,18 @@ class DropFunction(DropFunctionModel, FunctionSpark):
             +----+-------+---+--------+
             ```
 
-            Applying the drop function:
+            With configuration:
 
             ```
-            {"function": "drop", "arguments": {"columns": ["temp_col"]}}
+            {
+                "function": "drop",
+                "arguments": {
+                    "columns": ["temp_col"]
+                }
+            }
             ```
 
-            The resulting DataFrame will be:
+            Output DataFrame:
 
             ```
             +----+-------+---+

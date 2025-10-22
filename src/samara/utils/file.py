@@ -1,15 +1,8 @@
-"""File handling utilities for reading and validating configuration files.
+"""File handling utilities - Load and validate configuration files.
 
-This module provides a factory implementation for handling different file formats
-like JSON, YAML, etc. with a common interface. It includes:
-
-- Abstract base FileHandler class defining the file handling interface
-- Concrete implementations for different file formats (JSON, YAML, etc.)
-- Factory pattern for dynamically selecting appropriate file handlers
-- Validation utilities to ensure files exist and have correct format
-
-The file handlers are primarily used for loading ETL pipeline configurations,
-but can be used for any structured data file reading needs.
+This module provides factory-based file handling for reading JSON and YAML
+configuration files with comprehensive validation. It enables consistent parsing
+of pipeline definitions across different file formats through a common interface.
 """
 
 import os
@@ -19,22 +12,28 @@ from typing import Any
 
 import pyjson5 as json
 import yaml
+
 from samara.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class FileHandler(ABC):
-    """Abstract base class for file handling operations.
+    """Abstract base for file reading and validation operations.
 
-    Provides a common interface for file operations like checking existence,
-    reading content, and validating format across different file types.
-
-    All concrete file handlers should inherit from this class and implement
-    the required abstract methods.
+    Defines the interface for loading and validating files, handling different
+    file formats (JSON, YAML) with comprehensive validation including existence
+    checks, permissions, size limits, and format verification. Subclasses must
+    implement the `_read()` method to parse format-specific content.
 
     Attributes:
-        filepath: Path to the file being handled
+        filepath: Path to the file being handled.
+        DEFAULT_MAX_SIZE: Maximum allowed file size (10 MB by default).
+        ENCODING: Character encoding used for file reading (UTF-8).
+
+    Example:
+        >>> handler = FileYamlHandler(Path("pipeline.yaml"))
+        >>> config = handler.read()  # Validates and reads file
     """
 
     # Class constants for validation limits
@@ -42,25 +41,25 @@ class FileHandler(ABC):
     ENCODING: str = "utf-8"
 
     def __init__(self, filepath: Path) -> None:
-        """Initialize the file handler with a file path.
+        """Initialize a file handler with the target file path.
 
         Args:
-            filepath: Path object pointing to the target file
+            filepath: Path object pointing to the file to handle.
 
         Note:
-            The file is not accessed during initialization,
-            only when operations are performed.
+            File access is deferred until read operations are performed.
+            Validation occurs at read time, not during initialization.
         """
         logger.debug("Initializing %s for path: %s", self.__class__.__name__, filepath)
         self.filepath = filepath
         logger.debug("%s initialized successfully for: %s", self.__class__.__name__, filepath)
 
     def _file_exists(self) -> None:
-        """Validate that the file exists.
+        """Verify the file exists.
 
         Raises:
             FileNotFoundError: If the file does not exist.
-            OSError: If there's a system-level error checking file existence.
+            OSError: If a system-level error occurs while checking existence.
         """
         logger.debug("Checking file existence: %s", self.filepath)
         if not self.filepath.exists():
@@ -69,11 +68,11 @@ class FileHandler(ABC):
         logger.debug("File exists: %s", self.filepath)
 
     def _is_file(self) -> None:
-        """Validate that the path is a regular file.
+        """Verify the path points to a regular file (not a directory).
 
         Raises:
             IsADirectoryError: If the path is a directory.
-            OSError: If the path is not a regular file or there's a system-level error.
+            OSError: If the path is not a regular file or a system-level error occurs.
         """
         logger.debug("Checking if path is a regular file: %s", self.filepath)
         if not self.filepath.is_file():
@@ -82,11 +81,11 @@ class FileHandler(ABC):
         logger.debug("Path is a regular file: %s", self.filepath)
 
     def _read_permission(self) -> None:
-        """Validate that the file has read permissions.
+        """Verify the file is readable by the current process.
 
         Raises:
             PermissionError: If the file is not readable.
-            OSError: If there's a system-level error checking permissions.
+            OSError: If a system-level error occurs while checking permissions.
         """
         logger.debug("Checking read permissions for file: %s", self.filepath)
         if not os.access(self.filepath, os.R_OK):
@@ -95,10 +94,10 @@ class FileHandler(ABC):
         logger.debug("Read permissions validated for file: %s", self.filepath)
 
     def _file_not_empty(self) -> None:
-        """Validate that the file is not empty.
+        """Verify the file contains data (not empty).
 
         Raises:
-            OSError: If the file is empty or there's a system-level error accessing file metadata.
+            OSError: If the file is empty or a system-level error occurs accessing metadata.
         """
         logger.debug("Checking if file is empty: %s", self.filepath)
         file_size = self.filepath.stat().st_size
@@ -108,13 +107,13 @@ class FileHandler(ABC):
         logger.debug("File not empty: %s (size: %d bytes)", self.filepath, file_size)
 
     def _file_size_limits(self, max_size: int = DEFAULT_MAX_SIZE) -> None:
-        """Validate that the file size is within specified limits.
+        """Verify file size is within specified limits.
 
         Args:
-            max_size: Maximum allowed file size in bytes.
+            max_size: Maximum allowed file size in bytes (defaults to 10 MB).
 
         Raises:
-            OSError: If the file size is too large or there's a system-level error.
+            OSError: If the file exceeds size limits or a system-level error occurs.
         """
         logger.debug("Checking file size limits for: %s (max allowed: %d bytes)", self.filepath, max_size)
         file_size = self.filepath.stat().st_size
@@ -128,11 +127,11 @@ class FileHandler(ABC):
         logger.debug("File size within limits: %s (size: %d bytes, max: %d bytes)", self.filepath, file_size, max_size)
 
     def _text_file(self) -> None:
-        """Validate that the file is a readable text file.
+        """Verify the file contains readable text (not binary data).
 
         Raises:
-            OSError: If the file contains binary content or has encoding/access issues.
-            PermissionError: If permission is denied reading the file.
+            OSError: If the file contains binary content or has encoding issues.
+            PermissionError: If permission is denied while reading the file.
         """
         logger.debug("Validating file is readable text: %s", self.filepath)
         try:
@@ -148,18 +147,20 @@ class FileHandler(ABC):
             raise OSError(f"Invalid file encoding: '{self.filepath}' is not valid UTF-8") from e
 
     def read(self) -> dict[str, Any]:
-        """Read the file and return its contents as a dictionary.
+        """Read and validate the file, returning its contents as a dictionary.
 
-        This method should be implemented by subclasses to handle specific file formats.
+        Performs comprehensive validation including existence, file type, permissions,
+        size limits, and format checks before parsing. Format-specific parsing is
+        delegated to subclass implementations.
 
         Returns:
-            dict[str, Any]: The contents of the file as a dictionary.
+            dict[str, Any]: File contents parsed into a dictionary structure.
 
         Raises:
             FileNotFoundError: If the file does not exist.
-            PermissionError: If permission is denied for accessing the file.
-            OSError: If the file has invalid properties (empty, too large, wrong type, etc.).
-            NotImplementedError: If the file extension is not supported.
+            PermissionError: If the file cannot be read due to permission restrictions.
+            OSError: If the file fails validation (empty, too large, binary, wrong type).
+            NotImplementedError: If the subclass does not implement `_read()`.
         """
         logger.info("Starting file validation and reading: %s", self.filepath)
         logger.debug("Running validation checks for file: %s", self.filepath)
@@ -180,37 +181,38 @@ class FileHandler(ABC):
 
     @abstractmethod
     def _read(self) -> dict[str, Any]:
-        """Read the file and return its contents as a dictionary.
+        """Parse and return file contents as a dictionary.
 
-        This method should be overridden by subclasses to implement
-        format-specific reading logic.
+        Subclasses must implement this method to handle format-specific parsing logic.
 
         Returns:
-            dict[str, Any]: The contents of the file as a dictionary.
+            dict[str, Any]: File contents parsed into a dictionary structure.
 
         Raises:
-            NotImplementedError: If the method is not implemented by a subclass.
-            FileNotFoundError: If the file does not exist.
-            PermissionError: If permission is denied for accessing the file.
             ValueError: If the file content cannot be parsed.
-            OSError: If there's a system-level error accessing the file.
+            FileNotFoundError: If the file does not exist.
+            PermissionError: If permission is denied while accessing the file.
+            OSError: If a system-level error occurs while reading the file.
         """
 
 
 class FileYamlHandler(FileHandler):
-    """Handles YAML files."""
+    """Handle reading and parsing YAML configuration files.
+
+    Loads YAML files with safe parsing to prevent code execution vulnerabilities.
+    Complements `FileJsonHandler` for format flexibility in pipeline configurations.
+    """
 
     def _read(self) -> dict[str, Any]:
-        """
-        Read the YAML file and return its contents as a dictionary.
+        """Parse YAML file content into a dictionary.
 
         Returns:
-            dict[str, Any]: The contents of the YAML file as a dictionary.
+            dict[str, Any]: YAML content parsed into a dictionary structure.
 
         Raises:
+            ValueError: If the YAML syntax is invalid.
             FileNotFoundError: If the file does not exist.
-            PermissionError: If permission is denied for accessing the file.
-            yaml.YAMLError: If there is an error reading the YAML file.
+            PermissionError: If the file cannot be read due to permission restrictions.
         """
         logger.info("Reading YAML file: %s", self.filepath)
 
@@ -227,20 +229,23 @@ class FileYamlHandler(FileHandler):
 
 
 class FileJsonHandler(FileHandler):
-    """Handles JSON files."""
+    """Handle reading and parsing JSON and JSONC configuration files.
+
+    Loads JSON and JSON with Comments (JSONC) files using a lenient parser that
+    supports common extensions like comments and trailing commas. Provides format
+    flexibility for pipeline configuration definitions.
+    """
 
     def _read(self) -> dict[str, Any]:
-        """
-        Read the JSON file and return its contents as a dictionary.
+        """Parse JSON or JSONC file content into a dictionary.
 
         Returns:
-            dict[str, Any]: The contents of the JSON file as a dictionary.
+            dict[str, Any]: JSON content parsed into a dictionary structure.
 
         Raises:
+            ValueError: If the JSON syntax is invalid.
             FileNotFoundError: If the file does not exist.
-            PermissionError: If permission is denied for accessing the file.
-            json.JSONDecodeError: If there is an error decoding the JSON file.
-            ValueError: If JSON cannot be decoded.
+            PermissionError: If the file cannot be read due to permission restrictions.
         """
         logger.info("Reading JSON file: %s", self.filepath)
 
@@ -258,7 +263,20 @@ class FileJsonHandler(FileHandler):
 
 
 class FileHandlerContext:
-    """Factory for creating appropriate file handlers."""
+    """Factory for creating file handlers based on file extension.
+
+    Provides a registry-based factory that automatically selects the appropriate
+    file handler (YAML or JSON) based on file extension, enabling polymorphic
+    file handling through a single unified interface.
+
+    Attributes:
+        SUPPORTED_EXTENSIONS: Maps file extensions (.yaml, .yml, .json, .jsonc)
+            to their corresponding handler classes.
+
+    Example:
+        >>> handler = FileHandlerContext.from_filepath(Path("config.yaml"))
+        >>> data = handler.read()  # Returns parsed configuration
+    """
 
     SUPPORTED_EXTENSIONS: dict[str, type[FileHandler]] = {
         ".yml": FileYamlHandler,
@@ -269,17 +287,24 @@ class FileHandlerContext:
 
     @classmethod
     def from_filepath(cls, filepath: Path) -> FileHandler:
-        """
-        Create and return the appropriate file handler based on file extension.
+        """Create the appropriate file handler for the given file path.
+
+        Examines the file extension and instantiates the matching handler class.
+        Supports YAML (.yaml, .yml) and JSON/JSONC (.json, .jsonc) formats.
 
         Args:
-            filepath (Path): The path to the file.
+            filepath: Path to the file requiring a handler.
 
         Returns:
-            FileHandler: An instance of the appropriate file handler.
+            FileHandler: An instance of the appropriate handler for the file format.
 
         Raises:
-            ValueError: If the file extension is not supported.
+            ValueError: If the file extension is not supported. Supported formats
+                are listed in the error message along with SUPPORTED_EXTENSIONS.
+
+        Example:
+            >>> yaml_handler = FileHandlerContext.from_filepath(Path("pipeline.yaml"))
+            >>> json_handler = FileHandlerContext.from_filepath(Path("config.jsonc"))
         """
         logger.debug("Creating file handler for path: %s", filepath)
         _, file_extension = os.path.splitext(filepath)

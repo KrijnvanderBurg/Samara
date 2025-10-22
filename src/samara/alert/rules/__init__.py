@@ -1,10 +1,12 @@
-"""Alert trigger rules for flexible condition evaluation.
+"""Rule-based system for alert trigger conditions.
 
-This module contains the rule-based system for alert triggers, providing
-a flexible way to define conditions that determine when alerts should fire.
+This module provides alert trigger rules that define conditions for when
+alerts should be fired within a data pipeline. Rules evaluate exceptions
+and runtime state to determine alert triggering based on configuration.
 
-The rule system follows the same pattern as transform functions, with
-abstract base classes, registries, and concrete implementations.
+The rule system follows a discriminator-based union pattern, enabling
+pipeline authors to mix different rule types within the same configuration.
+Each rule type handles a specific evaluation strategy for alert conditions.
 """
 
 from typing import Annotated

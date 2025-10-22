@@ -1,8 +1,9 @@
-"""Transform function implementations for Spark.
+"""Spark transform operations - Configurable data transformation functions.
 
-This module imports all available transform functions to register them with the
-TransformFunctionRegistry. Each transform function is automatically registered
-when imported.
+This module provides all available transform operations for Spark-based data
+processing pipelines. It enables automatic registration of transform functions
+through a union discriminator pattern, allowing pipeline configurations to
+specify transformations declaratively without requiring code changes.
 """
 
 from typing import Annotated

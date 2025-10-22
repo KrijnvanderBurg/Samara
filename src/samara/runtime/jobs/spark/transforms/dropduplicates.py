@@ -53,10 +53,19 @@ class DropDuplicatesFunction(DropDuplicatesFunctionModel, FunctionSpark):
             +----+-------+---+
             ```
 
-            Applying the dropDuplicates function with columns ["name", "age"]:
+            Applying the dropDuplicates transform with columns ["name", "age"]:
 
             ```
-            {"function": "dropDuplicates", "arguments": {"columns": ["name", "age"]}}
+            {
+              "transforms": [
+                {
+                  "function": "dropduplicates",
+                  "arguments": {
+                    "columns": ["name", "age"]
+                  }
+                }
+              ]
+            }
             ```
 
             The resulting DataFrame will be:

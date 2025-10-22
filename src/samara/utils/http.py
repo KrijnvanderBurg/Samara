@@ -1,8 +1,10 @@
-"""HTTP utility classes for the Samara ETL framework.
+"""HTTP utilities for Samara's configuration-driven data pipeline framework.
 
-This module provides shared HTTP functionality that can be used by both
-alert channels and actions. It includes retry logic, timeout handling,
-and standardized HTTP request functionality.
+Provides reusable HTTP functionality for alert channels and event hook actions,
+enabling reliable communication through configurable retry logic, timeout handling,
+and standardized request execution. Supports the declarative configuration model
+by allowing HTTP endpoints and behaviors to be specified in configuration files
+rather than code.
 """
 
 import json
@@ -12,20 +14,38 @@ from typing import Any
 
 import requests
 from pydantic import BaseModel, Field, HttpUrl, PositiveInt
+
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
 
 
 class Retry(BaseModel):
-    """Configuration for handling HTTP failures and retries.
+    """Configurable retry behavior for HTTP requests in pipeline operations.
 
-    This class defines how HTTP requests should behave when failures occur,
-    including retry logic and error escalation settings.
+    Defines how HTTP requests should handle transient failures through configurable
+    retry attempts and delays. This configuration model aligns with Samara's
+    declarative approach, allowing retry strategies to be specified in pipeline
+    configuration files without modifying code.
 
     Attributes:
-        max_attempts: Maximum number of retry attempts for failed requests
-        delay_in_seconds: Delay between retry attempts in seconds
+        max_attempts: Maximum number of retry attempts (0-3) for failed requests.
+        delay_in_seconds: Delay between retry attempts in seconds (1-30).
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "max_attempts": 2,
+            "delay_in_seconds": 5
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        max_attempts: 2
+        delay_in_seconds: 5
+        ```
     """
 
     max_attempts: int = Field(..., description="Maximum number of retry attempts for failed requests", ge=0, le=3)
@@ -33,17 +53,51 @@ class Retry(BaseModel):
 
 
 class HttpBase(BaseModel):
-    """Base class for HTTP functionality shared between alerts and actions.
+    """Base HTTP configuration for alerts and event hooks in Samara pipelines.
 
-    This class provides common HTTP configuration and request handling
-    that can be inherited by both alert channels and actions.
+    Provides shared HTTP request handling for alert notifications and event-triggered
+    actions. Supports the framework's configuration-driven model by allowing HTTP
+    endpoints, methods, headers, and retry behavior to be defined in configuration
+    files. Used by alert channels and actions to communicate with external HTTP
+    endpoints, webhooks, and services.
 
     Attributes:
-        url: HTTP endpoint URL for sending requests
-        method: HTTP method to use (GET, POST, PUT, etc.)
-        headers: Dictionary of HTTP headers to include in requests
-        timeout: Request timeout in seconds
-        retry: Configuration for handling failures and retries
+        url: HTTP endpoint URL for sending requests.
+        method: HTTP method to use (GET, POST, PUT, etc.), minimum 1 character.
+        headers: Dictionary of HTTP headers to include in requests (default: empty).
+        timeout: Request timeout in seconds (1-30).
+        retry: Retry configuration for handling transient HTTP failures.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "url": "https://api.example.com/webhook",
+            "method": "POST",
+            "headers": {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer token123"
+            },
+            "timeout": 10,
+            "retry": {
+                "max_attempts": 2,
+                "delay_in_seconds": 5
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        url: https://api.example.com/webhook
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: Bearer token123
+        timeout: 10
+        retry:
+          max_attempts: 2
+          delay_in_seconds: 5
+        ```
     """
 
     url: HttpUrl = Field(..., description="HTTP endpoint URL for sending requests")
@@ -55,13 +109,20 @@ class HttpBase(BaseModel):
     retry: Retry = Field(..., description="Configuration for handling failures and retries")
 
     def _make_http_request(self, payload: dict[str, Any] | None = None) -> None:
-        """Make an HTTP request with retry logic.
+        """Execute an HTTP request with configurable retry logic and error handling.
+
+        Sends an HTTP request with the configured method, headers, timeout, and retry
+        behavior. Handles transient failures gracefully through exponential backoff
+        retry logic. On success, logs the request completion; on final failure after
+        all retries, logs the error and raises the underlying exception.
 
         Args:
-            payload: Optional payload to send in the request body.
+            payload: Optional dictionary to send as JSON in the request body.
+                If None, the request is sent without a body.
 
         Raises:
-            requests.RequestException: If the HTTP request fails after all retries.
+            requests.RequestException: If the HTTP request fails after exhausting
+                all configured retry attempts.
         """
         data = json.dumps(payload)
 

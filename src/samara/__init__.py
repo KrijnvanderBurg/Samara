@@ -1,26 +1,29 @@
-"""PySpark Ingestion Framework.
+"""Configuration-driven data processing framework.
 
-A scalable, modular framework for building data ingestion pipelines using Apache PySpark.
-This framework provides tools and components for extracting data from various sources,
-transforming it using customizable operations, and loading it into target systems.
+Define complete data pipelines through JSON configuration rather than code.
+This module provides a scalable, modular framework for building data extraction,
+transformation, and loading (ETL) pipelines with support for multiple processing
+engines and extensible components.
 
-The framework is built with configurability in mind, allowing pipeline definitions
-through configuration files rather than code changes. It leverages PySpark for
-distributed data processing and follows standard ETL (Extract, Transform, Load) patterns.
+Key capabilities:
+    - Define pipelines via configuration (sources, transforms, destinations)
+    - Multi-engine architecture (Pandas, Polars, and more)
+    - Configurable alert system with multiple notification channels
+    - Event-triggered custom actions at pipeline stages
+    - Engine-agnostic configuration supporting different backends
 
 Example:
-    Basic usage of the framework:
+    Define and execute a pipeline from configuration:
 
-    ```python
-    from pathlib import Path
-    from samara.runtime.etl.spark.job import Job
+    >>> from pathlib import Path
+    >>> from samara.runtime.controller import RuntimeController
+    >>> controller = RuntimeController.from_config_file(Path("pipeline.json"))
+    >>> controller.execute()
 
-    # Create a job from configuration
-    job = Job.from_file(filepath=Path("config.json"))
-
-    # Execute the pipeline
-    job.execute()
-    ```
+See Also:
+    - Configuration format documentation in docs/
+    - Alert system setup in docs/alert/
+    - Available transforms and operations documentation
 """
 
 __author__ = "Krijn van der Burg"
@@ -35,24 +38,41 @@ __status__ = "Prototype"
 from abc import ABC
 
 from pydantic import BaseModel as PydanticBaseModel
+
 from samara.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class BaseModel(PydanticBaseModel, ABC):
-    """Abstract base class for all configuration models in the framework.
+    """Abstract base class for all configuration models.
 
-    Defines the common interface that all model classes must implement using Pydantic v2.
-    Model classes are responsible for converting dictionary-based configuration
-    into strongly-typed objects that can be used by the framework components.
+    Defines the common interface that all model classes must implement using
+    Pydantic v2 for configuration validation and serialization. This base class
+    ensures type safety and consistency when converting dictionary-based
+    configuration into strongly-typed objects used throughout the framework.
+
+    All configuration models inherit from this class to provide:
+        - Configuration validation and error handling
+        - Automatic type conversion and coercion
+        - Clear error messages for invalid configurations
+        - Consistent serialization/deserialization behavior
+
+    Example:
+        >>> from samara import BaseModel
+        >>> class CustomTransform(BaseModel):
+        ...     name: str
+        ...     parameters: dict
+        >>> config = {"name": "my_transform", "parameters": {"key": "value"}}
+        >>> transform = CustomTransform(**config)
+        >>> transform.name
+        'my_transform'
+
+    Note:
+        Subclasses should define their specific configuration schema using
+        Pydantic field annotations. All configuration models are immutable
+        by default to prevent accidental modifications during pipeline execution.
+
+    See Also:
+        pydantic.BaseModel: For configuration validation framework details
     """
-
-    # class Config:
-    # """Pydantic configuration."""
-
-    # extra = "forbid"
-    # validate_assignment = True
-    # str_strip_whitespace = True
-    # validate_default = True
-    # arbitrary_types_allowed = True

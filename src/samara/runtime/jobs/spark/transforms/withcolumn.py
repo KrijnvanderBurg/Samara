@@ -1,10 +1,8 @@
-"""WithColumn transform function.
+"""WithColumn transform - Add or replace DataFrame columns with expressions.
 
-This module provides a transform function for adding or replacing columns in a DataFrame
-based on an expression, enabling column manipulation in the ETL pipeline.
-
-The WithColumnFunction is registered with the TransformFunctionRegistry under
-the name 'withColumn', making it available for use in configuration files.
+This module provides the WithColumn transform, enabling column manipulation
+in configuration-driven ETL pipelines. Supports adding new columns or replacing
+existing ones using PySpark SQL expressions.
 """
 
 from collections.abc import Callable
@@ -17,22 +15,20 @@ from samara.runtime.jobs.spark.transforms.base import FunctionSpark
 
 
 class WithColumnFunction(WithColumnFunctionModel, FunctionSpark):
-    """Function that adds or replaces a column in a DataFrame.
+    """Add or replace a column in a DataFrame using an expression.
 
-    This transform function allows for adding a new column or replacing an existing
-    column in a DataFrame based on an expression. It's useful for derived columns,
-    data transformations, or adding calculated fields.
-
-    The function is configured using a WithColumnFunctionModel that specifies
-    the column name and expression.
+    This transform enables dynamic column addition and modification.
+    Specify a column name and a PySpark SQL expression to create derived
+    columns, perform data transformations, or add calculated fields.
 
     Attributes:
-        function: The name of the function (always "withColumn")
-        model: Configuration model specifying the column name and expression
-        data_registry: Shared registry for accessing and storing DataFrames
+        function: The name of the function (always "withColumn").
+        arguments: Configuration specifying col_name and col_expr.
+        data_registry: Shared registry for accessing and storing DataFrames.
 
     Example:
-        ```json
+        **Configuration in JSON:**
+        ```
         {
             "function": "withColumn",
             "arguments": {
@@ -41,52 +37,60 @@ class WithColumnFunction(WithColumnFunctionModel, FunctionSpark):
             }
         }
         ```
+
+        **Configuration in YAML:**
+        ```
+        function: withColumn
+        arguments:
+          col_name: full_name
+          col_expr: "concat(first_name, ' ', last_name)"
+        ```
+
+        **Input DataFrame:**
+        ```
+        +----------+---------+---+
+        |first_name|last_name|age|
+        +----------+---------+---+
+        |John      |Doe      |25 |
+        |Jane      |Smith    |30 |
+        +----------+---------+---+
+        ```
+
+        **Output DataFrame:**
+        ```
+        +----------+---------+---+---------+
+        |first_name|last_name|age|full_name|
+        +----------+---------+---+---------+
+        |John      |Doe      |25 |John Doe |
+        |Jane      |Smith    |30 |Jane Smith|
+        +----------+---------+---+---------+
+        ```
+
+    Note:
+        The col_expr parameter accepts any valid PySpark SQL expression
+        that can be used with DataFrame.withColumn(). Expressions can reference
+        existing columns and PySpark functions.
     """
 
     def transform(self) -> Callable:
-        """Apply the withColumn transformation to the DataFrame.
+        """Return a callable that adds or replaces a column in a DataFrame.
 
-        This method extracts the column name and expression from the model
-        and applies it to the DataFrame, adding or replacing the specified column.
+        Extracts the column name and expression from the configuration model
+        and returns a function that applies the withColumn operation. The
+        returned function is designed to be applied to a DataFrame in the
+        transform pipeline.
 
         Returns:
-            A callable function that performs the column addition/replacement when applied
-            to a DataFrame
+            A callable that accepts a DataFrame and returns a DataFrame with
+            the specified column added or replaced based on the configured
+            expression.
 
-        Examples:
-            Consider the following DataFrame:
+        Example:
+            >>> transform_func = WithColumnFunction(args).transform()
+            >>> result_df = transform_func(input_df)
 
-            ```
-            +----------+---------+---+
-            |first_name|last_name|age|
-            +----------+---------+---+
-            |John      |Doe      |25 |
-            |Jane      |Smith    |30 |
-            +----------+---------+---+
-            ```
-
-            Applying the withColumn function:
-
-            ```
-            {
-                "function": "withColumn",
-                "arguments": {
-                    "col_name": "full_name",
-                    "col_expr": "concat(first_name, ' ', last_name)"
-                }
-            }
-            ```
-
-            The resulting DataFrame will be:
-
-            ```
-            +----------+---------+---+---------+
-            |first_name|last_name|age|full_name|
-            +----------+---------+---+---------+
-            |John      |Doe      |25 |John Doe |
-            |Jane      |Smith    |30 |Jane Smith|
-            +----------+---------+---+---------+
-            ```
+            The above applies the column transformation using the configured
+            column name and SQL expression.
         """
 
         def __f(df: DataFrame) -> DataFrame:

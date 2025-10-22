@@ -1,10 +1,8 @@
-"""Job models for the Samara ETL framework.
+"""Job models for the ETL framework configuration system.
 
-This module provides the base job models and discriminated union for different
-engine types. It includes:
-    - Base job model with common attributes
-    - Engine-specific job implementations
-    - Discriminated union using Pydantic's discriminator feature
+This module defines the core job model and execution engine abstraction.
+It enables users to configure complete ETL pipelines through job definitions
+that specify data extraction, transformation, and loading operations.
 """
 
 import logging
@@ -30,10 +28,36 @@ LoadT = TypeVar("LoadT", bound=LoadModel)
 
 
 class JobEngine(Enum):
-    """Enumeration of supported job engines.
+    """Define available execution engines for ETL job processing.
 
-    Defines the different execution engines that can be used to run ETL jobs.
-    This enum is used as the discriminator for job type selection.
+    Specifies the supported execution engines that process configured
+    data pipelines. Used as the discriminator to route jobs to their
+    appropriate implementation handlers.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "id": "daily_sync",
+            "engine": "spark",
+            "extracts": [],
+            "transforms": [],
+            "loads": []
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        id: daily_sync
+        engine: spark
+        extracts: []
+        transforms: []
+        loads: []
+        ```
+
+    Note:
+        Future engines (Polars, Pandas) can be added to support
+        different execution characteristics and performance profiles.
     """
 
     SPARK = "spark"
@@ -42,27 +66,128 @@ class JobEngine(Enum):
 
 
 class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
-    """Abstract base class for all job types.
+    """Execute a complete ETL pipeline with configuration-driven stages.
 
-    Defines the common interface and attributes that all job implementations
-    must provide, regardless of the underlying execution engine.
+    Orchestrates data pipeline execution through configurable extract,
+    transform, and load stages. Handles job lifecycle hooks, exception
+    management, and registry cleanup. The framework validates all
+    component IDs for uniqueness and upstream references to ensure
+    configuration correctness before execution.
 
-    This class handles:
-    - Job enabled/disabled state checking
-    - Hook execution at appropriate lifecycle points (onStart, onError, onSuccess, onFinally)
-    - Exception handling and wrapping in SamaraJobError
-
-    Subclasses only need to implement the _execute() method with engine-specific logic.
+    This abstract class provides the execution framework that all
+    engine-specific implementations (Spark, Polars, Pandas) inherit.
+    Subclasses implement _execute() with engine-specific logic and _clear()
+    for resource cleanup.
 
     Attributes:
-        id: Unique identifier for the job
-        description: Human-readable description of the job's purpose
-        enabled: Whether this job should be executed
-        engine_type: The execution engine to use for this job
-        hooks: Hooks to execute at various stages of the job lifecycle
-        extracts: Collection of Extract components to obtain data from sources
-        transforms: Collection of Transform components to process the data
-        loads: Collection of Load components to write data to destinations
+        id_: Unique identifier for this job within the pipeline configuration.
+        description: Human-readable purpose and context for the job.
+        enabled: Controls whether this job executes; disabled jobs are skipped.
+        engine_type: Specifies which execution engine processes this job.
+        extracts: List of data source configurations for reading data.
+        transforms: Ordered list of transformation operations applied in sequence.
+        loads: List of destination configurations for writing results.
+        hooks: Lifecycle hooks executed at onStart, onError, onSuccess, onFinally stages.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "id": "customer_orders_daily",
+            "description": "Join customer and order data for daily reporting",
+            "enabled": true,
+            "engine": "spark",
+            "extracts": [
+                {
+                    "id": "customers",
+                    "type": "csv",
+                    "path": "s3://data/customers"
+                },
+                {
+                    "id": "orders",
+                    "type": "json",
+                    "path": "s3://data/orders"
+                }
+            ],
+            "transforms": [
+                {
+                    "id": "filtered_orders",
+                    "upstreamId": "orders",
+                    "functions": [
+                        {
+                            "type": "filter",
+                            "expression": "amount > 0"
+                        }
+                    ]
+                },
+                {
+                    "id": "enriched_data",
+                    "upstreamId": "filtered_orders",
+                    "functions": [
+                        {
+                            "type": "join",
+                            "mode": "inner",
+                            "otherUpstreamId": "customers",
+                            "keys": ["customer_id"]
+                        }
+                    ]
+                }
+            ],
+            "loads": [
+                {
+                    "id": "final_output",
+                    "upstreamId": "enriched_data",
+                    "type": "csv",
+                    "path": "s3://results/customer_orders"
+                }
+            ],
+            "hooks": {
+                "onSuccess": []
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        id: customer_orders_daily
+        description: Join customer and order data for daily reporting
+        enabled: true
+        engine: spark
+        extracts:
+          - id: customers
+            type: csv
+            path: s3://data/customers
+          - id: orders
+            type: json
+            path: s3://data/orders
+        transforms:
+          - id: filtered_orders
+            upstreamId: orders
+            functions:
+              - type: filter
+                expression: amount > 0
+          - id: enriched_data
+            upstreamId: filtered_orders
+            functions:
+              - type: join
+                mode: inner
+                otherUpstreamId: customers
+                keys:
+                  - customer_id
+        loads:
+          - id: final_output
+            upstreamId: enriched_data
+            type: csv
+            path: s3://results/customer_orders
+        hooks:
+          onSuccess: []
+        ```
+
+    Note:
+        Job execution automatically clears all DataFrames and streaming queries
+        from registries after completion (success or failure) to prevent memory
+        leaks and cross-job data contamination. Transform order matters: later
+        transforms can only reference earlier extracts or transforms in the list.
     """
 
     id_: str = Field(..., alias="id", description="Unique identifier for the job", min_length=1)
@@ -76,15 +201,18 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
 
     @model_validator(mode="after")
     def validate_unique_ids(self) -> Self:
-        """Validate all IDs are unique within the job.
+        """Enforce unique IDs across all job components.
 
-        Ensures that all extract, transform, and load IDs are unique within this job.
+        Validates that all extract, transform, and load IDs are unique
+        within this job configuration. Prevents accidental ID collisions
+        that would cause upstream reference errors.
 
         Returns:
             Self: The validated instance.
 
         Raises:
-            ValueError: If duplicate IDs are found.
+            ValueError: If any ID appears more than once in extracts,
+                transforms, or loads sections.
         """
         # Collect all IDs as lists (not sets) to detect duplicates
         extract_ids_list = [extract.id_ for extract in self.extracts]
@@ -101,19 +229,25 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
 
     @model_validator(mode="after")
     def validate_upstream_references(self) -> Self:
-        """Validate all upstream_id references exist and are in the correct order.
+        """Validate all upstream component references and ordering constraints.
 
-        Ensures that:
-        - All transform upstream_ids reference existing extract or previously defined transform IDs
-        - Transforms cannot reference themselves
-        - Transforms can only reference transforms that appear before them in the list
-        - All load upstream_ids reference existing extract or transform IDs
+        Checks that:
+        - All transform upstream_ids reference existing extracts or previously
+          defined transforms (ordered dependency validation)
+        - Transforms never self-reference via upstream_id
+        - All load upstream_ids reference existing extracts or any transform
+        - Join functions reference valid upstream sources
+
+        This validation enables the framework to execute transforms in sequence,
+        ensuring each transform's dependencies are satisfied before execution.
 
         Returns:
             Self: The validated instance.
 
         Raises:
-            ValueError: If invalid upstream_id references are found.
+            ValueError: If invalid upstream_id references, self-references,
+                or ordering violations are detected with descriptive messages
+                indicating the problematic component and suggestion for correction.
         """
         # Convert to sets for upstream reference validation
         extract_ids = {extract.id_ for extract in self.extracts}
@@ -165,23 +299,29 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
         return self
 
     def execute(self) -> None:
-        """Execute the complete ETL pipeline with comprehensive exception handling.
+        """Execute the complete ETL pipeline with lifecycle management.
 
-        Checks if the job is enabled before execution. If disabled, returns immediately.
+        Orchestrates job execution including enabled/disabled checks, hook
+        execution at key lifecycle points, exception handling, and resource
+        cleanup. Wraps configuration and I/O errors in SamaraJobError to
+        provide consistent error handling across all engine implementations.
 
-        Triggers hooks at appropriate lifecycle points:
-        - onStart: When execution begins
-        - onError: When any exception occurs
-        - onSuccess: When execution completes successfully
-        - onFinally: Always executed at the end
+        Lifecycle flow:
+        1. Check if job is enabled; skip if disabled
+        2. Execute onStart hook
+        3. Run _execute() with engine-specific logic
+        4. On success: execute onSuccess hook
+        5. On error: execute onError hook and wrap in SamaraJobError
+        6. Finally: execute onFinally hook and clear all registries
 
-        After execution completes (success or failure), clears all DataFrames and
-        streaming queries from registries to free memory and prevent data leakage
-        between jobs.
+        After execution completes (success or failure), automatically clears
+        all DataFrames and streaming queries from engine registries to free
+        memory and prevent data leakage between jobs.
 
         Raises:
-            SamaraJobError: Wraps configuration and I/O exceptions with context,
-                preserving the original exception as the cause.
+            SamaraJobError: Wraps ValueError, KeyError, or OSError exceptions
+                with context about the job, preserving the original exception
+                as the cause for debugging.
         """
         if not self.enabled:
             logger.info("Job '%s' is disabled. Skipping execution.", self.id_)
@@ -204,19 +344,24 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
 
     @abstractmethod
     def _execute(self) -> None:
-        """Execute the engine-specific ETL pipeline logic.
+        """Run engine-specific ETL pipeline logic.
 
-        This method must be implemented by each engine-specific job class
-        to handle the execution of the ETL pipeline using the appropriate
-        execution engine.
+        Implemented by each engine-specific job subclass to execute the
+        configured extract, transform, and load operations using the
+        appropriate execution engine (Spark, Polars, Pandas, etc.).
+
+        This is called automatically during job execution after validation.
         """
 
     @abstractmethod
     def _clear(self) -> None:
-        """Clear engine-specific registries to free memory.
+        """Clear engine registries and free execution resources.
 
-        This method must be implemented by each engine-specific job class
-        to clear all data registries (DataFrames, streaming queries, etc.)
-        after job execution completes. This ensures memory is freed and
-        prevents data leakage between jobs.
+        Implemented by each engine-specific job subclass to clean up all
+        data registries (DataFrames, streaming queries, temporary objects)
+        after job execution completes. Prevents memory leaks and ensures
+        data doesn't leak between independent job executions.
+
+        This is always called during the finally block of execute(),
+        regardless of success or failure.
         """

@@ -1,8 +1,8 @@
-"""Runtime configuration module for the Samara ETL framework.
+"""Runtime controller - Manage ETL pipeline configuration and execution.
 
 This module provides runtime configuration management using Pydantic models
-for type safety and validation. It includes the main Runtime class that holds
-the global configuration state for the framework.
+for type safety and validation. It enables pipeline authors to define job
+execution sequences through configuration files in JSON or YAML formats.
 """
 
 from pathlib import Path
@@ -23,37 +23,84 @@ RUNTIME: Final = "runtime"
 
 
 class PreserveFieldOrderJsonSchema(GenerateJsonSchema):
-    """Custom JSON schema generator that preserves field order as defined in code.
+    """Preserve field definition order in JSON schema generation.
 
-    By default, Pydantic sorts JSON schema keys alphabetically. This custom generator
-    disables sorting to preserve the order of fields as they appear in the model definition.
+    By default, Pydantic sorts JSON schema keys alphabetically. This custom
+    generator preserves the order of fields as they appear in model definitions,
+    making schema outputs more readable and consistent with configuration intent.
     """
 
     def sort(self, value: JsonSchemaValue, parent_key: str | None = None) -> JsonSchemaValue:
-        """No-op sort to preserve field definition order.
+        """Return unmodified JSON schema value to preserve field order.
 
         Args:
-            value: The JSON schema value to sort (not sorted in this implementation).
-            parent_key: Optional parent key context.
+            value: The JSON schema value (not sorted in this implementation).
+            parent_key: Optional parent key context (unused).
 
         Returns:
-            The unmodified value, preserving original field order.
+            The unmodified value, preserving original field definition order.
         """
         _ = parent_key
         return value
 
 
 class RuntimeController(BaseModel):
-    """Main runtime configuration class for the Samara ETL framework.
+    """Configure and execute ETL pipeline jobs.
 
     This class serves as the central configuration holder for the entire
-    framework, providing type-safe access to global settings and components.
+    framework, enabling pipeline authors to define job sequences through
+    declarative configuration. It provides type-safe access to global settings
+    and orchestrates job execution within the ETL pipeline.
 
     Attributes:
-        id: Unique identifier for the runtime configuration
-        description: Description of the runtime configuration
-        enabled: Whether this runtime is enabled
-        jobs: List of jobs to execute in the ETL pipeline
+        id_: Unique identifier for the runtime configuration instance.
+        description: Human-readable description of the runtime purpose.
+        enabled: Whether this runtime should execute its jobs.
+        jobs: List of jobs to execute sequentially in the pipeline.
+
+    Example:
+        >>> config_path = Path("pipeline_config.json")
+        >>> runtime = RuntimeController.from_file(config_path)
+        >>> runtime.execute_all()
+
+        **Configuration in JSON:**
+        ```
+        {
+            "runtime": {
+                "id": "daily_etl_pipeline",
+                "description": "Daily data processing pipeline",
+                "enabled": true,
+                "jobs": [
+                    {
+                        "type": "job",
+                        "id": "load_customers",
+                        "extracts": [...],
+                        "transforms": [...],
+                        "loads": [...]
+                    }
+                ]
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        runtime:
+          id: daily_etl_pipeline
+          description: Daily data processing pipeline
+          enabled: true
+          jobs:
+            - type: job
+              id: load_customers
+              extracts: [...]
+              transforms: [...]
+              loads: [...]
+        ```
+
+    Note:
+        Each job in the pipeline is executed sequentially. If any job fails,
+        execution stops and an exception is raised. Jobs are responsible for
+        clearing their own engine-specific registries after execution.
     """
 
     id_: str = Field(..., alias="id", description="Unique identifier for the runtime configuration", min_length=1)
@@ -63,19 +110,34 @@ class RuntimeController(BaseModel):
 
     @classmethod
     def from_file(cls, filepath: Path) -> Self:
-        """Create an RuntimeManager instance from a configuration file.
+        """Load runtime configuration from a file.
 
-        Loads and parses a configuration file to create an RuntimeManager instance.
+        Reads and parses a configuration file (JSON or YAML) to create a fully
+        configured RuntimeController instance. Automatically detects file format
+        and handles deserialization, validation, and error reporting.
 
         Args:
-            filepath: Path to the configuration file.
+            filepath: Path to the configuration file (JSON or YAML format).
 
         Returns:
-            A fully configured RuntimeManager instance.
+            A fully configured RuntimeController instance ready for execution.
 
         Raises:
-            SamaraIOError: If there are file I/O related issues (file not found, permission denied, etc.)
-            SamaraRuntimeConfigurationError: If there are configuration parsing or validation issues
+            SamaraIOError: If file I/O fails (file not found, permission denied,
+                unreadable format, etc.).
+            SamaraRuntimeConfigurationError: If the file is missing the required
+                'runtime' section or contains invalid configuration data.
+
+        Example:
+            >>> from pathlib import Path
+            >>> config_file = Path("config.json")
+            >>> runtime = RuntimeController.from_file(config_file)
+            >>> runtime.execute_all()
+
+        Note:
+            The configuration file must contain a top-level 'runtime' key
+            with all required RuntimeController fields (id, description,
+            enabled, jobs).
         """
         logger.info("Creating RuntimeManager from file: %s", filepath)
 
@@ -99,34 +161,53 @@ class RuntimeController(BaseModel):
 
     @classmethod
     def export_schema(cls) -> dict[str, Any]:
-        """Export the JSON schema for the RuntimeController model.
+        """Export JSON schema for configuration documentation and validation.
 
-        Returns the complete JSON schema definition for the RuntimeController,
-        including all nested models and their validation rules. This schema
-        can be used for documentation, validation, or generating configuration
-        templates.
-
-        The schema preserves the order of fields as they are defined in the model,
-        rather than sorting them alphabetically.
+        Generate the complete JSON schema definition for RuntimeController,
+        including all nested models and validation rules. The schema preserves
+        field definition order for improved readability and can be used for
+        documentation generation, IDE autocompletion, and configuration validation.
 
         Returns:
-            dict[str, Any]: The JSON schema dictionary conforming to JSON Schema Draft 2020-12.
+            Complete JSON schema dictionary (JSON Schema Draft 2020-12 format)
+            with all field definitions, constraints, and descriptions.
 
         Example:
             >>> schema = RuntimeController.export_schema()
             >>> print(schema['properties']['id']['type'])
             'string'
+            >>> print(schema['required'])
+            ['id', 'description', 'enabled', 'jobs']
+
+        Note:
+            This schema is useful for generating configuration templates,
+            validating external configuration sources, or providing IDE hints
+            for configuration files.
         """
         logger.debug("Exporting RuntimeController JSON schema")
         return cls.model_json_schema(schema_generator=PreserveFieldOrderJsonSchema)
 
     def execute_all(self) -> None:
-        """Execute all jobs in the ETL pipeline.
+        """Execute all jobs in the ETL pipeline sequentially.
 
-        Executes each job in the ETL instance by calling their execute method.
+        Iterates through all configured jobs in order and executes each one.
         Each job is responsible for clearing its own engine-specific registries
-        after execution completes.
-        Raises an exception if any job fails during execution.
+        after execution completes. If any job fails, execution stops immediately
+        and an exception is raised.
+
+        Note:
+            - Respects the 'enabled' flag; returns early if disabled
+            - Logs progress for each job execution
+            - Jobs execute sequentially; parallel execution not supported
+            - Each job must handle its own engine cleanup after execution
+
+        Raises:
+            Any exception raised by individual job.execute() calls during
+            pipeline execution.
+
+        Example:
+            >>> runtime = RuntimeController.from_file(Path("config.json"))
+            >>> runtime.execute_all()
         """
         if not self.enabled:
             logger.info("Runtime is disabled")
@@ -137,7 +218,5 @@ class RuntimeController(BaseModel):
         for i, job in enumerate(self.jobs):
             logger.info("Executing job %d/%d: %s", i + 1, len(self.jobs), job.id_)
             job.execute()
-
-        logger.info("All jobs in ETL pipeline executed successfully")
 
         logger.info("All jobs in ETL pipeline executed successfully")
