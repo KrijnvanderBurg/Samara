@@ -1,11 +1,8 @@
-"""Filter/where transform function.
+"""Filter transform implementation.
 
-This module provides a transform function for filtering rows in a DataFrame
-based on a specified condition, enabling WHERE-like functionality in the ETL pipeline.
-
-The FilterFunction is registered with the TransformFunctionRegistry under
-the name 'filter', making it available for use in configuration files.
-"""
+This module provides row filtering capabilities for data pipelines, enabling
+users to retain only rows matching specified conditions through configuration-
+driven filtering."""
 
 import logging
 from collections.abc import Callable
@@ -20,55 +17,106 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class FilterFunction(FilterFunctionModel, FunctionSpark):
-    """Function that filters rows from a DataFrame based on a condition.
+    """Filter rows from a DataFrame based on a condition.
 
-    This transform function allows for filtering rows from a DataFrame
-    based on a specified condition, similar to the WHERE clause in SQL.
+    Applies a boolean condition to filter rows from the input DataFrame,
+    similar to the WHERE clause in SQL. This enables efficient data reduction
+    by removing unwanted rows early in the pipeline, improving downstream
+    performance and focusing data flow on relevant records.
 
     Attributes:
-        function: The name of the function (always "filter")
-        arguments: Container for the filter parameters
+        function: The transform name (always "filter").
+        arguments: Configuration specifying the filter condition.
+        data_registry: Shared registry for accessing and storing DataFrames.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "transforms": [
+                {
+                    "id": "filter-adults",
+                    "upstream_id": "extract-users",
+                    "options": {},
+                    "functions": [
+                        {
+                            "function_type": "filter",
+                            "arguments": {
+                                "condition": "age > 18"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        transforms:
+          - id: filter-adults
+            upstream_id: extract-users
+            options: {}
+            functions:
+              - function_type: filter
+                arguments:
+                  condition: age > 18
+        ```
+
+    Note:
+        The condition must be a valid PySpark SQL expression that evaluates
+        to a boolean. Refer to PySpark DataFrame API documentation for
+        supported functions and syntax.
     """
 
     def transform(self) -> Callable:
-        """Apply the filter transformation to the DataFrame.
+        """Build and return a filter transformation function.
 
-        This method extracts the filter condition from the model
-        and applies it to the DataFrame, returning only the rows that
-        satisfy the condition.
+        Returns a callable that applies the configured condition to filter
+        rows from an input DataFrame. Rows matching the condition are retained,
+        while non-matching rows are removed.
 
         Returns:
-            A callable function that performs the filtering when applied
-            to a DataFrame
+            A callable that accepts a DataFrame and returns a new DataFrame
+            containing only rows where the condition evaluates to true.
 
-        Examples:
-            Consider the following DataFrame:
-
+        Example:
+            Input DataFrame:
             ```
             +----+-------+---+
-            |id  |name   |age|
+            | id | name  |age|
             +----+-------+---+
-            |1   |John   |25 |
-            |2   |Jane   |17 |
-            |3   |Bob    |42 |
-            |4   |Alice  |15 |
+            | 1  | John  |25 |
+            | 2  | Jane  |17 |
+            | 3  | Bob   |42 |
+            | 4  | Alice |15 |
             +----+-------+---+
             ```
 
-            Applying the filter function with condition "age > 18":
-
+            Configuration:
             ```
-            {"function": "filter", "arguments": {"condition": "age > 18"}}
+            {
+                "id": "filter-adults",
+                "upstream_id": "extract-users",
+                "options": {},
+                "functions": [
+                    {
+                        "function_type": "filter",
+                        "arguments": {
+                            "condition": "age > 18"
+                        }
+                    }
+                ]
+            }
             ```
 
-            The resulting DataFrame will be:
-
+            Output DataFrame:
             ```
             +----+-------+---+
-            |id  |name   |age|
+            | id | name  |age|
             +----+-------+---+
-            |1   |John   |25 |
-            |3   |Bob    |42 |
+            | 1  | John  |25 |
+            | 3  | Bob   |42 |
             +----+-------+---+
             ```
         """

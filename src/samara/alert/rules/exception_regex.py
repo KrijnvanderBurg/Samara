@@ -1,7 +1,8 @@
-"""Exception regex rule for alert triggers.
+"""Exception regex rule - Match exception messages against regex patterns.
 
-This module implements a rule that matches exception messages against
-regular expression patterns.
+This module provides a rule implementation that evaluates exceptions by
+testing their messages against configurable regular expression patterns,
+enabling flexible exception-based alert triggering in data pipelines.
 """
 
 import logging
@@ -9,6 +10,7 @@ import re
 from typing import Literal
 
 from pydantic import Field
+
 from samara.alert.rules.base import AlertRule
 from samara.utils.logger import get_logger
 
@@ -16,23 +18,68 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class ExceptionRegexRule(AlertRule):
-    """Rule that matches exception messages against regular expressions.
+    """Match exception messages against regular expression patterns.
 
-    This rule evaluates to True if the exception message matches
-    the configured regular expression pattern.
+    This rule evaluates to True if the exception message matches the
+    configured regular expression pattern. This enables dynamic alert
+    triggering based on exception message content without modifying
+    pipeline code.
+
+    Attributes:
+        rule_type: Discriminator for rule type selection (always "exception_regex").
+        pattern: Regular expression pattern to match against exception messages.
+            If empty, the rule evaluates to True (no filtering).
+
+    Example:
+        >>> from samara.alert.rules import ExceptionRegexRule
+        >>> rule = ExceptionRegexRule(
+        ...     rule_type="exception_regex",
+        ...     pattern=r".*connection.*timeout.*"
+        ... )
+        >>> rule.evaluate(Exception("Connection timeout occurred"))
+        True
+
+        **Configuration in JSON:**
+        ```
+        {
+            "rules": [
+                {
+                    "rule_type": "exception_regex",
+                    "pattern": ".*connection.*timeout.*"
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        rules:
+          - rule_type: exception_regex
+            pattern: ".*connection.*timeout.*"
+        ```
+
+    Note:
+        Pattern matching is performed using Python's `re.search()`, which
+        finds the pattern anywhere in the exception message. Use anchors
+        (^ and $) for exact matching if needed.
     """
 
     rule_type: Literal["exception_regex"] = Field(..., description="Rule type discriminator")
     pattern: str = Field(..., description="Regular expression pattern to match against exception messages")
 
     def evaluate(self, exception: Exception) -> bool:
-        """Evaluate if the exception message matches the regex pattern.
+        """Determine if the exception message matches the regex pattern.
+
+        Evaluates the exception by testing its string representation against
+        the configured regular expression pattern using Python's `re.search()`.
+        If no pattern is configured, returns True (no filtering applied).
 
         Args:
-            exception: The exception to check
+            exception: The exception to evaluate against the pattern.
 
         Returns:
-            True if the message matches the regex, False otherwise
+            True if the pattern matches the exception message or no pattern
+            is configured, False if the pattern does not match.
         """
         if not self.pattern:
             logger.debug("No exception_regex pattern configured; skipping regex check.")

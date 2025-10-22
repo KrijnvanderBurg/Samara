@@ -1,40 +1,85 @@
-"""Configuration model for the drop transform function.
+"""Column removal transform configuration models.
 
-This module defines the data models used to configure drop
-transformations in the ingestion framework. It includes:
-
-- DropFunctionModel: Main configuration model for drop operations
-- DropArgs: Container for the drop parameters
-
-These models provide a type-safe interface for configuring column removal
-from configuration files or dictionaries.
+This module defines the data models for configuring column removal
+transformations in data pipelines, enabling users to specify which columns
+to drop from the output DataFrame.
 """
 
 from typing import Literal
 
 from pydantic import Field
+
 from samara.runtime.jobs.models.model_transform import ArgsModel, FunctionModel
 
 
 class DropArgs(ArgsModel):
-    """Arguments for drop transform operations.
+    """Arguments for column removal transform operations.
+
+    Specifies which columns to remove from the input DataFrame.
 
     Attributes:
-        columns: List of column names to drop from the DataFrame
+        columns: List of column names to drop. Must include at least one
+            column. Columns are removed in a single operation.
+
+    Example:
+        >>> args = DropArgs(columns=["temp_id", "internal_flag"])
+        >>> print(args.columns)
+        ["temp_id", "internal_flag"]
+
+    Note:
+        Column names must exist in the input DataFrame. Attempting to drop
+        non-existent columns will cause the transform to fail during execution.
     """
 
     columns: list[str] = Field(..., description="List of column names to drop from the DataFrame", min_length=1)
 
 
 class DropFunctionModel(FunctionModel[DropArgs]):
-    """Configuration model for drop transform operations.
+    """Configuration model for column removal transform operations.
 
-    This model defines the structure for configuring a drop
-    transformation, specifying which columns to remove from the DataFrame.
+    Defines the structure for removing specific columns from the input
+    DataFrame. This transform narrows the output by excluding the requested
+    columns while preserving all others and their order.
 
     Attributes:
-        function_type: The name of the function to be used (always "drop")
-        arguments: Container for the drop parameters
+        function_type: The transform type identifier (always "drop").
+        arguments: Parameters specifying which columns to remove.
+
+    Example:
+        >>> config = {
+        ...     "function_type": "drop",
+        ...     "arguments": {"columns": ["temp_id", "debug_flag"]}
+        ... }
+        >>> model = DropFunctionModel(**config)
+
+        **Configuration in JSON:**
+        ```
+        {
+            "transforms": [
+                {
+                    "function_type": "drop",
+                    "arguments": {
+                        "columns": ["temp_id", "internal_flag", "debug_mode"]
+                    }
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        transforms:
+          - function_type: drop
+            arguments:
+              columns:
+                - temp_id
+                - internal_flag
+                - debug_mode
+        ```
+
+    See Also:
+        SelectFunctionModel: For selecting specific columns instead of dropping.
+        DropDuplicatesFunctionModel: For removing duplicate rows.
     """
 
     function_type: Literal["drop"] = "drop"

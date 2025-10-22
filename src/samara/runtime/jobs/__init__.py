@@ -1,7 +1,14 @@
-"""Job union types for the Samara ETL framework.
+"""Job type definitions for runtime pipeline execution.
 
-This module provides the discriminated union of all job types.
-It's separate from the base models to avoid circular import issues.
+This module provides the discriminated union of all available job types,
+allowing the runtime to support multiple processing engines. The types are
+defined separately from base models to prevent circular import issues and
+maintain clean module boundaries.
+
+Note:
+    Currently supports Spark-based jobs. As additional engines (Polars,
+    Dask, etc.) are implemented, this module will expand the union type
+    to include all available job types with proper discriminator support.
 """
 
 from samara.runtime.jobs.spark.job import JobSpark

@@ -1,13 +1,16 @@
-"""Custom exceptions for the ingestion framework.
+"""Custom exceptions for the data pipeline framework.
 
 This module defines specialized exception classes used throughout the framework
-to provide more detailed error information and improved error handling.
+to provide detailed error information and enable granular error handling.
 
-Custom exceptions help with:
-- Providing more context about errors
-- Enabling specific error handling for different error types
-- Improving debugging by identifying the exact cause of failures
-- Associating exceptions with appropriate exit codes
+Benefits of using custom exceptions:
+- Associate exceptions with semantic exit codes for CLI integration
+- Enable specific error handling for different failure scenarios
+- Provide context-rich information for debugging and logging
+- Follow Unix exit code conventions for better system integration
+
+Each exception type maps to a specific exit code, allowing the CLI to report
+meaningful error states to the operating system.
 """
 
 import enum
@@ -17,16 +20,10 @@ K = TypeVar("K")  # Key type
 
 
 class ExitCode(enum.IntEnum):
-    """Exit codes for the application.
+    """Define standardized exit codes for application termination.
 
-    These codes follow common Unix/Linux conventions:
-    - 0: Success
-    - 1-63: Application-specific error codes
-    - 64-127: Command-specific error codes
-
-    References:
-        - https://tldp.org/LDP/abs/html/exitcodes.html
-        - https://www.freebsd.org/cgi/man.cgi?query=sysexits&sektion=3
+    Map semantic error conditions to Unix/Linux exit code conventions, enabling
+    scripts and tools to programmatically handle different failure scenarios.
     """
 
     SUCCESS = 0
@@ -44,111 +41,122 @@ class ExitCode(enum.IntEnum):
 
 
 class SamaraError(Exception):
-    """Base exception for all Samara-specific exceptions.
+    """Base exception for all framework-specific errors.
 
-    Provides common functionality for all Samara exceptions, including
-    association with an exit code. Use with Python's built-in exception
-    chaining by raising with the `from` keyword.
-
-    The exit_code attribute serves two key purposes:
-    1. It allows the CLI to map exceptions to appropriate system exit codes
-    2. It provides semantic meaning to different error types
-
-    This design separates error detection (exceptions) from error handling (exit codes),
-    following the separation of concerns principle.
+    Associates exceptions with exit codes for CLI integration and provides
+    a foundation for granular error handling throughout the pipeline.
 
     Attributes:
         exit_code: The exit code associated with this exception
 
     Example:
-        ```python
-        try:
-            # Some operation that might fail
-            process_data(file_path)
-        except IOError as e:
-            # Chain the exception to preserve the original cause
-            raise ConfigurationError(f"Cannot process configuration: {file_path}") from e
-        ```
+        >>> try:
+        ...     process_pipeline(config)
+        ... except SamaraError as e:
+        ...     sys.exit(e.exit_code)
     """
 
     def __init__(self, message: str, exit_code: ExitCode) -> None:
-        """Initialize SamaraException.
+        """Initialize the exception with a message and exit code.
 
         Args:
-            message: The exception message
-            exit_code: The exit code associated with this exception
+            message: Description of the error condition
+            exit_code: The exit code to report on termination
         """
         self.exit_code = exit_code
         super().__init__(message)
 
 
 class SamaraIOError(SamaraError):
-    """Exception raised for I/O errors."""
+    """Raise when file system or I/O operations fail.
+
+    Covers file access, read/write errors, and resource unavailability.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize ValidationError.
+        """Initialize the exception.
 
         Args:
-            message: The exception message
+            message: Description of the I/O error
         """
         super().__init__(message=message, exit_code=ExitCode.IO_ERROR)
 
 
 class SamaraAlertConfigurationError(SamaraError):
-    """Exception raised for configuration-related errors."""
+    """Raise when alert configuration is invalid.
+
+    Indicates issues with alert definition JSON/YAML including invalid
+    channels, triggers, or template configuration.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize ConfigurationError.
+        """Initialize the exception.
 
         Args:
-            message: The exception message
+            message: Description of the configuration error
         """
         super().__init__(message=message, exit_code=ExitCode.CONFIGURATION_ERROR)
 
 
 class SamaraRuntimeConfigurationError(SamaraError):
-    """Exception raised for configuration-related errors."""
+    """Raise when runtime configuration is invalid.
+
+    Indicates issues with job, extract, transform, or load configuration
+    including missing required fields or incompatible settings.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize ConfigurationError.
+        """Initialize the exception.
 
         Args:
-            message: The exception message
+            message: Description of the configuration error
         """
         super().__init__(message=message, exit_code=ExitCode.CONFIGURATION_ERROR)
 
 
 class SamaraValidationError(SamaraError):
-    """Exception raised for validation failures."""
+    """Raise when data or schema validation fails.
+
+    Occurs during pipeline execution when input data doesn't conform to
+    expected schemas or validation rules fail.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize ValidationError.
+        """Initialize the exception.
 
         Args:
-            message: The exception message
+            message: Description of the validation error
         """
         super().__init__(message=message, exit_code=ExitCode.VALIDATION_ERROR)
 
 
 class SamaraAlertTestError(SamaraError):
-    """Exception raised for validation failures."""
+    """Raise when alert system testing fails.
+
+    Indicates failure during alert channel validation or test execution,
+    including delivery failures or notification errors.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize ValidationError.
+        """Initialize the exception.
 
         Args:
-            message: The exception message
+            message: Description of the alert test error
         """
         super().__init__(message=message, exit_code=ExitCode.ALERT_TEST_ERROR)
 
 
 class SamaraJobError(SamaraError):
-    """Exception raised for errors related to the ETL process."""
+    """Raise when ETL job execution fails.
+
+    Covers errors during data extraction, transformation, or loading phases
+    including engine failures or transformation logic errors.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize E.
+        """Initialize the exception.
 
         Args:
-            message: The exception message
+            message: Description of the job execution error
         """
         super().__init__(message=message, exit_code=ExitCode.JOB_ERROR)

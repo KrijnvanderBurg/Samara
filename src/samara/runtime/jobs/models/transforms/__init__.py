@@ -1,6 +1,13 @@
-"""Transform function models with discriminated union support.
+"""Transform function models - Configuration-driven data transformation definitions.
 
-This module provides imports for transform function models and their arguments.
+This module provides unified access to all transform function models that enable
+pipeline authors to define data transformations declaratively through configuration.
+Each model represents a specific transformation operation (cast, filter, select, etc.)
+that can be composed into complex processing chains.
+
+The models use discriminated unions to support type-safe, configuration-driven
+pipeline execution across different engines while maintaining consistent interfaces
+for both JSON and YAML configuration formats.
 """
 
 from .model_cast import CastFunctionModel

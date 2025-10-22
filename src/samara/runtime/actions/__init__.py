@@ -1,14 +1,14 @@
-"""HTTP actions and other action implementations for Spark.
+"""Event hook actions - Register available action types for pipeline event handlers.
 
-This module imports all available action functions to register them with the
-HooksActionsUnion. Each action function is automatically registered
-when imported.
+This module provides the action types that can be triggered by pipeline events
+(onStart, onSuccess, onFailure, onFinally). It enables pipeline authors to
+configure external integrations and notifications at key execution points
+through the configuration-driven pipeline definition.
 """
 
 from samara.runtime.actions.http import HttpAction
 
-# from samara.runtime.actions.move_or_copy_job_files import MoveOrCopyJobFiles
-
-# When there's only one action type, use it directly
-# When there are multiple, use: Annotated[HttpAction | OtherAction, Discriminator("action")]
+# Register HttpAction as the available action type for pipeline event hooks.
+# When additional action types are implemented, combine them using a union
+# with Annotated and Discriminator: Annotated[HttpAction | OtherAction, Discriminator("action_type")]
 HooksActionsUnion = HttpAction

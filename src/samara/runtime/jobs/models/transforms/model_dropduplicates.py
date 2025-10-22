@@ -1,27 +1,47 @@
-"""Configuration model for the dropDuplicates transform function.
+"""Configure dropDuplicates transformations for duplicate row removal.
 
-This module defines the data models used to configure dropDuplicates
-transformations in the ingestion framework. It includes:
-
-- DropDuplicatesFunctionModel: Main configuration model for dropDuplicates operations
-- DropDuplicatesArgs: Container for the dropDuplicates parameters
-
-These models provide a type-safe interface for configuring duplicate row removal
-from configuration files or dictionaries.
+This module provides models for defining dropDuplicates operations,
+enabling you to remove duplicate rows based on specified columns
+or across all columns in a data pipeline configuration.
 """
 
 from typing import Literal
 
 from pydantic import Field
+
 from samara.runtime.jobs.models.model_transform import ArgsModel, FunctionModel
 
 
 class DropDuplicatesArgs(ArgsModel):
-    """Arguments for dropDuplicates transform operations.
+    """Arguments for the dropDuplicates transformation.
+
+    Specifies which columns to consider when identifying and removing
+    duplicate rows. When columns is empty, all columns are considered
+    for duplicate detection.
 
     Attributes:
-        columns: List of column names to consider when dropping duplicates.
-                If empty list, all columns are considered.
+        columns: List of column names to compare for duplicate detection.
+            An empty list removes duplicates based on all columns.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "function": "dropDuplicates",
+            "arguments": {
+                "columns": ["customer_id", "email"]
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        function: dropDuplicates
+        arguments:
+            columns:
+              - customer_id
+              - email
+        ```
     """
 
     columns: list[str] = Field(
@@ -33,14 +53,44 @@ class DropDuplicatesArgs(ArgsModel):
 
 
 class DropDuplicatesFunctionModel(FunctionModel[DropDuplicatesArgs]):
-    """Configuration model for dropDuplicates transform operations.
+    """Configure a dropDuplicates transformation in a data pipeline.
 
-    This model defines the structure for configuring a dropDuplicates
-    transformation, specifying which columns to consider when identifying duplicates.
+    Remove duplicate rows from a dataset based on specified columns.
+    This transformation identifies and retains only the first occurrence
+    of each unique row combination.
 
     Attributes:
-        function_type: The name of the function to be used (always "dropDuplicates")
-        arguments: Container for the dropDuplicates parameters
+        function_type: The transform operation identifier (always "dropDuplicates").
+        arguments: Parameters for the dropDuplicates operation.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "transforms": [
+                {
+                    "function": "dropDuplicates",
+                    "arguments": {
+                        "columns": ["user_id"]
+                    }
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        transforms:
+          - function: dropDuplicates
+            arguments:
+                columns:
+                  - user_id
+        ```
+
+    Note:
+        When columns is empty, the transformation considers all columns
+        to detect duplicates. This operation is engine-agnostic and works
+        with both Pandas and Polars backends.
     """
 
     function_type: Literal["dropDuplicates"] = "dropDuplicates"

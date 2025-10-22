@@ -1,11 +1,10 @@
-"""Alert manager for handling notification configurations and trigger.
+"""Alert controller - Orchestrate alert processing and notification delivery.
 
-This module provides the main AlertManager class that orchestrates alert
-processing and trigger based on configuration. It serves as the root object
-for the alert system, managing templates, channels, and trigger rules.
-
-The AlertManager uses the from_dict classmethod pattern consistent with other
-components in the Samara framework to create instances from configuration data.
+This module provides the AlertController class that coordinates alert
+processing, channel management, and trigger-based notification delivery
+from configuration. It enables declarative alert workflows where
+pipeline authors define channels, rules, and conditions through JSON or YAML
+configuration files rather than code.
 """
 
 import logging
@@ -13,6 +12,7 @@ from pathlib import Path
 from typing import Any, Final, Self
 
 from pydantic import Field, ValidationError
+
 from samara import BaseModel
 from samara.alert.channels import channel_union
 from samara.alert.trigger import AlertTrigger
@@ -26,15 +26,87 @@ ALERT: Final = "alert"
 
 
 class AlertController(BaseModel):
-    """Main alert manager that coordinates alert processing and triggering.
+    """Coordinate alert channels, trigger rules, and notification delivery.
 
-    This class serves as the root object for the alert system, managing the
-    configuration and coordination of templates, channels, and trigger rules.
-    It implements the Model interface to support configuration-driven initialization.
+    The AlertController is the root component of the alert system that manages
+    alert channels (email, HTTP, file), trigger rules that determine when to
+    alert, and templates for formatting alert messages. It evaluates conditions
+    on pipeline events and delivers notifications through configured channels.
 
     Attributes:
-        channels: List of alert channels for handling different alert destinations
-        triggers: Rules for determining which channels to use for specific alerts
+        channels: List of configured alert channels (email, HTTP, file, etc.)
+            for handling different alert destinations and delivery mechanisms.
+        triggers: List of alert trigger rules that evaluate pipeline events
+            and determine which channels should receive notifications.
+
+    Example:
+        Pipeline authors configure alerts in the pipeline definition file:
+
+        **Configuration in JSON:**
+        ```
+            {
+                "alert": {
+                    "channels": [
+                        {
+                            "id": "email_alerts",
+                            "type": "email",
+                            "recipients": ["ops@example.com"],
+                            "fromAddress": "alerts@pipeline.local"
+                        },
+                        {
+                            "id": "http_webhook",
+                            "type": "http",
+                            "url": "https://hooks.example.com/alerts",
+                            "method": "POST",
+                            "retryPolicy": {
+                                "maxAttempts": 3,
+                                "backoffMs": 1000
+                            }
+                        }
+                    ],
+                    "triggers": [
+                        {
+                            "id": "on_failure",
+                            "when": ["PipelineFailure"],
+                            "channelIds": ["email_alerts", "http_webhook"],
+                            "templateId": "failure_template"
+                        }
+                    ]
+                }
+            }
+        ```
+
+        **Configuration in YAML:**
+        ```
+            alert:
+              channels:
+                - id: email_alerts
+                  type: email
+                  recipients:
+                    - ops@example.com
+                  fromAddress: alerts@pipeline.local
+                - id: http_webhook
+                  type: http
+                  url: https://hooks.example.com/alerts
+                  method: POST
+                  retryPolicy:
+                    maxAttempts: 3
+                    backoffMs: 1000
+              triggers:
+                - id: on_failure
+                  when:
+                    - PipelineFailure
+                  channelIds:
+                    - email_alerts
+                    - http_webhook
+                  templateId: failure_template
+        ```
+
+    Note:
+        The alert section must be defined at the root level of the pipeline
+        configuration file. Channels and triggers are evaluated in the order
+        defined. Each trigger references channel IDs that must exist in the
+        channels list, otherwise validation will fail.
     """
 
     channels: list[channel_union] = Field(..., description="List of configured channels")
@@ -42,19 +114,36 @@ class AlertController(BaseModel):
 
     @classmethod
     def from_file(cls, filepath: Path) -> Self:
-        """Create an AlertManager instance from a configuration file.
+        """Load alert configuration from a JSON or YAML file.
 
-        Loads and parses a configuration file to create an AlertManager instance.
+        Reads and parses an alert configuration file, then instantiates an
+        AlertController with the defined channels, triggers, and rules. Supports
+        both JSON and YAML formats with automatic detection based on file extension.
 
         Args:
-            filepath: Path to the configuration file.
+            filepath: Path to the alert configuration file (JSON or YAML format).
+                The file must contain an "alert" key at the root level with
+                "channels" and "triggers" sections.
 
         Returns:
-            A fully configured AlertManager instance.
+            Fully configured AlertController instance ready for processing alerts.
 
         Raises:
-            SamaraIOError: If there are file I/O related issues (file not found, permission denied, etc.)
-            SamaraAlertConfigurationError: If there are configuration parsing or validation issues
+            SamaraIOError: If file cannot be read (file not found, permission denied,
+                read timeout, etc.) or if the file is not valid JSON/YAML.
+            SamaraAlertConfigurationError: If the configuration is invalid, missing
+                the required "alert" section, or contains invalid channel/trigger
+                definitions that fail validation.
+
+        Example:
+            >>> alert_config = AlertController.from_file(
+            ...     Path("pipeline/config/alerts.json")
+            ... )
+            >>> alert_config.evaluate_trigger_and_alert(
+            ...     title="Pipeline Failed",
+            ...     body="Check logs for details",
+            ...     exception=RuntimeError("Transform failed")
+            ... )
         """
         logger.info("Creating AlertManager from file: %s", filepath)
 
@@ -75,12 +164,37 @@ class AlertController(BaseModel):
             raise SamaraAlertConfigurationError(f"Invalid alert configuration in file '{filepath}': {e}") from e
 
     def evaluate_trigger_and_alert(self, title: str, body: str, exception: Exception) -> None:
-        """Process and send an alert to all channels as defined by enabled trigger rules.
+        """Evaluate trigger conditions and deliver alerts through matched channels.
+
+        Iterates through configured trigger rules, evaluates their conditions
+        against the provided exception, and sends formatted alerts through all
+        channels specified in matching triggers. This method enables event-driven
+        notifications where pipeline failures, timeouts, or custom conditions
+        automatically trigger appropriate alerts.
 
         Args:
-            title: The alert title.
-            body: The alert message to send.
-            exception: The exception that triggered the alert.
+            title: Alert title/subject line. Will be formatted by trigger templates
+                before sending to channels.
+            body: Alert message body containing details about the event. Will be
+                formatted by trigger templates before sending to channels.
+            exception: Exception that triggered the alert. Trigger rules use
+                exception type and attributes to determine if conditions are met.
+
+        Example:
+            >>> try:
+            ...     process_data()
+            ... except Exception as e:
+            ...     alert_controller.evaluate_trigger_and_alert(
+            ...         title="Data Processing Failed",
+            ...         body=f"Error: {str(e)}",
+            ...         exception=e
+            ...     )
+
+        Note:
+            Only trigger rules whose conditions match the exception type will fire.
+            Each fired trigger sends the alert to all its configured channels.
+            Alerts are sent sequentially; a failure in one channel does not
+            prevent sending to subsequent channels.
         """
 
         for trigger in self.triggers:

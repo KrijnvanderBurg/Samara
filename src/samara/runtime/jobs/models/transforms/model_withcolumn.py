@@ -1,27 +1,45 @@
-"""Configuration model for the withColumn transform function.
+"""Define withColumn transform configurations.
 
-This module defines the data models used to configure withColumn
-transformations in the ingestion framework. It includes:
-
-- WithColumnFunctionModel: Main configuration model for withColumn operations
-- WithColumnArgs: Container for the withColumn parameters
-
-These models provide a type-safe interface for configuring column addition
-or replacement from configuration files or dictionaries.
+This module provides configuration models enabling pipeline authors to add,
+replace, or transform columns in data processing pipelines through
+configuration-driven specifications.
 """
 
 from typing import Literal
 
 from pydantic import Field
+
 from samara.runtime.jobs.models.model_transform import ArgsModel, FunctionModel
 
 
 class WithColumnArgs(ArgsModel):
-    """Arguments for withColumn transform operations.
+    """Specify the column name and expression for a withColumn operation.
 
     Attributes:
-        col_name: Name of the column to add or replace
-        col_expr: Column expression representing the value
+        col_name: Name of the column to add or replace. Used as the target
+            column identifier in the DataFrame.
+        col_expr: Column expression representing the value. Accepts SQL-like
+            expressions that will be evaluated during transformation.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "function": "withColumn",
+            "arguments": {
+                "colName": "customer_id",
+                "colExpr": "CAST(id AS STRING)"
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        function: withColumn
+        arguments:
+          colName: customer_id
+          colExpr: CAST(id AS STRING)
+        ```
     """
 
     col_name: str = Field(..., description="Name of the column to add or replace", min_length=1)
@@ -29,14 +47,40 @@ class WithColumnArgs(ArgsModel):
 
 
 class WithColumnFunctionModel(FunctionModel[WithColumnArgs]):
-    """Configuration model for withColumn transform operations.
+    """Configure a withColumn transformation operation.
 
-    This model defines the structure for configuring a withColumn
-    transformation, specifying the column name and expression.
+    This model defines the structure for specifying a column addition or
+    replacement transformation within a pipeline. It combines the function
+    type identifier with the withColumn-specific arguments.
 
     Attributes:
-        function_type: The name of the function to be used (always "withColumn")
-        arguments: Container for the withColumn parameters
+        function_type: The transform function identifier (always "withColumn").
+        arguments: Parameters controlling the column operation, including the
+            target column name and the expression to apply.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "function": "withColumn",
+            "arguments": {
+                "colName": "total_amount",
+                "colExpr": "quantity * unit_price"
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        function: withColumn
+        arguments:
+          colName: total_amount
+          colExpr: quantity * unit_price
+        ```
+
+    Note:
+        The withColumn operation adds a new column if it doesn't exist or
+        replaces the column if it already exists in the DataFrame.
     """
 
     function_type: Literal["withColumn"] = "withColumn"

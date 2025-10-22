@@ -1,6 +1,12 @@
-"""Samara CLI command definitions using Click library.
+"""CLI command definitions for configuration-driven pipeline management.
 
-Contains Click command implementations for validate, run, and export-schema operations.
+This module provides command-line interface commands for managing ETL pipelines
+through configuration files. It focuses on three core operations: validating
+pipeline configurations with optional alert testing, executing pipelines with
+integrated alerting, and exporting JSON schemas for configuration documentation.
+
+All commands support detailed error handling and proper exit codes to facilitate
+CI/CD integration and operational monitoring.
 """
 
 import json
@@ -9,6 +15,7 @@ import os
 from pathlib import Path
 
 import click
+
 from samara.alert import AlertController
 from samara.exceptions import (
     ExitCode,
@@ -34,7 +41,22 @@ logger: logging.Logger = get_logger(__name__)
     help="Set the logging level (default: INFO).",
 )
 def cli(log_level: str | None = None) -> None:
-    """Samara: Configuration-driven PySpark ETL framework."""
+    """Initialize the CLI group and configure logging.
+
+    Create the main command group for the CLI interface and set up logging
+    based on the specified level. This command group serves as the entry point
+    for all subcommands (validate, run, export-schema).
+
+    Args:
+        log_level: The logging level as a string. Must be one of DEBUG, INFO,
+            WARNING, ERROR, or CRITICAL (case-insensitive). Defaults to INFO
+            level if not specified.
+
+    Note:
+        The log level is set globally for all subsequent CLI operations.
+        Use DEBUG for detailed diagnostic information or INFO for standard
+        operational messages.
+    """
     set_logger(level=log_level)
 
 
@@ -69,7 +91,45 @@ def validate(
     test_exception: str | None,
     test_env_var: tuple[str, ...],
 ) -> None:
-    """Validate the ETL pipeline configuration."""
+    """Validate pipeline configuration files with optional alert testing.
+
+    Load and validate both alert and runtime configuration files to ensure they
+    conform to expected schemas and contain valid settings. This command performs
+    fail-fast validation without alerting on configuration errors (unlike the run
+    command), making it suitable for local development and CI/CD pipelines where
+    validation failures should not trigger alerts.
+
+    Optionally trigger a test alert to verify alert system functionality using
+    a test exception message or environment variables.
+
+    Args:
+        alert_filepath: Path to the alert configuration file in JSON or YAML
+            format. The file must exist and contain valid alert configuration
+            with triggers and channels.
+        runtime_filepath: Path to the runtime (ETL) configuration file in JSON
+            or YAML format. The file must exist and define valid pipeline
+            extracts, transforms, and loads.
+        test_exception: Optional test exception message string. When provided,
+            triggers a test alert to verify alert system functionality. If
+            provided with test_env_var, this takes precedence for the message.
+        test_env_var: Optional environment variables to set before validation
+            in KEY=VALUE format. Useful for testing environment-dependent
+            configurations without affecting system environment permanently.
+
+    Raises:
+        click.exceptions.Exit: Exits with appropriate exit code on error.
+            - ExitCode.SUCCESS: Validation passed
+            - ExitCode.IO_ERROR: Cannot access configuration files
+            - ExitCode.VALIDATION_ERROR: Configuration schema validation failed
+            - ExitCode.KEYBOARD_INTERRUPT: User interrupted execution
+            - ExitCode.UNEXPECTED_ERROR: Unexpected runtime error
+
+    Note:
+        This command does NOT send alerts on configuration errors, only on
+        test alerts if explicitly requested. This prevents alert fatigue
+        during development and validation cycles. For the actual pipeline
+        execution with alert integration, use the 'run' command.
+    """
     try:
         logger.info("Running 'validate' command...")
 
@@ -147,7 +207,37 @@ def validate(
     help="Path to runtime configuration file",
 )
 def run(alert_filepath: Path, runtime_filepath: Path) -> None:
-    """Run the ETL pipeline."""
+    """Execute the ETL pipeline with integrated alert monitoring.
+
+    Load runtime and alert configurations, then execute the complete ETL pipeline.
+    The pipeline processes all defined jobs in sequence, applying configured
+    transforms to ingest, transform, and load data according to specifications.
+    Errors during pipeline execution are captured and alerts are sent based on
+    configured alert rules and triggers.
+
+    Args:
+        alert_filepath: Path to the alert configuration file in JSON or YAML
+            format. Defines alert channels (email, HTTP, file) and trigger rules
+            that determine when and how alerts are sent during execution.
+        runtime_filepath: Path to the runtime configuration file in JSON or YAML
+            format. Defines the complete ETL pipeline including data sources,
+            transformation chains, and output destinations.
+
+    Raises:
+        click.exceptions.Exit: Exits with appropriate exit code on error.
+            - ExitCode.SUCCESS: Pipeline executed successfully
+            - ExitCode.IO_ERROR: Cannot access configuration files
+            - ExitCode.VALIDATION_ERROR: Configuration validation failed
+            - ExitCode.RUNTIME_ERROR: Error during pipeline execution
+            - ExitCode.KEYBOARD_INTERRUPT: User interrupted execution
+            - ExitCode.UNEXPECTED_ERROR: Unexpected runtime error
+
+    Note:
+        All exceptions during pipeline execution trigger alert evaluation,
+        allowing configured alert rules to send notifications based on
+        error type and severity. This enables operational visibility into
+        pipeline failures and automating incident response workflows.
+    """
     try:
         logger.info("Running 'run' command...")
         logger.info("Running ETL pipeline with config: %s", runtime_filepath)
@@ -213,7 +303,31 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
     help="Path where the JSON schema file will be saved",
 )
 def export_schema(output_filepath: Path) -> None:
-    """Export the runtime configuration JSON schema."""
+    """Generate and save the runtime configuration JSON schema.
+
+    Export the complete JSON Schema for runtime (ETL pipeline) configurations.
+    This schema documents all valid configuration keys, types, constraints, and
+    structure for pipeline definitions. The exported schema can be used for
+    configuration file validation, IDE auto-completion, and documentation.
+
+    Args:
+        output_filepath: Path where the JSON schema file will be written.
+            Parent directories are created if they do not exist. The file will
+            be formatted with 4-space indentation for readability.
+
+    Raises:
+        click.exceptions.Exit: Exits with appropriate exit code on error.
+            - ExitCode.SUCCESS: Schema exported successfully
+            - ExitCode.IO_ERROR: Cannot write schema file to specified path
+            - ExitCode.KEYBOARD_INTERRUPT: User interrupted execution
+            - ExitCode.UNEXPECTED_ERROR: Unexpected runtime error
+
+    Note:
+        The generated schema includes all supported transforms, source types,
+        and load destinations. Use this schema to validate custom runtime
+        configurations or integrate with schema validation tooling in your
+        development workflow.
+    """
     try:
         logger.info("Running 'export-schema' command...")
         logger.info("Exporting runtime configuration schema to: %s", output_filepath)

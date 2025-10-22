@@ -1,14 +1,17 @@
-"""PySpark session management utilities.
+"""PySpark session management for Samara pipelines.
 
-This module provides a singleton implementation of SparkSession management to ensure
-that only one active Spark context exists within the application. It includes:
+This module manages the Spark execution engine that processes data transformations.
+It ensures only one active Spark context exists to prevent resource conflicts and
+improve performance.
 
-- SparkHandler class for creating and accessing a shared SparkSession
-- Utility functions for configuring Spark with sensible defaults
-- Helper methods for common Spark operations
+Key features:
+- Lazy initialization of Spark sessions (only created when needed)
+- Automatic resource cleanup and management
+- Centralized configuration handling for Spark parameters
+- Seamless integration with Samara's configuration-driven pipeline model
 
-The singleton pattern ensures resource efficiency and prevents issues that can
-arise from multiple concurrent Spark contexts.
+The SparkHandler singleton ensures efficient resource usage across the entire
+pipeline lifecycle, whether running locally for testing or on distributed clusters.
 """
 
 import logging
@@ -23,21 +26,25 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class SparkHandler(metaclass=Singleton):
-    """Singleton handler for SparkSession management.
+    """Manages a single Spark execution engine for data processing.
 
-    Ensures that only one SparkSession is active throughout the application
-    lifecycle, preventing resource conflicts and improving performance.
+    SparkHandler ensures that your Samara pipeline uses exactly one Spark session,
+    preventing resource conflicts and improving performance. It automatically handles
+    Spark initialization and cleanup.
 
-    This class uses the Singleton metaclass to ensure that only one instance
-    is created regardless of how many times it's initialized.
+    Key responsibilities:
+    - Creates and maintains a single shared Spark session
+    - Applies configuration from your pipeline definition
+    - Handles resource cleanup when the pipeline completes
+    - Provides consistent access to the Spark engine across all pipeline stages
 
-    The SparkSession is created lazily on first access to avoid unnecessary
-    initialization when Spark is not actually used.
+    Under the hood, this uses the Singleton pattern to guarantee only one instance
+    exists, regardless of how many parts of your code reference it.
 
     Attributes:
-        _session: The managed PySpark SparkSession instance (created lazily)
-        _app_name: Application name for the SparkSession
-        _init_options: Initial configuration options for the SparkSession
+        _session: The active Spark session (created on first use, not at startup)
+        _app_name: Your application's name, used for job tracking in Spark
+        _init_options: Configuration settings from your pipeline definition
     """
 
     _session: SparkSession | None
@@ -49,14 +56,17 @@ class SparkHandler(metaclass=Singleton):
         app_name: str = "samara",
         options: dict[str, str] | None = None,
     ) -> None:
-        """Initialize the SparkHandler with app name and configuration options.
+        """Initialize the Spark handler with your pipeline configuration.
 
-        Stores configuration for lazy initialization. The SparkSession is not
-        created until the session property is first accessed.
+        Prepares the handler with your application name and any Spark settings
+        from your pipeline definition. The actual Spark session won't start until
+        the first transformation runs.
 
         Args:
-            app_name: Name of the Spark application, used for tracking and monitoring
-            options: Optional dictionary of Spark configuration options as key-value pairs
+            app_name: Your application name (default: "samara"). Used to identify
+                your pipeline in Spark logs and job tracking systems.
+            options: Spark configuration from your pipeline definition as key-value
+                pairs (e.g., {"spark.executor.memory": "4g"}). Optional.
         """
         logger.debug("Configuring SparkHandler with app_name: %s (lazy initialization)", app_name)
         self._session = None
@@ -65,14 +75,14 @@ class SparkHandler(metaclass=Singleton):
 
     @property
     def session(self) -> SparkSession:
-        """Get the current managed SparkSession instance.
+        """Access the Spark engine for running your pipeline.
 
-        Lazily creates the SparkSession on first access. This ensures that
-        Spark is only initialized when actually needed, not when the module
-        is imported.
+        Returns the active Spark session, creating it on first access. This ensures
+        Spark only initializes when your pipeline actually needs to process data,
+        not during import or configuration parsing.
 
         Returns:
-            The current active SparkSession instance
+            The Spark session ready to execute your transformations
         """
         if self._session is None:
             logger.debug("Creating SparkSession on first access - app_name: %s", self._app_name)
@@ -93,13 +103,13 @@ class SparkHandler(metaclass=Singleton):
 
     @session.setter
     def session(self, session: SparkSession) -> None:
-        """Set the managed SparkSession instance.
+        """Replace the current Spark session.
 
-        Updates the internal reference to the SparkSession instance.
-        This is typically only used internally during initialization.
+        Sets a new Spark session. This is typically used internally by the
+        framework and rarely needed in pipeline definitions.
 
         Args:
-            session: The SparkSession instance to use
+            session: The Spark session to use for subsequent operations
         """
         logger.debug(
             "Setting SparkSession instance - app name: %s, version: %s", session.sparkContext.appName, session.version
@@ -108,13 +118,14 @@ class SparkHandler(metaclass=Singleton):
 
     @session.deleter
     def session(self) -> None:
-        """Stop and delete the current SparkSession.
+        """Stop and clean up the Spark session.
 
-        Properly terminates the SparkSession and removes the internal reference.
-        This ensures that all Spark resources are released cleanly.
+        Properly shuts down the active Spark session and releases all associated
+        resources. This is called automatically when your pipeline completes or
+        encounters a fatal error.
 
-        This should be called when the SparkSession is no longer needed,
-        typically at the end of the application lifecycle.
+        Use this to manually clean up if you need to restart Spark during a
+        pipeline's lifecycle.
         """
         if self._session is not None:
             logger.info("Stopping SparkSession: %s", self._session.sparkContext.appName)
@@ -125,19 +136,20 @@ class SparkHandler(metaclass=Singleton):
             logger.debug("SparkSession was never initialized, nothing to stop")
 
     def add_configs(self, options: dict[str, Any]) -> None:
-        """Add configuration options to the active SparkSession.
+        """Apply additional Spark settings at runtime.
 
-        Updates the configuration of the current SparkSession with new options.
-        This can be used to modify Spark behavior at runtime, although not all
-        configuration options can be changed after the session is created.
+        Adds or updates Spark configuration options after the engine has started.
+        This is useful when certain settings depend on runtime conditions discovered
+        during pipeline execution.
 
         Args:
-            options: Dictionary of configuration key-value pairs to apply
+            options: Configuration settings as key-value pairs to apply
+                (e.g., {"spark.sql.shuffle.partitions": "200"})
 
         Note:
-            Some Spark configurations can only be set during initialization
-            and cannot be changed using this method after the SparkSession
-            has been created.
+            Some Spark settings cannot be changed after initialization. For
+            pre-execution configuration, define settings in your pipeline's
+            engine configuration instead.
         """
         logger.debug("Adding %d configuration options to SparkSession", len(options))
 

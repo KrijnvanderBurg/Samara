@@ -1,11 +1,8 @@
-"""Email channel for sending alert messages via SMTP.
+"""Email alert channel - send alerts via SMTP.
 
-This module implements the email alert channel that sends alerts
-through SMTP servers. It supports authentication, multiple recipients,
-and configurable failure handling.
-
-The EmailChannel follows the Samara framework patterns for configuration-driven
-initialization and implements the ChannelModel interface.
+This module provides SMTP-based email alerting, enabling users to send
+alert notifications to one or more recipients through configured email servers
+with full authentication and failure handling support.
 """
 
 import logging
@@ -14,30 +11,74 @@ from email.mime.text import MIMEText
 from typing import Literal
 
 from pydantic import EmailStr, Field, SecretStr, StrictInt, StrictStr
+from typing_extensions import override
+
 from samara.alert.channels.base import ChannelModel
 from samara.utils.logger import get_logger
-from typing_extensions import override
 
 logger: logging.Logger = get_logger(__name__)
 
 
 class EmailChannel(ChannelModel):
-    """Email alert channel for SMTP-based alerts.
+    """Send alerts via email using SMTP.
 
-    This class implements email alerting functionality using SMTP servers.
-    It supports authentication, multiple recipients, and configurable
-    failure handling with retry logic.
+    This channel delivers alert notifications through SMTP servers with
+    full authentication support. It enables reliable email delivery to
+    multiple recipients with configurable retry policies.
 
     Attributes:
-        channel_type: Always "email" for email channels
-        id: Human-readable identifier for the channel
-        description: Description of the channel purpose
-        smtp_server: SMTP server hostname or IP address
-        smtp_port: SMTP server port number
-        username: SMTP authentication username
-        password: SMTP authentication password
-        from_email: Email address to send alerts from
-        to_emails: List of recipient email addresses
+        channel_type: Always "email" to identify this channel type.
+        id: Unique identifier for this channel in alert configuration.
+        description: Optional description of this channel's purpose.
+        smtp_server: SMTP server hostname or IP address to use for sending.
+        smtp_port: SMTP server port (typically 587 for TLS or 25 for plaintext).
+        username: Username for SMTP authentication.
+        password: Password for SMTP authentication (stored securely).
+        from_email: Email address shown as the sender of alert messages.
+        to_emails: One or more recipient email addresses for alerts.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "alerts": [
+                {
+                    "id": "email-alerts",
+                    "type": "alert",
+                    "channels": [
+                        {
+                            "id": "production-email",
+                            "type": "email",
+                            "smtpServer": "smtp.gmail.com",
+                            "smtpPort": 587,
+                            "username": "alerts@company.com",
+                            "password": "app-password-here",
+                            "fromEmail": "alerts@company.com",
+                            "toEmails": ["ops@company.com", "admin@company.com"]
+                        }
+                    ]
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        alerts:
+          - id: email-alerts
+            type: alert
+            channels:
+              - id: production-email
+                type: email
+                smtpServer: smtp.gmail.com
+                smtpPort: 587
+                username: alerts@company.com
+                password: app-password-here
+                fromEmail: alerts@company.com
+                toEmails:
+                  - ops@company.com
+                  - admin@company.com
+        ```
     """
 
     channel_type: Literal["email"] = Field(..., description="Channel type discriminator")
@@ -50,14 +91,30 @@ class EmailChannel(ChannelModel):
 
     @override
     def _alert(self, title: str, body: str) -> None:
-        """Send an alert message via email.
+        """Send alert notification via email to configured recipients.
+
+        Constructs an email message with the provided title and body,
+        then delivers it through the configured SMTP server to all
+        recipients specified in the channel configuration.
 
         Args:
-            title: The alert title (used as email subject).
-            body: The alert message content (used as email body).
+            title: Alert title used as the email subject line.
+            body: Alert message content used as the email body text.
 
         Raises:
-            smtplib.SMTPException: If email sending fails.
+            smtplib.SMTPException: If SMTP connection, authentication,
+                or sending fails. Failures are logged with full error details.
+
+        Example:
+            >>> channel = EmailChannel(
+            ...     smtp_server="smtp.example.com",
+            ...     smtp_port=587,
+            ...     username="bot@example.com",
+            ...     password="secret",
+            ...     from_email="bot@example.com",
+            ...     to_emails=["admin@example.com"]
+            ... )
+            >>> channel._alert("Pipeline Failed", "Job run_2025 failed at 10:30 UTC")
         """
         # Create simple text message
         msg = MIMEText(body, "plain")

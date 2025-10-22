@@ -1,16 +1,9 @@
-"""Data models for transformation operations in the ingestion framework.
+"""Transformation models - Define and structure transformation operations.
 
-This module defines the data models and configuration structures used for
-representing transformation operations. It includes:
-
-- Base models for transformation function arguments
-- Data classes for structuring transformation configuration
-- Utility methods for parsing and validating transformation parameters
-- Constants for standard configuration keys
-
-These models serve as the configuration schema for the Transform components
-and provide a type-safe interface between configuration and implementation.
-"""
+This module provides type-safe models for configuring transformation operations
+within data pipelines. It focuses on the configuration-driven approach,
+enabling pipeline authors to define transformation functions and their
+parameters through structured configuration rather than code."""
 
 import logging
 from abc import ABC, abstractmethod
@@ -26,15 +19,18 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class ArgsModel(BaseModel, ABC):
-    """Abstract base class for transformation function arguments.
+    """Define arguments for transformation functions.
 
-    Serves as the foundation for all argument containers used by
-    transformation functions in the framework. Each concrete subclass
+    Abstract base class that serves as the foundation for all argument
+    containers used by transformation functions. Each concrete subclass
     should implement type-specific argument handling for different
     transformation operations.
 
-    All transformation argument models should inherit from this class
-    to ensure a consistent interface throughout the framework.
+    All transformation argument models should inherit from this class to
+    ensure consistent interface and validation throughout the framework.
+
+    See Also:
+        FunctionModel: Uses ArgsModel subclasses to configure transformations.
     """
 
 
@@ -43,15 +39,32 @@ FunctionNameT = TypeVar("FunctionNameT", bound=str)
 
 
 class FunctionModel(BaseModel, Generic[ArgsT], ABC):
-    """
-    Model specification for transformation functions.
+    """Specify a transformation function with its configuration.
 
-    This class represents the configuration for a transformation function,
-    including its name and arguments.
+    Represents the configuration for a single transformation function,
+    including its arguments. This model bridges configuration files and
+    transformation execution by validating and structuring function arguments.
 
-    Args:
-        function: Name of the transformation function to execute
-        arguments: Arguments model specific to the transformation function
+    Attributes:
+        arguments: Arguments model specific to the transformation function.
+            Must be a subclass of ArgsModel with fields matching the function's
+            parameters.
+
+    Example:
+        >>> # Concrete implementation for a "cast" transformation
+        >>> class CastArgs(ArgsModel):
+        ...     columns: dict[str, str] = {"age": "StringType"}
+        >>> class CastFunctionModel(FunctionModel[CastArgs]):
+        ...     def transform(self) -> Callable:
+        ...         return self._create_cast_function()
+
+    See Also:
+        ArgsModel: Base class for all transformation arguments.
+        TransformModel: Chains multiple FunctionModel instances together.
+
+    Note:
+        Concrete implementations must define the transform() method
+        to create the actual callable that processes data.
     """
 
     arguments: ArgsT
@@ -72,26 +85,72 @@ FunctionModelT = TypeVar("FunctionModelT", bound=FunctionModel)
 
 
 class TransformModel(BaseModel, Generic[FunctionModelT], ABC):
-    """
-    Model for data transformation operations.
+    """Configure a transformation operation within a pipeline.
 
     This model configures transformation operations for data processing,
-    including the identifier, upstream source, and transformation options.
+    including the operation identifier, upstream data source, and a sequence
+    of transformation functions to apply. It enables pipeline authors to
+    define complex transformation chains through configuration.
 
-    Args:
-        id: Identifier for this transformation operation
-        upstream_id: Identifier(s) of the upstream component(s) providing data
-        functions: List of transformation functions to apply
-        options: Transformation options as key-value pairs
+    Attributes:
+        id_: Identifier for this transformation operation (minimum 1 character).
+            Used to reference this transform in other pipeline components.
+        upstream_id: Identifier of the upstream component providing input data
+            (minimum 1 character). References a data source or previous transform.
+        functions: List of transformation functions to apply in sequence.
+            Each function receives the output of the previous function.
 
-    Examples:
-        >>> df = spark.createDataFrame(data=[("Alice", 27), ("Bob", 32),], schema=["name", "age"])
-        >>> dict = {"function_type": "cast", "arguments": {"columns": {"age": "StringType",}}}
-        >>> transform = TransformFunction.from_dict(dict=dict[str, Any])
-        >>> df = df.transform(func=transform).printSchema()
-        root
-        |-- name: string (nullable = true)
-        |-- age: string (nullable = true)
+    Example:
+        >>> transform_config = {
+        ...     "transforms": [
+        ...         {
+        ...             "id": "transform_1",
+        ...             "upstream_id": "source_data",
+        ...             "functions": [
+        ...                 {
+        ...                     "function_type": "cast",
+        ...                     "arguments": {"columns": {"age": "StringType"}}
+        ...                 }
+        ...             ]
+        ...         }
+        ...     ]
+        ... }
+
+        **Configuration in JSON:**
+        ```
+            {
+                "transforms": [
+                    {
+                        "id": "transform_1",
+                        "upstream_id": "source_data",
+                        "functions": [
+                            {
+                                "function_type": "cast",
+                                "arguments": {
+                                    "columns": {"age": "StringType"}
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ```
+
+        **Configuration in YAML:**
+        ```
+            transforms:
+              - id: transform_1
+                upstream_id: source_data
+                functions:
+                  - function_type: cast
+                    arguments:
+                      columns:
+                        age: StringType
+        ```
+
+    Note:
+        Functions are applied in the order specified. Each function's output
+        becomes the input to the next function in the sequence.
     """
 
     id_: str = Field(..., alias="id", description="Identifier for this transformation operation", min_length=1)

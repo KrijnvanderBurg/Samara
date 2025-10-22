@@ -1,35 +1,71 @@
-"""File channel for writing alert messages to files.
+"""File alert channel - Write alerts to file destinations.
 
-This module implements the file alert channel that writes alerts
-to log files or other file destinations. It supports configurable file
-paths and failure handling for file system operations.
-
-The FileAlertChannel follows the Samara framework patterns for configuration-driven
-initialization and implements the ChannelModel interface.
-"""
+This module provides file-based alert delivery enabling users to persist
+alerts to log files or other file destinations. It supports configurable
+file paths and handles file system operations with appropriate error reporting."""
 
 import logging
 from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
+from typing_extensions import override
+
 from samara.alert.channels.base import ChannelModel
 from samara.utils.logger import get_logger
-from typing_extensions import override
 
 logger: logging.Logger = get_logger(__name__)
 
 
 class FileChannel(ChannelModel):
-    """File alert channel for file-based alerts.
+    """Write alert messages to file destinations.
 
-    This class implements file alerting functionality for writing alerts
-    to log files or other file destinations. It supports configurable file
-    paths and handles file system errors appropriately.
+    This channel implementation persists alerts to configured file paths,
+    creating files if they do not exist. Alerts are appended line-by-line
+    with title and body combined in a readable format.
 
     Attributes:
-        channel_type: Always "file" for file channels
-        file_path: Path to the file where alerts should be written
+        channel_type: Always "file" for file channels.
+        file_path: Path to the destination file where alerts are written.
+
+    Example:
+        >>> from pathlib import Path
+        >>> config = {
+        ...     "channel": {
+        ...         "type": "file",
+        ...         "filePath": "/var/log/alerts.log"
+        ...     }
+        ... }
+        >>> channel = FileChannel(**config["channel"])
+        >>> channel._alert("Pipeline Failed", "Job 'daily_sync' failed at 14:30")
+
+        **Configuration in JSON:**
+        ```
+        {
+            "alerts": [
+                {
+                    "channel": {
+                        "type": "file",
+                        "filePath": "/var/log/pipeline_alerts.log"
+                    },
+                    "triggers": [...]
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        alerts:
+          - channel:
+              type: file
+              filePath: /var/log/pipeline_alerts.log
+            triggers: [...]
+        ```
+
+    Note:
+        The parent directory of the specified file path must exist and
+        be writable. File write failures are logged as errors and re-raised.
     """
 
     channel_type: Literal["file"] = Field(..., description="Channel type discriminator")
@@ -37,16 +73,23 @@ class FileChannel(ChannelModel):
 
     @override
     def _alert(self, title: str, body: str) -> None:
-        """Send an alert message to a file.
+        """Write an alert message to the configured file.
 
-        Appends the alert to the configured file with timestamp, creating it if it does not exist.
+        Appends the alert to the file with title and body separated by a colon,
+        creating the file if it does not exist. Each alert is written as a new
+        line with automatic newline termination.
 
         Args:
-            title: The alert title.
-            body: The alert message content.
+            title: The alert title to identify the alert type or source.
+            body: The alert message containing details about the event.
 
         Raises:
-            OSError: If writing to the file fails.
+            OSError: When file write operations fail due to permission errors,
+                path issues, or disk space problems.
+
+        Note:
+            The parent directory must exist before calling this method.
+            Check that the configured file_path points to a writable location.
         """
         try:
             with open(self.file_path, "a", encoding="utf-8") as file:

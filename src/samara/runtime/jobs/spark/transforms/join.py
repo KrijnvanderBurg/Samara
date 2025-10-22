@@ -1,10 +1,8 @@
-"""Join transform function.
+"""Join transform - Combine DataFrames from multiple sources.
 
-This module provides a transform function for joining DataFrames
-in the ETL pipeline, allowing data from multiple sources to be combined.
-
-The JoinFunction is registered with the TransformFunctionRegistry under
-the name 'join', making it available for use in configuration files.
+This module provides the join transform function enabling users to combine
+DataFrames based on specified columns and join strategies. The JoinFunction
+is registered as 'join' in the transform function registry.
 """
 
 import logging
@@ -20,24 +18,77 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class JoinFunction(JoinFunctionModel, FunctionSpark):
-    """Function that joins DataFrames.
+    """Combine two DataFrames based on join keys and strategy.
 
-    This transform function allows for joining the current DataFrame with another
-    DataFrame from the registry.
+    This transform function joins the current DataFrame with another
+    DataFrame from the data registry using specified join columns and
+    join type. Supports all Spark join strategies (inner, outer, left,
+    right, cross, etc.) enabling flexible data combinations.
 
     Attributes:
         function: The name of the function (always "join")
-        arguments: Container for the join parameters
+        arguments: Container for the join parameters with join configuration
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "transforms": [
+                {
+                    "function": "join",
+                    "arguments": {
+                        "other_upstream_id": "orders_data",
+                        "on": "customer_id",
+                        "how": "inner"
+                    }
+                }
+            ]
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        transforms:
+          - function: join
+            arguments:
+              other_upstream_id: orders_data
+              on: customer_id
+              how: inner
+        ```
+
+        **Multiple join columns example (JSON):**
+        ```
+        {
+            "function": "join",
+            "arguments": {
+                "other_upstream_id": "reference_table",
+                "on": ["country", "product_id"],
+                "how": "left"
+            }
+        }
+        ```
+
+    Note:
+        The `other_upstream_id` must refer to a DataFrame already in the
+        data registry. The join columns must exist in both DataFrames.
+        Performance may vary depending on DataFrame sizes and cluster resources.
     """
 
     def transform(self) -> Callable:
-        """Apply the join transformation to the DataFrame.
+        """Return a callable that applies the join transformation to a DataFrame.
 
-        This method extracts the join configuration from the model
-        and returns a callable function that performs the join operation.
+        Extracts join configuration from the model and builds a transformation
+        function that retrieves the right DataFrame from the registry and
+        performs the join operation with the specified columns and strategy.
 
         Returns:
-            A callable function that applies the join operation to a DataFrame
+            A callable that takes a DataFrame and returns the joined result.
+            The callable performs the join with the DataFrame specified by
+            `other_upstream_id` using the configured join columns and type.
+
+        Note:
+            The join is performed in-memory on the Spark cluster. Large joins
+            may require appropriate cluster resources and shuffle operations.
         """
         logger.debug(
             "Creating join transform - other: %s, on: %s, how: %s",

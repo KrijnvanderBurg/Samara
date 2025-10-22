@@ -1,15 +1,9 @@
-"""PySpark implementation for data transformation operations.
+"""PySpark transformation implementation - Execute configuration-driven data transformations.
 
-This module provides concrete implementations for transforming data using Apache PySpark.
-It includes:
-
-- Abstract base classes defining the transformation interface
-- Function-based transformation support with configurable arguments
-- Registry mechanisms for dynamically selecting transformation functions
-- Configuration-driven transformation functionality
-
-The Transform components represent the middle phase in the ETL pipeline, responsible
-for manipulating data between extraction and loading.
+This module provides concrete implementations for applying transformation chains to data
+using Apache PySpark as the processing engine. It focuses on configuration-driven
+transformations enabling pipeline authors to define complex data manipulation sequences
+through structured configuration rather than code.
 """
 
 import logging
@@ -27,13 +21,72 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class TransformSpark(TransformModel[transform_function_spark_union]):
-    """
-    Concrete implementation for DataFrame transformation.
+    """Apply PySpark-based transformations to dataframes in the pipeline.
 
-    This class provides functionality for transforming data.
+    This class executes a sequence of transformation functions configured in the pipeline
+    definition. It manages the transformation chain by copying upstream data and applying
+    each function sequentially, tracking row counts through each step for debugging and
+    monitoring purposes.
 
     Attributes:
-        options: Transformation options as key-value pairs
+        options: Transformation options passed to Spark as key-value pairs for configuring
+            Spark behavior and tuning parameters.
+
+    Example:
+        >>> from samara.runtime.jobs.spark.transform import TransformSpark
+        >>> transform = TransformSpark(
+        ...     id_="customer_transform",
+        ...     upstream_id="customer_extract",
+        ...     functions=[...],
+        ...     options={"spark.sql.adaptive.enabled": "true"}
+        ... )
+        >>> transform.transform()
+
+        **Configuration in JSON:**
+        ```
+        {
+            "type": "transform",
+            "id": "customer_transform",
+            "upstream_id": "customer_extract",
+            "functions": [
+                {
+                    "functionType": "select",
+                    "params": ["id", "name", "email"]
+                },
+                {
+                    "functionType": "filter",
+                    "params": ["age > 18"]
+                }
+            ],
+            "options": {
+                "spark.sql.adaptive.enabled": "true",
+                "spark.sql.shuffle.partitions": "200"
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        type: transform
+        id: customer_transform
+        upstream_id: customer_extract
+        functions:
+          - functionType: select
+            params:
+              - id
+              - name
+              - email
+          - functionType: filter
+            params:
+              - "age > 18"
+        options:
+          spark.sql.adaptive.enabled: "true"
+          spark.sql.shuffle.partitions: "200"
+        ```
+
+    Note:
+        Spark configurations are applied before data transformations. Each transformation
+        function modifies the dataframe in place within the registry, so order matters.
     """
 
     model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
@@ -41,13 +94,18 @@ class TransformSpark(TransformModel[transform_function_spark_union]):
     options: dict[str, Any] = Field(..., description="Transformation options as key-value pairs")
 
     def __init__(self, **data: Any) -> None:
-        """Initialize TransformSpark with data and set up runtime instances.
+        """Initialize TransformSpark with configuration data.
 
-        Creates the Pydantic model with provided data and then initializes
-        non-Pydantic instance attributes for DataFrameRegistry and SparkHandler.
+        Creates a Pydantic model instance from the provided configuration data and then
+        initializes runtime attributes for managing dataframes and Spark sessions. This
+        two-stage initialization separates Pydantic model validation from runtime setup.
 
         Args:
-            **data: Pydantic model initialization data
+            **data: Configuration data for initializing the Pydantic model. Should include
+                `id_`, `upstream_id`, `functions`, and `options` keys at minimum.
+
+        Returns:
+            None
         """
         super().__init__(**data)
         # Set up non-Pydantic attributes that shouldn't be in schema
@@ -55,16 +113,22 @@ class TransformSpark(TransformModel[transform_function_spark_union]):
         self.spark: SparkHandler = SparkHandler()
 
     def transform(self) -> None:
-        """
-        Apply all transformation functions to the data source.
+        """Execute the complete transformation chain on the upstream dataframe.
 
-        This method performs the following steps:
-        1. Copies the dataframe from the upstream source to current transform's id
-        2. Sequentially applies each transformation function to the dataframe
-        3. Each function updates the registry with its results
+        Perform sequential transformation operations on the input data by:
+        1. Applying configured Spark options to optimize execution
+        2. Copying the dataframe from the upstream stage to this transform's namespace
+        3. Applying each transformation function in order, with row count tracking
+        4. Logging metrics and results for each transformation step
+
+        Args:
+            None
 
         Note:
-            Functions are applied in the order they were defined in the configuration.
+            Functions execute sequentially in the order specified in the configuration.
+            Each transformation modifies the dataframe registry in place. Row count changes
+            are logged to help identify unexpected data loss or multiplication during
+            transformation.
         """
         logger.info("Starting transformation for: %s from upstream: %s", self.id_, self.upstream_id)
 

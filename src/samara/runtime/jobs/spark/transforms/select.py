@@ -1,10 +1,9 @@
-"""Column selection transform function.
+"""Select transform - Project specific columns from a DataFrame.
 
-This module provides a transform function for selecting specific columns
-from a DataFrame, allowing for projection operations in the ETL pipeline.
-
-The SelectFunction is registered with the TransformFunctionRegistry under
-the name 'select', making it available for use in configuration files.
+This module provides column projection capabilities for data pipelines,
+enabling users to select only the columns needed for downstream processing.
+It focuses on configuration-driven column filtering, making pipeline logic
+accessible without code modifications.
 """
 
 import logging
@@ -20,64 +19,89 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class SelectFunction(SelectFunctionModel, FunctionSpark):
-    """Function that selects specified columns from a DataFrame.
+    """Project specific columns from a DataFrame.
 
-    This transform function allows for projecting specific columns from
-    a DataFrame, similar to the SELECT statement in SQL. It's useful for
-    filtering out unnecessary columns and focusing only on the data needed
-    for downstream processing.
-
-    The function is configured using a SelectFunctionModel that specifies
-    which columns to include in the output.
+    This transform selects and returns only the specified columns from
+    a DataFrame, similar to SQL SELECT projections. It enables efficient
+    data filtering by removing unnecessary columns early in the pipeline,
+    improving performance and clarity of data flow.
 
     Attributes:
-        function: The name of the function (always "select")
-        model: Configuration model specifying which columns to select
-        data_registry: Shared registry for accessing and storing DataFrames
+        function: The transform name (always "select").
+        arguments: Configuration specifying which columns to project.
+        data_registry: Shared registry for accessing and storing DataFrames.
 
     Example:
-        ```json
+        **Configuration in JSON:**
+        ```
         {
-            "function": "select",
-            "arguments": {
-                "columns": ["id", "name", "age"]
-            }
+            "transforms": [
+                {
+                    "function": "select",
+                    "arguments": {
+                        "columns": ["id", "name", "email"]
+                    }
+                }
+            ]
         }
         ```
+
+        **Configuration in YAML:**
+        ```
+        transforms:
+          - function: select
+            arguments:
+              columns:
+                - id
+                - name
+                - email
+        ```
+
+    Note:
+        The columns list must contain only columns that exist in the input
+        DataFrame. Requesting non-existent columns will raise an error.
     """
 
     def transform(self) -> Callable:
-        """Apply the column selection transformation to the DataFrame.
+        """Return a function that projects specified columns from a DataFrame.
 
-        This method extracts the column selection configuration from the model
-        and applies it to the DataFrame, returning only the specified columns.
-        It supports selecting specific columns by name.
+        Builds a transformation function that filters the input DataFrame
+        to include only the columns specified in the configuration. This is
+        a common operation in data pipelines to reduce data volume and focus
+        on relevant fields.
 
         Returns:
-            A callable function that performs the column selection when applied
-            to a DataFrame
+            A callable that accepts a DataFrame and returns a new DataFrame
+            containing only the selected columns in the specified order.
 
-        Examples:
-            Consider the following DataFrame schema:
+        Example:
+            Input DataFrame schema:
+            ```
+            root
+            |-- id: long (nullable = true)
+            |-- name: string (nullable = true)
+            |-- age: integer (nullable = true)
+            |-- department: string (nullable = true)
+            ```
 
+            Configuration:
+            ```
+            {
+                "function": "select",
+                "arguments": {
+                    "columns": ["name", "age"]
+                }
+            }
+            ```
+
+            Output DataFrame schema:
             ```
             root
             |-- name: string (nullable = true)
             |-- age: integer (nullable = true)
             ```
 
-            Applying the dict_ 'select_with_alias' function:
-
-            ```
-            {"function": "select_with_alias", "arguments": {"columns": {"age": "years_old",}}}
-            ```
-
-            The resulting DataFrame schema will be:
-
-            ```
-            root
-            |-- years_old: integer (nullable = true)
-            ```
+            The output contains only the projected columns in the order specified.
         """
         logger.debug("Creating select transform for columns: %s", self.arguments.columns)
 

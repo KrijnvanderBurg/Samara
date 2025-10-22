@@ -1,12 +1,9 @@
-"""
-PySpark implementation for data extraction operations.
+"""PySpark data extraction - Batch and streaming extraction operations.
 
-This module provides concrete implementations for extracting data using PySpark.
-It includes:
-    - Abstract base classes for extraction
-    - Concrete file-based extractors
-    - A registry for selecting extraction strategies
-    - Support for both batch and streaming extraction
+This module provides extraction implementations for the Samara framework, enabling
+pipeline authors to configure data sources in their pipeline definitions. It supports
+both batch and streaming extraction modes from file-based sources, with automatic
+schema parsing and PySpark configuration management.
 """
 
 import logging
@@ -28,13 +25,46 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class ExtractSpark(ExtractModel, ABC):
-    """Abstract base class for data extraction operations.
+    """Base class for data extraction operations.
 
-    Defines the interface for all extraction implementations, supporting both
-    batch and streaming extractions. Manages a data registry for extracted DataFrames.
+    Defines the extraction interface for all PySpark-based extractors, supporting
+    both batch and streaming modes. Manages automatic schema parsing and maintains
+    a registry of extracted DataFrames for use in downstream transforms.
 
     Attributes:
-        options: PySpark reader options
+        options: PySpark reader configuration as key-value pairs (e.g., delimiter,
+            header options for CSV).
+        _schema_parsed: Parsed PySpark StructType schema, populated automatically
+            from schema_ field during model validation.
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "extract": {
+                "id": "source_data",
+                "method": "batch",
+                "schema_": "path/to/schema.json",
+                "options": {"delimiter": ",", "header": "true"}
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        extract:
+          id: source_data
+          method: batch
+          schema_: path/to/schema.json
+          options:
+            delimiter: ","
+            header: "true"
+        ```
+
+    Note:
+        Subclasses must implement both _extract_batch() and _extract_streaming()
+        methods. The extract() method automatically selects the appropriate
+        extraction mode based on the configured method.
     """
 
     model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
@@ -43,13 +73,15 @@ class ExtractSpark(ExtractModel, ABC):
     options: dict[str, Any] = Field(..., description="PySpark reader options as key-value pairs")
 
     def __init__(self, **data: Any) -> None:
-        """Initialize ExtractSpark with data and set up runtime instances.
+        """Initialize the extractor with configuration data and runtime components.
 
-        Creates the Pydantic model with provided data and then initializes
-        non-Pydantic instance attributes for DataFrameRegistry and SparkHandler.
+        Sets up the Pydantic model with provided configuration data and initializes
+        runtime components (DataFrameRegistry for storing extracted data and
+        SparkHandler for managing the Spark session).
 
         Args:
-            **data: Pydantic model initialization data
+            **data: Configuration data for model initialization. Should include
+                required fields like id_, method, schema_, and extract-specific fields.
         """
         super().__init__(**data)
         # Set up non-Pydantic attributes that shouldn't be in schema
@@ -58,15 +90,19 @@ class ExtractSpark(ExtractModel, ABC):
 
     @model_validator(mode="after")
     def parse_schema(self) -> Self:
-        """Parse schema_ field into _schema_parsed after model creation.
+        """Parse schema configuration into a PySpark StructType.
 
-        This validator automatically converts the schema_ field value into a
-        PySpark StructType based on the input type:
-        - File path ending in .json: Uses SchemaFilepathHandler
-        - JSON string: Uses SchemaStringHandler
+        Automatically converts the schema_ field into a parsed PySpark StructType
+        after model validation. Supports both schema file paths (.json) and inline
+        JSON schema strings. File paths are parsed via SchemaFilepathHandler while
+        JSON strings use SchemaStringHandler.
 
         Returns:
-            Self: The model instance with _schema_parsed populated
+            Self: The validated model instance with _schema_parsed populated.
+
+        Note:
+            If schema_ is empty or None, returns early without parsing.
+            File path detection relies on the .json extension.
         """
         if not self.schema_:
             return self
@@ -85,10 +121,19 @@ class ExtractSpark(ExtractModel, ABC):
         return self
 
     def extract(self) -> None:
-        """Main extraction method.
+        """Execute the extraction process based on configured method.
 
-        Selects batch or streaming extraction based on the model configuration
-        and stores the result in the data registry.
+        Routes to batch or streaming extraction based on the configured method,
+        applies PySpark reader options, and stores the resulting DataFrame in the
+        data registry for subsequent pipeline operations. Logs extraction progress
+        and validates that the method is supported.
+
+        Raises:
+            ValueError: If the extraction method is not BATCH or STREAMING.
+
+        Note:
+            The extracted DataFrame is stored in the registry with the configured
+            source id_ as the key, making it available to downstream transforms.
         """
         logger.info("Starting extraction for source: %s using method: %s", self.id_, self.method.value)
 
@@ -108,34 +153,92 @@ class ExtractSpark(ExtractModel, ABC):
 
     @abstractmethod
     def _extract_batch(self) -> DataFrame:
-        """Extract data in batch mode.
+        """Extract data using batch mode processing.
+
+        Subclasses implement this to load all data from the configured source
+        using PySpark's batch read operations.
 
         Returns:
-            DataFrame: The extracted data as a DataFrame.
+            DataFrame: The complete extracted dataset.
         """
 
     @abstractmethod
     def _extract_streaming(self) -> DataFrame:
-        """Extract data in streaming mode.
+        """Extract data using streaming mode processing.
+
+        Subclasses implement this to set up a streaming read from the configured
+        source using PySpark's streaming read operations.
 
         Returns:
-            DataFrame: The extracted data as a streaming DataFrame.
+            DataFrame: A streaming DataFrame that continuously receives data.
         """
 
 
 class ExtractFileSpark(ExtractSpark, ExtractFileModel):
-    """Concrete extractor for file-based sources (CSV, JSON, Parquet).
+    """Extract data from file-based sources (CSV, JSON, Parquet, etc.).
 
-    Supports both batch and streaming extraction using PySpark's DataFrame API.
+    Concrete extractor implementation for file sources, supporting both batch
+    and streaming extraction modes. Automatically handles schema application and
+    reader option configuration for the selected file format.
+
+    Attributes:
+        extract_type: Discriminator field set to "file" for configuration routing.
+        location: File path or pattern for the source data.
+        data_format: File format (csv, json, parquet, etc.).
+
+    Example:
+        **Configuration in JSON:**
+        ```
+        {
+            "extract": {
+                "id": "raw_data",
+                "method": "batch",
+                "extract_type": "file",
+                "location": "/data/input/transactions.csv",
+                "data_format": "csv",
+                "schema_": "schemas/transactions_schema.json",
+                "options": {
+                    "delimiter": ",",
+                    "header": "true",
+                    "inferSchema": "false"
+                }
+            }
+        }
+        ```
+
+        **Configuration in YAML:**
+        ```
+        extract:
+          id: raw_data
+          method: batch
+          extract_type: file
+          location: /data/input/transactions.csv
+          data_format: csv
+          schema_: schemas/transactions_schema.json
+          options:
+            delimiter: ","
+            header: "true"
+            inferSchema: "false"
+        ```
+
+    Note:
+        Inherits schema parsing and option management from ExtractSpark base class.
     """
 
     extract_type: Literal["file"]
 
     def _extract_batch(self) -> DataFrame:
-        """Read from file in batch mode using PySpark.
+        """Read data from file in batch mode using PySpark.
+
+        Loads all data from the configured file location using the specified format
+        and applies the parsed schema and reader options. Logs the row count on
+        successful completion.
 
         Returns:
-            DataFrame: The extracted data as a DataFrame.
+            DataFrame: The complete extracted dataset with schema applied.
+
+        Note:
+            Row count is logged for monitoring and debugging purposes.
         """
         logger.debug("Reading files in batch mode - path: %s, format: %s", self.location, self.data_format)
 
@@ -150,10 +253,18 @@ class ExtractFileSpark(ExtractSpark, ExtractFileModel):
         return dataframe
 
     def _extract_streaming(self) -> DataFrame:
-        """Read from file in streaming mode using PySpark.
+        """Set up streaming read from file using PySpark.
+
+        Configures PySpark to continuously read from the file location as new data
+        arrives, applying the specified format, schema, and reader options.
 
         Returns:
-            DataFrame: The extracted data as a streaming DataFrame.
+            DataFrame: A streaming DataFrame connected to the file source.
+
+        Note:
+            Streaming reads are suitable for sources that continuously append new
+            files. The schema and options from configuration are applied to the
+            stream reader.
         """
         logger.debug("Reading files in streaming mode - path: %s, format: %s", self.location, self.data_format)
 

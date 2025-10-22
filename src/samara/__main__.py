@@ -1,6 +1,8 @@
-"""Samara module entry point.
+"""Entry point for the application.
 
-Handles CLI execution using Click framework.
+This module serves as the main entry point when executing the package
+as a command-line application. It initializes the CLI interface and
+delegates execution to the command handler.
 """
 
 from samara.cli import cli

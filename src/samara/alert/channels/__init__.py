@@ -1,19 +1,20 @@
-"""Alert Channels for the Samara ETL framework.
+"""Alert channels - Configurable notification destinations for pipeline events.
 
-This package provides different alert channels for the alert system,
-including email, HTTP webhooks, and file-based alerts. Each channel
-implements a common interface for consistent configuration and usage.
+This package provides pluggable alert channels that enable notifications
+through multiple communication platforms. Each channel implements a unified
+interface supporting configuration-driven setup and consistent behavior
+across different delivery mechanisms (email, HTTP webhooks, file logging).
 
-Available Channels:
-- EmailChannel: SMTP-based email alerts
-- HttpChannel: HTTP webhook alerts
-- FileChannel: File-based logging alerts
+Channel implementations handle transport-specific concerns while exposing
+a common configuration schema, allowing pipeline authors to swap notification
+targets without modifying pipeline definitions.
 """
 
 import logging
 from typing import Annotated
 
 from pydantic import Discriminator
+
 from samara.alert.channels.base import ChannelModel
 from samara.alert.channels.email import EmailChannel
 from samara.alert.channels.file import FileChannel

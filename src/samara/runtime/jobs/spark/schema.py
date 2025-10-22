@@ -1,15 +1,10 @@
-"""Schema handling utilities for working with PySpark schemas.
+"""Schema handling for PySpark data processing.
 
-This module provides utilities for creating and managing PySpark schemas from
-different source formats. It includes:
-
-- Abstract base SchemaHandler class defining the schema handling interface
-- Concrete implementations for different schema sources (JSON, dictionary, file)
-- Factory pattern for dynamically selecting appropriate schema handlers
-- Helper methods for schema validation and conversion
-
-The schema utilities are primarily used in extraction and loading operations
-where data structure definitions are required.
+This module provides a unified interface for creating PySpark StructType schemas
+from multiple source formats. It enables configuration-driven schema definition
+by accepting schemas as dictionaries, JSON strings, or file paths, converting
+them seamlessly into PySpark's schema format for data extraction and loading
+operations.
 """
 
 import json
@@ -19,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from pyspark.sql.types import StructType
+
 from samara.utils.file import FileHandler, FileHandlerContext
 from samara.utils.logger import get_logger
 
@@ -26,37 +22,46 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class SchemaHandler(ABC):
-    """Abstract base class for PySpark schema handling operations.
+    """Abstract base for schema format handlers.
 
-    Defines the common interface for creating PySpark StructType schemas
-    from various source formats. All concrete schema handlers should
-    inherit from this class and implement the required abstract method.
+    Defines the common interface for converting schemas from various source
+    formats into PySpark StructType objects. Concrete implementations handle
+    specific source formats (dictionary, JSON string, file), enabling
+    configuration-driven schema specification in pipeline definitions.
+
+    All concrete schema handlers inherit from this class and must implement
+    the parse() method to support their specific source format.
     """
 
     @staticmethod
     @abstractmethod
     def parse(schema: Any) -> StructType:
-        """Create a PySpark schema from the provided source.
+        """Convert a schema definition to a PySpark StructType.
+
+        Transform the schema from its source format into a PySpark StructType
+        that can be used for data extraction and loading operations.
 
         Args:
             schema: The schema definition in a format specific to the handler
-                implementation (could be string, dict, file path, etc.).
-                Type: Any - varies depending on the specific handler implementation.
+                implementation. May be a dictionary, JSON string, file path,
+                or other format depending on the concrete handler.
 
         Returns:
-            StructType: The PySpark schema.
+            StructType: A PySpark StructType representing the schema with all
+                fields and types properly defined.
 
         Raises:
-            NotImplementedError: If the method is not implemented by a subclass.
+            NotImplementedError: If not implemented by a subclass.
         """
 
 
 class SchemaDictHandler(SchemaHandler):
-    """Schema handler for creating PySpark schemas from dictionaries.
+    """Convert dictionary schemas to PySpark StructType.
 
-    This handler converts a Python dictionary representation of a schema
-    into a PySpark StructType schema. The dictionary should follow the
-    structure expected by the PySpark schema parser.
+    Handles schema definitions provided as Python dictionaries following
+    PySpark's schema JSON format. Enables pipeline authors to define schemas
+    inline as configuration dictionaries, supporting both direct schema
+    definitions and those loaded from configuration files.
 
     Example:
         ```python
@@ -72,18 +77,26 @@ class SchemaDictHandler(SchemaHandler):
 
     @staticmethod
     def parse(schema: dict) -> StructType:
-        """Convert a dictionary representation to a PySpark StructType schema.
+        """Convert a dictionary to a PySpark StructType schema.
+
+        Parse a Python dictionary representation following PySpark's schema
+        JSON format and convert it into a ready-to-use StructType schema.
 
         Args:
-            schema: Dictionary containing the schema definition following
-                PySpark's schema JSON format with fields array
+            schema: Dictionary containing the schema definition. Must follow
+                PySpark's schema JSON format with a "fields" array containing
+                field definitions (name, type, nullable, etc.).
 
         Returns:
-            A fully configured PySpark StructType schema
+            StructType: A fully configured PySpark StructType schema ready for
+                use in data operations.
 
         Raises:
-            ValueError: If the dictionary format is invalid or cannot be
-                converted to a valid schema
+            ValueError: If the dictionary format is invalid, missing required
+                fields, or contains unsupported type definitions.
+            TypeError: If the dictionary structure doesn't match PySpark's
+                expected schema format.
+            KeyError: If required schema keys are missing from the dictionary.
         """
         logger.debug("Parsing schema from dictionary with keys: %s", list(schema.keys()))
 
@@ -98,11 +111,11 @@ class SchemaDictHandler(SchemaHandler):
 
 
 class SchemaStringHandler(SchemaHandler):
-    """Schema handler for creating PySpark schemas from JSON strings.
+    """Convert JSON string schemas to PySpark StructType.
 
-    This handler converts a JSON string representation of a schema
-    into a PySpark StructType schema. The string should contain a valid
-    JSON object that follows the structure expected by the PySpark schema parser.
+    Handles schema definitions provided as JSON strings. Enables flexible
+    schema specification where pipeline definitions contain serialized schema
+    representations that need conversion to PySpark's native format.
 
     Example:
         ```python
@@ -120,17 +133,24 @@ class SchemaStringHandler(SchemaHandler):
 
     @staticmethod
     def parse(schema: str) -> StructType:
-        """Convert a JSON string representation to a PySpark StructType schema.
+        """Convert a JSON string to a PySpark StructType schema.
+
+        Parse a JSON string representation of a schema and convert it into
+        a PySpark StructType. Internally deserializes the JSON string and
+        delegates to the dictionary handler for conversion.
 
         Args:
-            schema: String containing a valid JSON schema definition
+            schema: String containing a valid JSON schema definition following
+                PySpark's schema JSON format.
 
         Returns:
-            A fully configured PySpark StructType schema
+            StructType: A fully configured PySpark StructType schema ready for
+                use in data operations.
 
         Raises:
-            ValueError: If the JSON string is invalid or cannot be
-                converted to a valid schema
+            ValueError: If the JSON is invalid or cannot be converted to a
+                valid schema structure.
+            json.JSONDecodeError: If the string is not valid JSON.
         """
         logger.debug("Parsing schema from JSON string (length: %d)", len(schema))
 
@@ -150,11 +170,12 @@ class SchemaStringHandler(SchemaHandler):
 
 
 class SchemaFilepathHandler(SchemaHandler):
-    """Schema handler for creating PySpark schemas from files.
+    """Convert file-based schemas to PySpark StructType.
 
-    This handler reads a schema definition from a file (typically JSON)
-    and converts it into a PySpark StructType schema. It uses the appropriate
-    file handler for reading the file based on its extension.
+    Handles schema definitions stored in files (typically JSON). Enables
+    pipeline authors to separate schema definitions from configuration,
+    improving maintainability and reusability of schema definitions across
+    multiple pipeline configurations.
 
     Example:
         ```python
@@ -165,22 +186,28 @@ class SchemaFilepathHandler(SchemaHandler):
 
     @staticmethod
     def parse(schema: Path) -> StructType:
-        """Create a PySpark schema from a file.
+        """Convert a schema file to a PySpark StructType.
 
-        Reads the schema definition from a file and converts it to a PySpark
-        StructType schema. The file is expected to contain a valid schema
-        definition in a format supported by one of the file handlers.
+        Read a schema definition from a file and convert it into a PySpark
+        StructType. Automatically selects the appropriate file handler based
+        on the file extension to support multiple file formats.
 
         Args:
-            schema: Path object pointing to the schema definition file
+            schema: Path object pointing to the schema definition file. File
+                format is determined by extension (typically .json).
 
         Returns:
-            A fully configured PySpark StructType schema
+            StructType: A fully configured PySpark StructType schema ready for
+                use in data operations.
 
         Raises:
-            FileNotFoundError: If the schema file doesn't exist
-            PermissionError: If there's no permission to read the file
-            ValueError: If the file content can't be parsed as a valid schema
+            FileNotFoundError: If the schema file doesn't exist at the
+                specified path.
+            PermissionError: If insufficient permissions exist to read the file.
+            ValueError: If the file content is invalid or cannot be converted
+                to a valid schema structure.
+            NotImplementedError: If the file format is not supported by any
+                available file handler.
         """
         logger.info("Parsing schema from file: %s", schema)
 

@@ -1,15 +1,8 @@
-"""Data models for extraction operations in the ingestion framework.
+"""Data models for extraction configuration.
 
-This module defines the data models and configuration structures used for
-representing extraction operations. It includes:
-
-- Enums for representing extraction methods and formats
-- Data classes for structuring extraction configuration
-- Utility methods for parsing and validating extraction parameters
-- Constants for standard configuration keys
-
-These models serve as the configuration schema for the Extract components
-and provide a type-safe interface between configuration and implementation.
+This module provides data models and Pydantic schemas for defining extraction
+operations in configuration files. It enables users to declaratively specify
+how data should be read from various sources with type validation.
 """
 
 import logging
@@ -17,6 +10,7 @@ from enum import Enum
 from typing import Literal
 
 from pydantic import Field, FilePath
+
 from samara import BaseModel
 from samara.utils.logger import get_logger
 
@@ -24,13 +18,15 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class ExtractMethod(Enum):
-    """Enumeration of supported data extraction methods.
+    """Define supported data extraction methods.
 
-    Defines the different methods that can be used to read data from sources,
-    such as batch processing or streaming.
+    Specifies the extraction approach used when reading data from sources.
+    Configure this value in pipeline definitions to control whether data is
+    read in a single batch or continuously streamed.
 
-    These values are used in configuration files to specify how data should
-    be extracted from the source.
+    Attributes:
+        BATCH: Read all data at once in a single operation.
+        STREAMING: Read data continuously as it becomes available.
     """
 
     BATCH = "batch"
@@ -38,17 +34,42 @@ class ExtractMethod(Enum):
 
 
 class ExtractModel(BaseModel):
-    """
-    Base model for data extraction operations.
+    """Base model for extraction configurations.
 
-    This model serves as a base class for defining extraction configurations,
-    including the method of extraction and the format of the data.
+    Provides the core schema for defining data extraction operations in
+    configuration files. All extraction sources inherit from this model to
+    ensure consistent structure and validation across different extract types.
 
-    Args:
-        id: Identifier for this extraction operation
-        method: Method of extraction (batch or streaming)
-        data_format: Format of the data to extract (parquet, json, csv)
-        options: PySpark reader options as key-value pairs
+    Attributes:
+        id_: Unique identifier for this extraction operation. Used to reference
+            this extract in transform chains and other pipeline components.
+        method: Extraction approach - batch or streaming.
+        data_format: Format of the source data (parquet, json, csv, etc.).
+        schema_: Schema definition as a file path or JSON/YAML string. Defines
+            the structure and types of columns in the extracted data.
+
+    Example:
+        **Configuration in JSON (inside extracts array):**
+        ```
+        {
+            "id": "customers_extract",
+            "method": "batch",
+            "data_format": "json",
+            "schema": "schemas/customers_schema.json"
+        }
+        ```
+
+        **Configuration in YAML (under extracts):**
+        ```
+        - id: customers_extract
+          method: batch
+          data_format: json
+          schema: schemas/customers_schema.json
+        ```
+
+    Note:
+        This is a base class. Use specific extract types like ExtractFileModel
+        for file-based extraction or ExtractDatabaseModel for database sources.
     """
 
     id_: str = Field(..., alias="id", description="Identifier for this extraction operation", min_length=1)
@@ -58,19 +79,46 @@ class ExtractModel(BaseModel):
 
 
 class ExtractFileModel(ExtractModel):
-    """
-    Model for file extraction using PySpark.
+    """Configure extraction from file-based data sources.
 
-    This model configures extraction operations for reading files with PySpark,
-    including format, location, and schema information.
+    Specifies how to read data from files stored in local or remote locations.
+    Supports multiple formats and includes schema validation. This model is
+    used when declaring file-based extraction operations in pipeline configs.
 
-    Args:
-        extract_type: Type discriminator for file-based extraction
-        id: Identifier for this extraction operation
-        method: Method of extraction (batch or streaming)
-        data_format: Format of the files to extract (parquet, json, csv)
-        location: URI where the files are located
-        schema_: Schema definition - can be a file path or JSON string (defaults to empty string)
+    Attributes:
+        extract_type: Type discriminator - always "file" for file extraction.
+        id_: Unique identifier for this extraction operation.
+        method: Extraction approach (batch or streaming).
+        data_format: File format (parquet, json, csv, etc.).
+        location: URI or path where source files are located.
+        schema_: Schema definition for validating and typing extracted columns.
+
+    Example:
+        **Configuration in JSON (inside extracts array):**
+        ```
+        {
+            "type": "file",
+            "id": "orders_extract",
+            "method": "batch",
+            "data_format": "json",
+            "location": "s3://my-bucket/orders/",
+            "schema": "schemas/orders_schema.json"
+        }
+        ```
+
+        **Configuration in YAML (under extracts):**
+        ```
+        - type: file
+          id: orders_extract
+          method: batch
+          data_format: json
+          location: s3://my-bucket/orders/
+          schema: schemas/orders_schema.json
+        ```
+
+    Note:
+        The location can be a local path, S3 URI, HDFS path, or any URI
+        supported by the configured execution engine.
     """
 
     extract_type: Literal["file"] = Field(..., description="Extract type discriminator")
