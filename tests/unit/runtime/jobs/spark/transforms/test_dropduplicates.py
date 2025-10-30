@@ -3,11 +3,40 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual
+
 from samara.runtime.jobs.models.transforms.model_dropduplicates import DropDuplicatesArgs
 from samara.runtime.jobs.spark.transforms.dropduplicates import DropDuplicatesFunction
+
+# =========================================================================== #
+# ============================== TEST DATA ================================= #
+# =========================================================================== #
+
+
+@pytest.fixture
+def people_with_duplicates_df(spark: SparkSession) -> DataFrame:
+    """Create a DataFrame with duplicate rows for testing."""
+    data = [
+        (1, "Alice", "Engineering"),
+        (2, "Bob", "Sales"),
+        (1, "Alice", "Engineering"),  # Duplicate of first row
+        (3, "Charlie", "Engineering"),
+        (2, "Bob", "Sales"),  # Duplicate of second row
+        (4, "Diana", "Sales"),
+    ]
+    schema = StructType(
+        [
+            StructField("id", IntegerType(), False),
+            StructField("name", StringType(), True),
+            StructField("department", StringType(), True),
+        ]
+    )
+    return spark.createDataFrame(data, schema)
+
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
@@ -16,11 +45,8 @@ from samara.runtime.jobs.spark.transforms.dropduplicates import DropDuplicatesFu
 
 @pytest.fixture(name="dropduplicates_config")
 def fixture_dropduplicates_config() -> dict[str, Any]:
-    """Return a config dict for DropDuplicatesFunction.
-
-    The config uses an explicit columns list to exercise the model parsing.
-    """
-    return {"function_type": "dropDuplicates", "arguments": {"columns": ["test_col"]}}
+    """Return a config dict for DropDuplicatesFunction."""
+    return {"function_type": "dropDuplicates", "arguments": {"columns": ["id"]}}
 
 
 def test_dropduplicates_creation__from_config__creates_valid_model(dropduplicates_config: dict[str, Any]) -> None:
@@ -28,7 +54,7 @@ def test_dropduplicates_creation__from_config__creates_valid_model(dropduplicate
     f = DropDuplicatesFunction(**dropduplicates_config)
     assert f.function_type == "dropDuplicates"
     assert isinstance(f.arguments, DropDuplicatesArgs)
-    assert f.arguments.columns == ["test_col"]
+    assert f.arguments.columns == ["id"]
 
 
 # =========================================================================== #
@@ -49,7 +75,7 @@ def test_dropduplicates_fixture(dropduplicates_func: DropDuplicatesFunction) -> 
     """Assert the instantiated fixture has the expected columns list."""
     assert dropduplicates_func.function_type == "dropDuplicates"
     assert isinstance(dropduplicates_func.arguments, DropDuplicatesArgs)
-    assert dropduplicates_func.arguments.columns == ["test_col"]
+    assert dropduplicates_func.arguments.columns == ["id"]
 
 
 # =========================================================================== #
@@ -58,7 +84,7 @@ def test_dropduplicates_fixture(dropduplicates_func: DropDuplicatesFunction) -> 
 
 
 class TestDropDuplicatesFunctionTransform:
-    """Test DropDuplicatesFunction transform behavior."""
+    """Test DropDuplicatesFunction transform behavior with real Spark DataFrames."""
 
     def test_transform__returns_callable(self, dropduplicates_func: DropDuplicatesFunction) -> None:
         """Test transform returns a callable function."""
@@ -68,34 +94,69 @@ class TestDropDuplicatesFunctionTransform:
         # Assert
         assert callable(transform_fn)
 
-    def test_transform__applies_drop_duplicates(self, dropduplicates_func: DropDuplicatesFunction) -> None:
-        """Test transform applies dropDuplicates operation."""
-
-        # Arrange
-        mock_df = Mock()
-        mock_df.dropDuplicates.return_value = mock_df
-
-        # Act
-        transform_fn = dropduplicates_func.transform()
-        transform_fn(mock_df)
-
-        # Assert
-        mock_df.dropDuplicates.assert_called_once_with(["test_col"])
-
-    def test_transform__with_no_columns__applies_drop_duplicates_on_all_columns(
-        self, dropduplicates_config: dict[str, Any]
+    def test_transform__drops_duplicates_on_specific_columns(
+        self, spark: SparkSession, dropduplicates_func: DropDuplicatesFunction, people_with_duplicates_df: DataFrame
     ) -> None:
-        """Test transform applies dropDuplicates without columns when empty list specified."""
-
+        """Test transform drops duplicates based on specific columns."""
         # Arrange
-        dropduplicates_config["arguments"]["columns"] = []
-        dropduplicates_func = DropDuplicatesFunction(**dropduplicates_config)
-        mock_df = Mock()
-        mock_df.dropDuplicates.return_value = mock_df
+        expected_data = [
+            (1, "Alice", "Engineering"),
+            (2, "Bob", "Sales"),
+            (3, "Charlie", "Engineering"),
+            (4, "Diana", "Sales"),
+        ]
+        expected_schema = people_with_duplicates_df.schema
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
 
         # Act
         transform_fn = dropduplicates_func.transform()
-        transform_fn(mock_df)
+        result_df = transform_fn(people_with_duplicates_df)
 
         # Assert
-        mock_df.dropDuplicates.assert_called_once_with()
+        assertDataFrameEqual(result_df, expected_df, checkRowOrder=False)
+
+    def test_transform__with_empty_columns_list__drops_duplicates_on_all_columns(
+        self, spark: SparkSession, people_with_duplicates_df: DataFrame
+    ) -> None:
+        """Test transform drops duplicates across all columns when columns list is empty."""
+        # Arrange
+        config = {"function_type": "dropDuplicates", "arguments": {"columns": []}}
+        dropduplicates_func = DropDuplicatesFunction(**config)
+
+        expected_data = [
+            (1, "Alice", "Engineering"),
+            (2, "Bob", "Sales"),
+            (3, "Charlie", "Engineering"),
+            (4, "Diana", "Sales"),
+        ]
+        expected_schema = people_with_duplicates_df.schema
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
+
+        # Act
+        transform_fn = dropduplicates_func.transform()
+        result_df = transform_fn(people_with_duplicates_df)
+
+        # Assert
+        assertDataFrameEqual(result_df, expected_df, checkRowOrder=False)
+
+    def test_transform__with_multiple_columns(self, spark: SparkSession, people_with_duplicates_df: DataFrame) -> None:
+        """Test transform drops duplicates based on multiple columns."""
+        # Arrange
+        config = {"function_type": "dropDuplicates", "arguments": {"columns": ["name", "department"]}}
+        dropduplicates_func = DropDuplicatesFunction(**config)
+
+        expected_data = [
+            (1, "Alice", "Engineering"),
+            (2, "Bob", "Sales"),
+            (3, "Charlie", "Engineering"),
+            (4, "Diana", "Sales"),
+        ]
+        expected_schema = people_with_duplicates_df.schema
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
+
+        # Act
+        transform_fn = dropduplicates_func.transform()
+        result_df = transform_fn(people_with_duplicates_df)
+
+        # Assert
+        assertDataFrameEqual(result_df, expected_df, checkRowOrder=False)

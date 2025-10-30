@@ -1,0 +1,11 @@
+{
+    "fields": [
+        {"name": "department", "type": "string", "nullable": true},
+        {"name": "location", "type": "string", "nullable": true},
+        {"name": "avg_salary", "type": "double", "nullable": true},
+        {"name": "total_salary", "type": "long", "nullable": true},
+        {"name": "employee_count", "type": "long", "nullable": false},
+        {"name": "min_salary", "type": "integer", "nullable": true},
+        {"name": "max_salary", "type": "integer", "nullable": true}
+    ]
+}

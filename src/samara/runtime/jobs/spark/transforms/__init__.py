@@ -10,29 +10,35 @@ from typing import Annotated
 
 from pydantic import Discriminator
 
+from .aggregate import AggregateFunction
 from .cast import CastFunction
 from .drop import DropFunction
 from .dropduplicates import DropDuplicatesFunction
 from .filter import FilterFunction
+from .groupby import GroupByFunction
 from .join import JoinFunction
 from .select import SelectFunction
 from .withcolumn import WithColumnFunction
 
 __all__ = [
+    "AggregateFunction",
     "CastFunction",
     "DropFunction",
     "DropDuplicatesFunction",
     "FilterFunction",
+    "GroupByFunction",
     "JoinFunction",
     "SelectFunction",
     "WithColumnFunction",
 ]
 
 transform_function_spark_union = Annotated[
-    CastFunction
+    AggregateFunction
+    | CastFunction
     | DropFunction
     | DropDuplicatesFunction
     | FilterFunction
+    | GroupByFunction
     | JoinFunction
     | SelectFunction
     | WithColumnFunction,

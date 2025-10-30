@@ -1,0 +1,95 @@
+{
+    "alert": {
+        "channels": [],
+        "triggers": []
+    },
+    "runtime": {
+        "id": "test-runtime-aggregate",
+        "description": "Test aggregate transform",
+        "enabled": true,
+        "jobs": [
+            {
+                "id": "test-aggregate-job",
+                "description": "Test aggregation operations",
+                "enabled": true,
+                "engine_type": "spark",
+                "extracts": [
+                    {
+                        "id": "extract-test",
+                        "extract_type": "file",
+                        "data_format": "json",
+                        "location": "tests/e2e/job/aggregate/extract-test/input_data.json",
+                        "method": "batch",
+                        "options": {
+                            "multiLine": true
+                        },
+                        "schema": "tests/e2e/job/aggregate/extract-test/input_schema.json"
+                    }
+                ],
+                "transforms": [
+                    {
+                        "id": "transform-aggregate",
+                        "upstream_id": "extract-test",
+                        "options": {},
+                        "functions": [
+                            {
+                                "function_type": "aggregate",
+                                "arguments": {
+                                    "group_by_columns": ["department", "location"],
+                                    "aggregate_columns": [
+                                        {
+                                            "column_name": "salary",
+                                            "function": "avg",
+                                            "alias": "avg_salary"
+                                        },
+                                        {
+                                            "column_name": "salary",
+                                            "function": "sum",
+                                            "alias": "total_salary"
+                                        },
+                                        {
+                                            "column_name": "employee_id",
+                                            "function": "count",
+                                            "alias": "employee_count"
+                                        },
+                                        {
+                                            "column_name": "salary",
+                                            "function": "min",
+                                            "alias": "min_salary"
+                                        },
+                                        {
+                                            "column_name": "salary",
+                                            "function": "max",
+                                            "alias": "max_salary"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "loads": [
+                    {
+                        "id": "load-test",
+                        "upstream_id": "transform-aggregate",
+                        "data_format": "csv",
+                        "load_type": "file",
+                        "location": "tests/e2e/job/aggregate/load-test",
+                        "method": "batch",
+                        "mode": "overwrite",
+                        "options": {
+                            "header": true
+                        },
+                        "schema_export": "tests/e2e/job/aggregate/schema_export.json"
+                    }
+                ],
+                "hooks": {
+                    "onStart": [],
+                    "onError": [],
+                    "onSuccess": [],
+                    "onFinally": []
+                }
+            }
+        ]
+    }
+}

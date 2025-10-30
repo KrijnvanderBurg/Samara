@@ -1,0 +1,12 @@
+[
+    {"employee_id": 1, "name": "Alice Johnson", "department": "Engineering", "location": "New York", "salary": 95000},
+    {"employee_id": 2, "name": "Bob Smith", "department": "Engineering", "location": "New York", "salary": 85000},
+    {"employee_id": 3, "name": "Charlie Brown", "department": "Sales", "location": "Los Angeles", "salary": 70000},
+    {"employee_id": 4, "name": "Diana Prince", "department": "Sales", "location": "Los Angeles", "salary": 75000},
+    {"employee_id": 5, "name": "Eve Wilson", "department": "Engineering", "location": "San Francisco", "salary": 105000},
+    {"employee_id": 6, "name": "Frank Miller", "department": "HR", "location": "New York", "salary": 65000},
+    {"employee_id": 7, "name": "Grace Lee", "department": "Engineering", "location": "San Francisco", "salary": 98000},
+    {"employee_id": 8, "name": "Henry Davis", "department": "Sales", "location": "New York", "salary": 72000},
+    {"employee_id": 9, "name": "Ivy Chen", "department": "HR", "location": "San Francisco", "salary": 68000},
+    {"employee_id": 10, "name": "Jack Ryan", "department": "Engineering", "location": "New York", "salary": 92000}
+]
