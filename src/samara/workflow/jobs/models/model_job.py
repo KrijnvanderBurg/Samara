@@ -319,7 +319,7 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
         memory and prevent data leakage between jobs.
 
         Raises:
-            SamaraJobError: Wraps ValueError, KeyError, or OSError exceptions
+            SamaraWorkflowJobError: Wraps ValueError, KeyError, or OSError exceptions
                 with context about the job, preserving the original exception
                 as the cause for debugging.
         """
