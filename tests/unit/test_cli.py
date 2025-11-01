@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
-from samara.workflow.controller import RuntimeController
+from samara.workflow.controller import WorkflowController
 
 from samara.alert import AlertController
 from samara.cli import cli
@@ -15,7 +15,7 @@ from samara.exceptions import (
     SamaraAlertConfigurationError,
     SamaraIOError,
     SamaraJobError,
-    SamaraRuntimeConfigurationError,
+    SamaraWorkflowConfigurationError,
     SamaraValidationError,
 )
 
@@ -29,12 +29,12 @@ class TestValidateCommand:
         runner = CliRunner()
         # Mock controllers to avoid file I/O during validation
         mock_alert = Mock()
-        mock_runtime = Mock()
+        mock_workflow = Mock()
 
         # Act
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", return_value=mock_runtime),
+            patch.object(WorkflowController, "from_file", return_value=mock_workflow),
         ):
             result = runner.invoke(
                 cli,
@@ -76,7 +76,7 @@ class TestValidateCommand:
         # Assert
         assert result.exit_code == ExitCode.CONFIGURATION_ERROR
 
-    def test_validate__when_runtime_configuration_is_invalid__exits_with_configuration_error(self) -> None:
+    def test_validate__when_workflow_configuration_is_invalid__exits_with_configuration_error(self) -> None:
         """Test validate command returns configuration error when workflow configuration is malformed."""
         # Arrange
         runner = CliRunner()
@@ -86,7 +86,7 @@ class TestValidateCommand:
         # Mock invalid workflow configuration
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", side_effect=SamaraRuntimeConfigurationError("test")),
+            patch.object(WorkflowController, "from_file", side_effect=SamaraWorkflowConfigurationError("test")),
         ):
             result = runner.invoke(
                 cli,
@@ -96,7 +96,7 @@ class TestValidateCommand:
         # Assert
         assert result.exit_code == ExitCode.CONFIGURATION_ERROR
 
-    def test_validate__when_runtime_io_error_occurs__exits_with_io_error(self) -> None:
+    def test_validate__when_workflow_io_error_occurs__exits_with_io_error(self) -> None:
         """Test validate command returns IO error when workflow configuration file cannot be accessed."""
         # Arrange
         runner = CliRunner()
@@ -107,7 +107,7 @@ class TestValidateCommand:
         # Mock workflow file access failure
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", side_effect=SamaraIOError("test")),
+            patch.object(WorkflowController, "from_file", side_effect=SamaraIOError("test")),
         ):
             result = runner.invoke(
                 cli,
@@ -117,7 +117,7 @@ class TestValidateCommand:
         # Assert
         assert result.exit_code == ExitCode.IO_ERROR
 
-    def test_validate__when_runtime_configuration_fails__exits_with_error(self) -> None:
+    def test_validate__when_workflow_configuration_fails__exits_with_error(self) -> None:
         """Test validate command returns error when workflow configuration fails to load."""
         # Arrange
         runner = CliRunner()
@@ -128,7 +128,7 @@ class TestValidateCommand:
         # Mock workflow configuration failure
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", side_effect=SamaraValidationError("test")),
+            patch.object(WorkflowController, "from_file", side_effect=SamaraValidationError("test")),
         ):
             result = runner.invoke(
                 cli,
@@ -144,12 +144,12 @@ class TestValidateCommand:
         runner = CliRunner()
         # Mock controllers to avoid file I/O
         mock_alert = Mock()
-        mock_runtime = Mock()
+        mock_workflow = Mock()
 
         # Act
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", return_value=mock_runtime),
+            patch.object(WorkflowController, "from_file", return_value=mock_workflow),
             patch.dict("os.environ", {}, clear=False),
         ):
             result = runner.invoke(
@@ -179,7 +179,7 @@ class TestValidateCommand:
 
         # Act
         # Mock unexpected exception to test general error handling
-        with patch.object(AlertController, "from_file", side_effect=RuntimeError):
+        with patch.object(AlertController, "from_file", side_effect=WorkflowError):
             result = runner.invoke(
                 cli,
                 ["validate", "--alert-filepath", "/test/alert.json", "--workflow-filepath", "/test/workflow.json"],
@@ -198,12 +198,12 @@ class TestRunCommand:
         runner = CliRunner()
         # Mock controllers to avoid file I/O and actual pipeline execution
         mock_alert = Mock()
-        mock_runtime = Mock()
+        mock_workflow = Mock()
 
         # Act
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", return_value=mock_runtime),
+            patch.object(WorkflowController, "from_file", return_value=mock_workflow),
         ):
             result = runner.invoke(
                 cli, ["run", "--alert-filepath", "/test/alert.json", "--workflow-filepath", "/test/workflow.json"]
@@ -211,7 +211,7 @@ class TestRunCommand:
 
         # Assert
         assert result.exit_code == 0
-        mock_runtime.execute_all.assert_called_once()
+        mock_workflow.execute_all.assert_called_once()
 
     def test_run__when_alert_configuration_fails__exits_with_error(self) -> None:
         """Test run command returns error when alert configuration fails to load."""
@@ -247,12 +247,12 @@ class TestRunCommand:
         "exception_class,expected_exit_code",
         [
             (SamaraIOError, ExitCode.IO_ERROR),
-            (SamaraRuntimeConfigurationError, ExitCode.CONFIGURATION_ERROR),
+            (SamaraWorkflowConfigurationError, ExitCode.CONFIGURATION_ERROR),
             (SamaraValidationError, ExitCode.VALIDATION_ERROR),
             (SamaraJobError, ExitCode.JOB_ERROR),
         ],
     )
-    def test_run__when_runtime_error_occurs__triggers_alert_and_exits_with_correct_code(
+    def test_run__when_workflow_error_occurs__triggers_alert_and_exits_with_correct_code(
         self, exception_class, expected_exit_code
     ) -> None:
         """Test run command triggers alert and returns correct exit code for various workflow errors."""
@@ -265,7 +265,7 @@ class TestRunCommand:
         # Mock workflow errors to test error handling and alerting
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", side_effect=exception_class("Test error")),
+            patch.object(WorkflowController, "from_file", side_effect=exception_class("Test error")),
         ):
             result = runner.invoke(
                 cli, ["run", "--alert-filepath", "/test/alert.json", "--workflow-filepath", "/test/workflow.json"]
@@ -281,14 +281,14 @@ class TestRunCommand:
         runner = CliRunner()
         # Mock alert controller to test alerting behavior
         mock_alert = Mock()
-        mock_runtime = Mock()
+        mock_workflow = Mock()
         # Configure execute_all to raise SamaraJobError
-        mock_runtime.execute_all.side_effect = SamaraJobError("Job execution failed")
+        mock_workflow.execute_all.side_effect = SamaraJobError("Job execution failed")
 
         # Act
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", return_value=mock_runtime),
+            patch.object(WorkflowController, "from_file", return_value=mock_workflow),
         ):
             result = runner.invoke(
                 cli, ["run", "--alert-filepath", "/test/alert.json", "--workflow-filepath", "/test/workflow.json"]
@@ -321,7 +321,7 @@ class TestRunCommand:
 
         # Act
         # Mock unexpected exception to test general error handling
-        with patch.object(AlertController, "from_file", side_effect=RuntimeError):
+        with patch.object(AlertController, "from_file", side_effect=WorkflowError):
             result = runner.invoke(
                 cli, ["run", "--alert-filepath", "/test/alert.json", "--workflow-filepath", "/test/workflow.json"]
             )
@@ -342,7 +342,7 @@ class TestExportSchemaCommand:
         # Act
         # Mock schema generation to avoid dependency on actual schema definition
         with (
-            patch.object(RuntimeController, "export_schema", return_value=mock_schema),
+            patch.object(WorkflowController, "export_schema", return_value=mock_schema),
             runner.isolated_filesystem(),
         ):
             # Test with nested path to verify directory creation
@@ -361,7 +361,7 @@ class TestExportSchemaCommand:
         # Act
         # Mock file write failure to test error handling without requiring actual permission issues
         with (
-            patch.object(RuntimeController, "export_schema", return_value=mock_schema),
+            patch.object(WorkflowController, "export_schema", return_value=mock_schema),
             patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
             result = runner.invoke(cli, ["export-schema", "--output-filepath", "/invalid/path/schema.json"])
@@ -376,7 +376,7 @@ class TestExportSchemaCommand:
 
         # Act
         # Mock unexpected exception to test general error handling
-        with patch.object(RuntimeController, "export_schema", side_effect=RuntimeError("Unexpected error")):
+        with patch.object(WorkflowController, "export_schema", side_effect=WorkflowError("Unexpected error")):
             result = runner.invoke(cli, ["export-schema", "--output-filepath", "schema.json"])
 
         # Assert
@@ -389,7 +389,7 @@ class TestExportSchemaCommand:
 
         # Act
         # Mock KeyboardInterrupt to simulate Ctrl+C from user
-        with patch.object(RuntimeController, "export_schema", side_effect=KeyboardInterrupt):
+        with patch.object(WorkflowController, "export_schema", side_effect=KeyboardInterrupt):
             result = runner.invoke(cli, ["export-schema", "--output-filepath", "schema.json"])
 
         # Assert
@@ -420,13 +420,13 @@ class TestCliGroup:
         runner = CliRunner()
         # Mock controllers to avoid file I/O
         mock_alert = Mock()
-        mock_runtime = Mock()
+        mock_workflow = Mock()
 
         # Act
         # Testing one valid level is sufficient - Click validates the choice constraint
         with (
             patch.object(AlertController, "from_file", return_value=mock_alert),
-            patch.object(RuntimeController, "from_file", return_value=mock_runtime),
+            patch.object(WorkflowController, "from_file", return_value=mock_workflow),
         ):
             result = runner.invoke(
                 cli,

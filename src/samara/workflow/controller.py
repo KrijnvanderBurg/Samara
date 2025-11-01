@@ -12,7 +12,7 @@ from pydantic import Field, ValidationError
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 from samara import BaseModel
-from samara.exceptions import SamaraIOError, SamaraRuntimeConfigurationError
+from samara.exceptions import SamaraIOError, SamaraWorkflowConfigurationError
 from samara.utils.file import FileHandlerContext
 from samara.utils.logger import get_logger
 from samara.workflow.jobs import JobUnion
@@ -44,7 +44,7 @@ class PreserveFieldOrderJsonSchema(GenerateJsonSchema):
         return value
 
 
-class RuntimeController(BaseModel):
+class WorkflowController(BaseModel):
     """Configure and execute ETL pipeline jobs.
 
     This class serves as the central configuration holder for the entire
@@ -60,7 +60,7 @@ class RuntimeController(BaseModel):
 
     Example:
         >>> config_path = Path("pipeline_config.json")
-        >>> workflow = RuntimeController.from_file(config_path)
+        >>> workflow = WorkflowController.from_file(config_path)
         >>> workflow.execute_all()
 
         **Configuration in JSON:**
@@ -113,33 +113,33 @@ class RuntimeController(BaseModel):
         """Load workflow configuration from a file.
 
         Reads and parses a configuration file (JSON or YAML) to create a fully
-        configured RuntimeController instance. Automatically detects file format
+        configured WorkflowController instance. Automatically detects file format
         and handles deserialization, validation, and error reporting.
 
         Args:
             filepath: Path to the configuration file (JSON or YAML format).
 
         Returns:
-            A fully configured RuntimeController instance ready for execution.
+            A fully configured WorkflowController instance ready for execution.
 
         Raises:
             SamaraIOError: If file I/O fails (file not found, permission denied,
                 unreadable format, etc.).
-            SamaraRuntimeConfigurationError: If the file is missing the required
+            SamaraWorkflowConfigurationError: If the file is missing the required
                 'workflow' section or contains invalid configuration data.
 
         Example:
             >>> from pathlib import Path
             >>> config_file = Path("config.json")
-            >>> workflow = RuntimeController.from_file(config_file)
+            >>> workflow = WorkflowController.from_file(config_file)
             >>> workflow.execute_all()
 
         Note:
             The configuration file must contain a top-level 'workflow' key
-            with all required RuntimeController fields (id, description,
+            with all required WorkflowController fields (id, description,
             enabled, jobs).
         """
-        logger.info("Creating RuntimeManager from file: %s", filepath)
+        logger.info("Creating WorkflowManager from file: %s", filepath)
 
         try:
             handler = FileHandlerContext.from_filepath(filepath=filepath)
@@ -150,20 +150,20 @@ class RuntimeController(BaseModel):
 
         try:
             workflow = cls(**dict_[RUNTIME])
-            logger.info("Successfully created RuntimeManager from configuration file: %s", filepath)
+            logger.info("Successfully created WorkflowManager from configuration file: %s", filepath)
             return workflow
         except KeyError as e:
-            raise SamaraRuntimeConfigurationError(
+            raise SamaraWorkflowConfigurationError(
                 f"Missing 'workflow' section in configuration file '{filepath}'"
             ) from e
         except ValidationError as e:
-            raise SamaraRuntimeConfigurationError(f"Invalid workflow configuration in file '{filepath}': {e}") from e
+            raise SamaraWorkflowConfigurationError(f"Invalid workflow configuration in file '{filepath}': {e}") from e
 
     @classmethod
     def export_schema(cls) -> dict[str, Any]:
         """Export JSON schema for configuration documentation and validation.
 
-        Generate the complete JSON schema definition for RuntimeController,
+        Generate the complete JSON schema definition for WorkflowController,
         including all nested models and validation rules. The schema preserves
         field definition order for improved readability and can be used for
         documentation generation, IDE autocompletion, and configuration validation.
@@ -173,7 +173,7 @@ class RuntimeController(BaseModel):
             with all field definitions, constraints, and descriptions.
 
         Example:
-            >>> schema = RuntimeController.export_schema()
+            >>> schema = WorkflowController.export_schema()
             >>> print(schema['properties']['id']['type'])
             'string'
             >>> print(schema['required'])
@@ -184,7 +184,7 @@ class RuntimeController(BaseModel):
             validating external configuration sources, or providing IDE hints
             for configuration files.
         """
-        logger.debug("Exporting RuntimeController JSON schema")
+        logger.debug("Exporting WorkflowController JSON schema")
         return cls.model_json_schema(schema_generator=PreserveFieldOrderJsonSchema)
 
     def execute_all(self) -> None:
@@ -206,7 +206,7 @@ class RuntimeController(BaseModel):
             pipeline execution.
 
         Example:
-            >>> workflow = RuntimeController.from_file(Path("config.json"))
+            >>> workflow = WorkflowController.from_file(Path("config.json"))
             >>> workflow.execute_all()
         """
         if not self.enabled:

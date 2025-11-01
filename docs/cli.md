@@ -58,12 +58,12 @@ Exports the workflow configuration JSON schema to a file. This schema enables ID
 
 ```bash
 python -m samara export-schema \
-    --output-filepath="path/to/runtime_schema.json"  # Path where the JSON schema will be saved
+    --output-filepath="path/to/workflow_schema.json"  # Path where the JSON schema will be saved
 ```
 
 Example:
 ```bash
-python -m samara export-schema --output-filepath="dist/runtime_schema.json"
+python -m samara export-schema --output-filepath="dist/workflow_schema.json"
 ```
 
 **Using the exported schema:**
@@ -72,7 +72,7 @@ Once exported, reference the schema in your configuration files to enable IDE su
 
 ```jsonc
 {
-    "$schema": "path/to/runtime_schema.json",
+    "$schema": "path/to/workflow_schema.json",
     "workflow": {
         "id": "my-pipeline",
         // IDE now provides autocompletion and validation

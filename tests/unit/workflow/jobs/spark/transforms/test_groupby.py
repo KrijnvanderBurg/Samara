@@ -350,7 +350,7 @@ class TestGroupByFunctionTransform:
         # Assert
         assertDataFrameEqual(result_df, expected_df, checkRowOrder=False)
 
-    def test_transform__count_with_non_null_input_column__raises_runtime_error(self, employees_df: DataFrame) -> None:
+    def test_transform__count_with_non_null_input_column__raises_workflow_error(self, employees_df: DataFrame) -> None:
         """Test transform raises error when count has non-null input_column."""
         # Arrange
         config = {
@@ -364,11 +364,11 @@ class TestGroupByFunctionTransform:
         transform_fn = groupby_func.transform()
 
         # Act & Assert
-        with pytest.raises(RuntimeError, match="Count function requires input_column to be null"):
+        with pytest.raises(WorkflowError, match="Count function requires input_column to be null"):
             result_df = transform_fn(employees_df)
             result_df.collect()  # Force evaluation
 
-    def test_transform__non_count_with_null_input_column__raises_runtime_error(self, employees_df: DataFrame) -> None:
+    def test_transform__non_count_with_null_input_column__raises_workflow_error(self, employees_df: DataFrame) -> None:
         """Test transform raises error when non-count function has null input_column."""
         # Arrange
         config = {
@@ -382,7 +382,7 @@ class TestGroupByFunctionTransform:
         transform_fn = groupby_func.transform()
 
         # Act & Assert
-        with pytest.raises(RuntimeError, match="requires a valid input_column, got null"):
+        with pytest.raises(WorkflowError, match="requires a valid input_column, got null"):
             result_df = transform_fn(employees_df)
             result_df.collect()  # Force evaluation
 

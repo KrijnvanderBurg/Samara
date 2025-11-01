@@ -23,11 +23,11 @@ from samara.exceptions import (
     SamaraAlertTestError,
     SamaraIOError,
     SamaraJobError,
-    SamaraRuntimeConfigurationError,
+    SamaraWorkflowConfigurationError,
     SamaraValidationError,
 )
 from samara.utils.logger import get_logger, set_logger
-from samara.workflow.controller import RuntimeController
+from samara.workflow.controller import WorkflowController
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -87,7 +87,7 @@ def cli(log_level: str | None = None) -> None:
 )
 def validate(
     alert_filepath: Path,
-    runtime_filepath: Path,
+    workflow_filepath: Path,
     test_exception: str | None,
     test_env_var: tuple[str, ...],
 ) -> None:
@@ -106,7 +106,7 @@ def validate(
         alert_filepath: Path to the alert configuration file in JSON or YAML
             format. The file must exist and contain valid alert configuration
             with triggers and channels.
-        runtime_filepath: Path to the workflow (ETL) configuration file in JSON
+        workflow_filepath: Path to the workflow (ETL) configuration file in JSON
             or YAML format. The file must exist and define valid pipeline
             extracts, transforms, and loads.
         test_exception: Optional test exception message string. When provided,
@@ -156,13 +156,13 @@ def validate(
             raise click.exceptions.Exit(e.exit_code)
 
         try:
-            _ = RuntimeController.from_file(filepath=runtime_filepath)
+            _ = WorkflowController.from_file(filepath=workflow_filepath)
             # Not alerting on exceptions as a validate command is often run locally or from CICD
             # and thus an alert would be drowning out real alerts
         except SamaraIOError as e:
             logger.error("Cannot access workflow configuration file: %s", e)
             raise click.exceptions.Exit(e.exit_code)
-        except SamaraRuntimeConfigurationError as e:
+        except SamaraWorkflowConfigurationError as e:
             logger.error("Workflow configuration is invalid: %s", e)
             raise click.exceptions.Exit(e.exit_code)
         except SamaraValidationError as e:
@@ -206,7 +206,7 @@ def validate(
     type=click.Path(exists=False, path_type=Path),
     help="Path to workflow configuration file",
 )
-def run(alert_filepath: Path, runtime_filepath: Path) -> None:
+def run(alert_filepath: Path, workflow_filepath: Path) -> None:
     """Execute the ETL pipeline with integrated alert monitoring.
 
     Load workflow and alert configurations, then execute the complete ETL pipeline.
@@ -219,7 +219,7 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
         alert_filepath: Path to the alert configuration file in JSON or YAML
             format. Defines alert channels (email, HTTP, file) and trigger rules
             that determine when and how alerts are sent during execution.
-        runtime_filepath: Path to the workflow configuration file in JSON or YAML
+        workflow_filepath: Path to the workflow configuration file in JSON or YAML
             format. Defines the complete ETL pipeline including data sources,
             transformation chains, and output destinations.
 
@@ -240,7 +240,7 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
     """
     try:
         logger.info("Running 'run' command...")
-        logger.info("Running ETL pipeline with config: %s", runtime_filepath)
+        logger.info("Running ETL pipeline with config: %s", workflow_filepath)
 
         try:
             alert = AlertController.from_file(filepath=alert_filepath)
@@ -252,7 +252,7 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
             raise click.exceptions.Exit(e.exit_code)
 
         try:
-            workflow = RuntimeController.from_file(filepath=runtime_filepath)
+            workflow = WorkflowController.from_file(filepath=workflow_filepath)
             workflow.execute_all()
             logger.info("ETL pipeline completed successfully")
             logger.info(
@@ -264,7 +264,7 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
                 title="ETL Configuration File Error", body="Failed to read workflow configuration file", exception=e
             )
             raise click.exceptions.Exit(e.exit_code)
-        except SamaraRuntimeConfigurationError as e:
+        except SamaraWorkflowConfigurationError as e:
             logger.error("Workflow configuration is invalid: %s", e)
             alert.evaluate_trigger_and_alert(
                 title="ETL Configuration Error", body="Invalid workflow configuration", exception=e
@@ -333,7 +333,7 @@ def export_schema(output_filepath: Path) -> None:
         logger.info("Exporting workflow configuration schema to: %s", output_filepath)
 
         try:
-            schema = RuntimeController.export_schema()
+            schema = WorkflowController.export_schema()
 
             # Ensure parent directory exists
             output_filepath.parent.mkdir(parents=True, exist_ok=True)

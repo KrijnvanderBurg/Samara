@@ -136,14 +136,14 @@ Samara can export a JSON schema that enables autocompletion, validation, and inl
 **Export the schema:**
 
 ```bash
-python -m samara export-schema --output-filepath="./runtime_schema.json"
+python -m samara export-schema --output-filepath="./workflow_schema.json"
 ```
 
 **Reference it in your configuration:**
 
 ```jsonc
 {
-    "$schema": "./runtime_schema.json",
+    "$schema": "./workflow_schema.json",
     "workflow": {
         "id": "my-pipeline",
         // Your IDE now provides:

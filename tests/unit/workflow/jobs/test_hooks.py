@@ -82,8 +82,8 @@ def test_hooks_propagate_exceptions() -> None:
     """Test that hooks propagate exceptions from failing actions."""
     action = MockAction(id="test_action", description="Test action", enabled=True)
 
-    with patch.object(action, "_execute", side_effect=RuntimeError("Action failed")):
+    with patch.object(action, "_execute", side_effect=WorkflowError("Action failed")):
         hooks = Hooks.model_construct(onStart=[action])
 
-        with pytest.raises(RuntimeError, match="Action failed"):
+        with pytest.raises(WorkflowError, match="Action failed"):
             hooks.on_start()

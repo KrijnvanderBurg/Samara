@@ -98,7 +98,7 @@ class SamaraAlertConfigurationError(SamaraError):
         super().__init__(message=message, exit_code=ExitCode.CONFIGURATION_ERROR)
 
 
-class SamaraRuntimeConfigurationError(SamaraError):
+class SamaraWorkflowConfigurationError(SamaraError):
     """Raise when workflow configuration is invalid.
 
     Indicates issues with job, extract, transform, or load configuration

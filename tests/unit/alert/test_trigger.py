@@ -439,7 +439,7 @@ class TestAlertTriggerShouldFire:
 
         # Act & Assert - different exception types
         assert trigger.should_fire(ValueError("connection error")) is True
-        assert trigger.should_fire(RuntimeError("database connection failed")) is True
+        assert trigger.should_fire(WorkflowError("database connection failed")) is True
         assert trigger.should_fire(ConnectionError("connection timeout")) is True
         assert trigger.should_fire(Exception("no connection available")) is True
 

@@ -16,8 +16,8 @@ Example:
     Define and execute a pipeline from configuration:
 
     >>> from pathlib import Path
-    >>> from samara.workflow.controller import RuntimeController
-    >>> controller = RuntimeController.from_config_file(Path("pipeline.json"))
+    >>> from samara.workflow.controller import WorkflowController
+    >>> controller = WorkflowController.from_config_file(Path("pipeline.json"))
     >>> controller.execute()
 
 See Also:

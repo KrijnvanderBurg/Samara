@@ -111,7 +111,7 @@ class GroupByFunction(GroupByFunctionModel, FunctionSpark):
             with grouped and aggregated data.
 
         Raises:
-            RuntimeError: If a count function has a non-null input_column, or if
+            WorkflowError: If a count function has a non-null input_column, or if
                 a non-count function has a null input_column.
         """
 
@@ -126,17 +126,17 @@ class GroupByFunction(GroupByFunctionModel, FunctionSpark):
                 functions applied, containing group columns and aggregate result columns
 
             Raises:
-                RuntimeError: If aggregate function configuration is invalid
+                WorkflowError: If aggregate function configuration is invalid
             """
             agg_exprs = []
             for agg in self.arguments.aggregations:
                 if agg.function == "count":
                     if agg.input_column is not None:
-                        raise RuntimeError(f"Count function requires input_column to be null, got: {agg.input_column}")
+                        raise WorkflowError(f"Count function requires input_column to be null, got: {agg.input_column}")
                     agg_exprs.append(F.count("*").alias(agg.output_column))
                 else:
                     if agg.input_column is None:
-                        raise RuntimeError(
+                        raise WorkflowError(
                             f"Aggregate function '{agg.function}' requires a valid input_column, got null"
                         )
                     agg_exprs.append(getattr(F, agg.function)(agg.input_column).alias(agg.output_column))

@@ -1,4 +1,4 @@
-"""Unit tests for the RuntimeController module."""
+"""Unit tests for the WorkflowController module."""
 
 from __future__ import annotations
 
@@ -9,17 +9,17 @@ from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError
-from samara.workflow.controller import RuntimeController
+from samara.workflow.controller import WorkflowController
 
-from samara.exceptions import SamaraIOError, SamaraRuntimeConfigurationError
+from samara.exceptions import SamaraIOError, SamaraWorkflowConfigurationError
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
 # =========================================================================== #
 
 
-@pytest.fixture(name="runtime_config")
-def fixture_runtime_config(tmp_path: Path) -> dict[str, Any]:
+@pytest.fixture(name="workflow_config")
+def fixture_workflow_config(tmp_path: Path) -> dict[str, Any]:
     """Provide a valid workflow configuration dict with temporary paths.
 
     Args:
@@ -88,9 +88,9 @@ def fixture_runtime_config(tmp_path: Path) -> dict[str, Any]:
     }
 
 
-def test_runtime_creation__from_config__creates_valid_model(runtime_config: dict[str, Any]) -> None:
-    """Create a RuntimeController from config and assert its attributes."""
-    controller = RuntimeController(**runtime_config)
+def test_workflow_creation__from_config__creates_valid_model(workflow_config: dict[str, Any]) -> None:
+    """Create a WorkflowController from config and assert its attributes."""
+    controller = WorkflowController(**workflow_config)
 
     assert isinstance(controller.jobs, list)
     assert len(controller.jobs) == 1
@@ -102,68 +102,68 @@ def test_runtime_creation__from_config__creates_valid_model(runtime_config: dict
 # =========================================================================== #
 
 
-class TestRuntimeControllerValidation:
-    """Test RuntimeController model validation."""
+class TestWorkflowControllerValidation:
+    """Test WorkflowController model validation."""
 
-    def test_create_runtime_controller__with_missing_jobs__raises_validation_error(
-        self, runtime_config: dict[str, Any]
+    def test_create_workflow_controller__with_missing_jobs__raises_validation_error(
+        self, workflow_config: dict[str, Any]
     ) -> None:
-        """Test RuntimeController creation fails when jobs field is missing."""
-        del runtime_config["jobs"]
+        """Test WorkflowController creation fails when jobs field is missing."""
+        del workflow_config["jobs"]
 
         with pytest.raises(ValidationError):
-            RuntimeController(**runtime_config)
+            WorkflowController(**workflow_config)
 
-    def test_create_runtime_controller__with_invalid_job__raises_validation_error(
-        self, runtime_config: dict[str, Any]
+    def test_create_workflow_controller__with_invalid_job__raises_validation_error(
+        self, workflow_config: dict[str, Any]
     ) -> None:
-        """Test RuntimeController creation fails with invalid job configuration."""
-        runtime_config["jobs"][0]["engine_type"] = "invalid_engine"
+        """Test WorkflowController creation fails with invalid job configuration."""
+        workflow_config["jobs"][0]["engine_type"] = "invalid_engine"
 
         with pytest.raises(ValidationError):
-            RuntimeController(**runtime_config)
+            WorkflowController(**workflow_config)
 
-    def test_create_runtime_controller__with_missing_name__raises_validation_error(
-        self, runtime_config: dict[str, Any]
+    def test_create_workflow_controller__with_missing_name__raises_validation_error(
+        self, workflow_config: dict[str, Any]
     ) -> None:
-        """Test RuntimeController creation fails when name field is missing."""
-        del runtime_config["id"]
+        """Test WorkflowController creation fails when name field is missing."""
+        del workflow_config["id"]
 
         with pytest.raises(ValidationError):
-            RuntimeController(**runtime_config)
+            WorkflowController(**workflow_config)
 
-    def test_create_runtime_controller__with_empty_name__raises_validation_error(
-        self, runtime_config: dict[str, Any]
+    def test_create_workflow_controller__with_empty_name__raises_validation_error(
+        self, workflow_config: dict[str, Any]
     ) -> None:
-        """Test RuntimeController creation fails when name is empty."""
-        runtime_config["id"] = ""
+        """Test WorkflowController creation fails when name is empty."""
+        workflow_config["id"] = ""
 
         with pytest.raises(ValidationError):
-            RuntimeController(**runtime_config)
+            WorkflowController(**workflow_config)
 
-    def test_create_runtime_controller__with_missing_description__raises_validation_error(
-        self, runtime_config: dict[str, Any]
+    def test_create_workflow_controller__with_missing_description__raises_validation_error(
+        self, workflow_config: dict[str, Any]
     ) -> None:
-        """Test RuntimeController creation fails when description is missing."""
-        del runtime_config["description"]
+        """Test WorkflowController creation fails when description is missing."""
+        del workflow_config["description"]
 
         with pytest.raises(ValidationError):
-            RuntimeController(**runtime_config)
+            WorkflowController(**workflow_config)
 
-    def test_create_runtime_controller__with_missing_enabled__raises_validation_error(
-        self, runtime_config: dict[str, Any]
+    def test_create_workflow_controller__with_missing_enabled__raises_validation_error(
+        self, workflow_config: dict[str, Any]
     ) -> None:
-        """Test RuntimeController creation fails when enabled is missing."""
-        del runtime_config["enabled"]
+        """Test WorkflowController creation fails when enabled is missing."""
+        del workflow_config["enabled"]
 
         with pytest.raises(ValidationError):
-            RuntimeController(**runtime_config)
+            WorkflowController(**workflow_config)
 
-    def test_create_runtime_controller__with_enabled_false__succeeds(self, runtime_config: dict[str, Any]) -> None:
-        """Test RuntimeController creation succeeds with enabled set to False."""
-        runtime_config["enabled"] = False
+    def test_create_workflow_controller__with_enabled_false__succeeds(self, workflow_config: dict[str, Any]) -> None:
+        """Test WorkflowController creation succeeds with enabled set to False."""
+        workflow_config["enabled"] = False
 
-        controller = RuntimeController(**runtime_config)
+        controller = WorkflowController(**workflow_config)
 
         assert controller.enabled is False
 
@@ -173,10 +173,10 @@ class TestRuntimeControllerValidation:
 # =========================================================================== #
 
 
-@pytest.fixture(name="runtime_controller")
-def fixture_runtime_controller(runtime_config: dict[str, Any]) -> RuntimeController:
-    """Instantiate a RuntimeController from the provided config."""
-    return RuntimeController(**runtime_config)
+@pytest.fixture(name="workflow_controller")
+def fixture_workflow_controller(workflow_config: dict[str, Any]) -> WorkflowController:
+    """Instantiate a WorkflowController from the provided config."""
+    return WorkflowController(**workflow_config)
 
 
 # =========================================================================== #
@@ -184,18 +184,18 @@ def fixture_runtime_controller(runtime_config: dict[str, Any]) -> RuntimeControl
 # =========================================================================== #
 
 
-class TestRuntimeControllerFromFile:
-    """Test RuntimeController.from_file() class method."""
+class TestWorkflowControllerFromFile:
+    """Test WorkflowController.from_file() class method."""
 
-    def test_from_file__with_valid_json_config__succeeds(self, runtime_config: dict[str, Any], tmp_path: Path) -> None:
-        """Test from_file creates RuntimeController from valid JSON file."""
-        config_file = tmp_path / "runtime_config.json"
-        config_data = {"workflow": runtime_config}
+    def test_from_file__with_valid_json_config__succeeds(self, workflow_config: dict[str, Any], tmp_path: Path) -> None:
+        """Test from_file creates WorkflowController from valid JSON file."""
+        config_file = tmp_path / "workflow_config.json"
+        config_data = {"workflow": workflow_config}
         config_file.write_text(json.dumps(config_data), encoding="utf-8")
 
-        controller = RuntimeController.from_file(config_file)
+        controller = WorkflowController.from_file(config_file)
 
-        assert isinstance(controller, RuntimeController)
+        assert isinstance(controller, WorkflowController)
         assert len(controller.jobs) == 1
 
     def test_from_file__with_nonexistent_file__raises_samara_io_error(self, tmp_path: Path) -> None:
@@ -203,17 +203,17 @@ class TestRuntimeControllerFromFile:
         nonexistent_file = tmp_path / "nonexistent.json"
 
         with pytest.raises(SamaraIOError):
-            RuntimeController.from_file(nonexistent_file)
+            WorkflowController.from_file(nonexistent_file)
 
-    def test_from_file__with_missing_runtime_section__raises_configuration_error(
-        self, runtime_config: dict[str, Any], tmp_path: Path
+    def test_from_file__with_missing_workflow_section__raises_configuration_error(
+        self, workflow_config: dict[str, Any], tmp_path: Path
     ) -> None:
         """Test from_file raises error when 'workflow' section is missing."""
         config_file = tmp_path / "invalid_config.json"
-        config_file.write_text(json.dumps(runtime_config), encoding="utf-8")
+        config_file.write_text(json.dumps(workflow_config), encoding="utf-8")
 
-        with pytest.raises(SamaraRuntimeConfigurationError):
-            RuntimeController.from_file(config_file)
+        with pytest.raises(SamaraWorkflowConfigurationError):
+            WorkflowController.from_file(config_file)
 
 
 # =========================================================================== #
@@ -221,53 +221,53 @@ class TestRuntimeControllerFromFile:
 # =========================================================================== #
 
 
-class TestRuntimeControllerExecuteAll:
-    """Test RuntimeController.execute_all() method."""
+class TestWorkflowControllerExecuteAll:
+    """Test WorkflowController.execute_all() method."""
 
-    def test_execute_all__when_disabled__skips_job_execution(self, runtime_controller: RuntimeController) -> None:
+    def test_execute_all__when_disabled__skips_job_execution(self, workflow_controller: WorkflowController) -> None:
         """Test execute_all skips all jobs when workflow is disabled."""
-        runtime_controller.enabled = False
+        workflow_controller.enabled = False
         mock_job = Mock()
         mock_job.id = "mock_job"
-        runtime_controller.jobs = [mock_job]
+        workflow_controller.jobs = [mock_job]
 
-        runtime_controller.execute_all()
+        workflow_controller.execute_all()
 
         # Job should not be executed
         mock_job.execute.assert_not_called()
 
-    def test_execute_all__with_single_job__calls_job_execute(self, runtime_controller: RuntimeController) -> None:
+    def test_execute_all__with_single_job__calls_job_execute(self, workflow_controller: WorkflowController) -> None:
         """Test execute_all calls execute on single job."""
         mock_job = Mock()
         mock_job.id = "mock_job"
-        runtime_controller.jobs = [mock_job]
+        workflow_controller.jobs = [mock_job]
 
-        runtime_controller.execute_all()
+        workflow_controller.execute_all()
 
         mock_job.execute.assert_called_once()
 
-    def test_execute_all__with_multiple_jobs__calls_execute_on_all(self, runtime_controller: RuntimeController) -> None:
+    def test_execute_all__with_multiple_jobs__calls_execute_on_all(self, workflow_controller: WorkflowController) -> None:
         """Test execute_all calls execute on all jobs in order."""
         mock_job1 = Mock()
         mock_job1.id = "job1"
         mock_job2 = Mock()
         mock_job2.id = "job2"
-        runtime_controller.jobs = [mock_job1, mock_job2]
+        workflow_controller.jobs = [mock_job1, mock_job2]
 
-        runtime_controller.execute_all()
+        workflow_controller.execute_all()
 
         mock_job1.execute.assert_called_once()
         mock_job2.execute.assert_called_once()
 
-    def test_execute_all__when_job_fails__propagates_exception(self, runtime_controller: RuntimeController) -> None:
+    def test_execute_all__when_job_fails__propagates_exception(self, workflow_controller: WorkflowController) -> None:
         """Test execute_all propagates exception when a job fails."""
         mock_job = Mock()
         mock_job.id = "failing_job"
         mock_job.execute.side_effect = Exception("Job execution failed")
-        runtime_controller.jobs = [mock_job]
+        workflow_controller.jobs = [mock_job]
 
         with pytest.raises(Exception):
-            runtime_controller.execute_all()
+            workflow_controller.execute_all()
 
 
 # =========================================================================== #
@@ -275,18 +275,18 @@ class TestRuntimeControllerExecuteAll:
 # =========================================================================== #
 
 
-class TestRuntimeControllerExportSchema:
-    """Test RuntimeController.export_schema() method."""
+class TestWorkflowControllerExportSchema:
+    """Test WorkflowController.export_schema() method."""
 
     def test_export_schema__returns_dict(self) -> None:
         """Test export_schema returns a dictionary."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         assert isinstance(schema, dict)
 
     def test_export_schema__contains_required_top_level_keys(self) -> None:
         """Test export_schema contains standard JSON Schema keys."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         assert "properties" in schema
         assert "required" in schema
@@ -295,13 +295,13 @@ class TestRuntimeControllerExportSchema:
 
     def test_export_schema__has_correct_type(self) -> None:
         """Test export_schema indicates object type."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         assert schema["type"] == "object"
 
     def test_export_schema__contains_all_field_properties(self) -> None:
-        """Test export_schema includes all RuntimeController fields."""
-        schema = RuntimeController.export_schema()
+        """Test export_schema includes all WorkflowController fields."""
+        schema = WorkflowController.export_schema()
 
         properties = schema["properties"]
         assert "id" in properties
@@ -311,7 +311,7 @@ class TestRuntimeControllerExportSchema:
 
     def test_export_schema__id_field_has_correct_type_and_constraints(self) -> None:
         """Test export_schema defines id field correctly."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         id_field = schema["properties"]["id"]
         assert id_field["type"] == "string"
@@ -320,28 +320,28 @@ class TestRuntimeControllerExportSchema:
 
     def test_export_schema__description_field_has_correct_type(self) -> None:
         """Test export_schema defines description field correctly."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         description_field = schema["properties"]["description"]
         assert description_field["type"] == "string"
 
     def test_export_schema__enabled_field_has_correct_type(self) -> None:
         """Test export_schema defines enabled field correctly."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         enabled_field = schema["properties"]["enabled"]
         assert enabled_field["type"] == "boolean"
 
     def test_export_schema__jobs_field_is_array(self) -> None:
         """Test export_schema defines jobs field as array."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         jobs_field = schema["properties"]["jobs"]
         assert jobs_field["type"] == "array"
 
     def test_export_schema__all_fields_are_required(self) -> None:
         """Test export_schema marks all fields as required."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         required_fields = schema["required"]
         assert "id" in required_fields
@@ -351,14 +351,14 @@ class TestRuntimeControllerExportSchema:
 
     def test_export_schema__includes_nested_definitions(self) -> None:
         """Test export_schema includes definitions for nested models."""
-        schema = RuntimeController.export_schema()
+        schema = WorkflowController.export_schema()
 
         # Schema should contain definitions or $defs for nested models
         assert "$defs" in schema or "definitions" in schema
 
     def test_export_schema__is_idempotent(self) -> None:
         """Test export_schema returns same result when called multiple times."""
-        schema1 = RuntimeController.export_schema()
-        schema2 = RuntimeController.export_schema()
+        schema1 = WorkflowController.export_schema()
+        schema2 = WorkflowController.export_schema()
 
         assert schema1 == schema2
