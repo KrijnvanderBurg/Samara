@@ -1,0 +1,5 @@
+{
+    "extract-employee-data": "./extract-test/employees_schema.json",
+    "transform-order-employees": "./transform-test/ordered_schema.json",
+    "load-ordered-employees": "./load-test/expected_schema.json"
+}

@@ -1,0 +1,3 @@
+{
+    "load-test": "tests/e2e/job/pivot/load-test/expected_schema.json"
+}

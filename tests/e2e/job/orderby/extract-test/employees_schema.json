@@ -1,0 +1,9 @@
+{
+    "fields": [
+        {"name": "id", "type": "string", "nullable": true},
+        {"name": "name", "type": "string", "nullable": true},
+        {"name": "department", "type": "string", "nullable": true},
+        {"name": "salary", "type": "string", "nullable": true},
+        {"name": "hire_date", "type": "string", "nullable": true}
+    ]
+}
