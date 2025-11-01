@@ -13,6 +13,7 @@ from collections.abc import Callable
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
+from samara.exceptions import SamaraWorkflowJobError
 from samara.workflow.jobs.models.transforms.model_groupby import GroupByFunctionModel
 from samara.workflow.jobs.spark.transforms.base import FunctionSpark
 
@@ -132,11 +133,13 @@ class GroupByFunction(GroupByFunctionModel, FunctionSpark):
             for agg in self.arguments.aggregations:
                 if agg.function == "count":
                     if agg.input_column is not None:
-                        raise WorkflowError(f"Count function requires input_column to be null, got: {agg.input_column}")
+                        raise SamaraWorkflowJobError(
+                            f"Count function requires input_column to be null, got: {agg.input_column}"
+                        )
                     agg_exprs.append(F.count("*").alias(agg.output_column))
                 else:
                     if agg.input_column is None:
-                        raise WorkflowError(
+                        raise SamaraWorkflowJobError(
                             f"Aggregate function '{agg.function}' requires a valid input_column, got null"
                         )
                     agg_exprs.append(getattr(F, agg.function)(agg.input_column).alias(agg.output_column))

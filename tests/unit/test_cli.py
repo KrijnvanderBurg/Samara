@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
-from samara.workflow.controller import WorkflowController
 
 from samara.alert import AlertController
 from samara.cli import cli
@@ -14,10 +13,11 @@ from samara.exceptions import (
     ExitCode,
     SamaraAlertConfigurationError,
     SamaraIOError,
-    SamaraJobError,
-    SamaraWorkflowConfigurationError,
     SamaraValidationError,
+    SamaraWorkflowConfigurationError,
+    SamaraWorkflowJobError,
 )
+from samara.workflow.controller import WorkflowController
 
 
 class TestValidateCommand:
@@ -249,7 +249,7 @@ class TestRunCommand:
             (SamaraIOError, ExitCode.IO_ERROR),
             (SamaraWorkflowConfigurationError, ExitCode.CONFIGURATION_ERROR),
             (SamaraValidationError, ExitCode.VALIDATION_ERROR),
-            (SamaraJobError, ExitCode.JOB_ERROR),
+            (SamaraWorkflowJobError, ExitCode.JOB_ERROR),
         ],
     )
     def test_run__when_workflow_error_occurs__triggers_alert_and_exits_with_correct_code(
@@ -283,7 +283,7 @@ class TestRunCommand:
         mock_alert = Mock()
         mock_workflow = Mock()
         # Configure execute_all to raise SamaraJobError
-        mock_workflow.execute_all.side_effect = SamaraJobError("Job execution failed")
+        mock_workflow.execute_all.side_effect = SamaraWorkflowJobError("Job execution failed")
 
         # Act
         with (

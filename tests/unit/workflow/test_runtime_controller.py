@@ -9,9 +9,9 @@ from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError
-from samara.workflow.controller import WorkflowController
 
 from samara.exceptions import SamaraIOError, SamaraWorkflowConfigurationError
+from samara.workflow.controller import WorkflowController
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
@@ -246,7 +246,9 @@ class TestWorkflowControllerExecuteAll:
 
         mock_job.execute.assert_called_once()
 
-    def test_execute_all__with_multiple_jobs__calls_execute_on_all(self, workflow_controller: WorkflowController) -> None:
+    def test_execute_all__with_multiple_jobs__calls_execute_on_all(
+        self, workflow_controller: WorkflowController
+    ) -> None:
         """Test execute_all calls execute on all jobs in order."""
         mock_job1 = Mock()
         mock_job1.id = "job1"

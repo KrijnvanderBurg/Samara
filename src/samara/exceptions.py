@@ -146,7 +146,7 @@ class SamaraAlertTestError(SamaraError):
         super().__init__(message=message, exit_code=ExitCode.ALERT_TEST_ERROR)
 
 
-class SamaraJobError(SamaraError):
+class SamaraWorkflowJobError(SamaraError):
     """Raise when ETL job execution fails.
 
     Covers errors during data extraction, transformation, or loading phases

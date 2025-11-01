@@ -22,9 +22,9 @@ from samara.exceptions import (
     SamaraAlertConfigurationError,
     SamaraAlertTestError,
     SamaraIOError,
-    SamaraJobError,
-    SamaraWorkflowConfigurationError,
     SamaraValidationError,
+    SamaraWorkflowConfigurationError,
+    SamaraWorkflowJobError,
 )
 from samara.utils.logger import get_logger, set_logger
 from samara.workflow.controller import WorkflowController
@@ -276,7 +276,7 @@ def run(alert_filepath: Path, workflow_filepath: Path) -> None:
                 title="ETL Validation Error", body="Configuration validation failed", exception=e
             )
             raise click.exceptions.Exit(e.exit_code)
-        except SamaraJobError as e:
+        except SamaraWorkflowJobError as e:
             logger.error("ETL job failed: %s", e)
             alert.evaluate_trigger_and_alert(
                 title="ETL Execution Error", body="Workflow error during ETL execution", exception=e
