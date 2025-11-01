@@ -115,7 +115,7 @@ class TestAlertControllerOrchestration:
 
         with patch.object(controller.channels[0], "_alert") as mock_channel:
             # Act
-            controller.evaluate_trigger_and_alert("Test Alert", "Test message", RuntimeError("error"))
+            controller.evaluate_trigger_and_alert("Test Alert", "Test message", WorkflowError("error"))
 
             # Assert - only called once (by enabled trigger)
             mock_channel.assert_called_once()
@@ -148,7 +148,7 @@ class TestAlertControllerOrchestration:
 
         with patch.object(controller.channels[0], "_alert") as mock_channel:
             # Act - should not raise exception
-            controller.evaluate_trigger_and_alert("Test Alert", "Test message", RuntimeError("error"))
+            controller.evaluate_trigger_and_alert("Test Alert", "Test message", WorkflowError("error"))
 
             # Assert - existing channel still called
             mock_channel.assert_called_once()
@@ -186,7 +186,7 @@ class TestAlertControllerOrchestration:
 
         with patch.object(controller.channels[0], "_alert") as mock_channel:
             # Act
-            controller.evaluate_trigger_and_alert("Original Title", "Original Body", RuntimeError("error"))
+            controller.evaluate_trigger_and_alert("Original Title", "Original Body", WorkflowError("error"))
 
             # Assert - template formatting applied
             mock_channel.assert_called_once_with(

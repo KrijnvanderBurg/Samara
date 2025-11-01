@@ -1,6 +1,6 @@
 {
-    "$schema": "../../dist/runtime_schema.json",
-    "runtime": {
+    "$schema": "../../dist/workflow_schema.json",
+    "workflow": {
         "id": "customer-orders-pipeline",
         "description": "ETL pipeline for processing customer orders data",
         "enabled": true,

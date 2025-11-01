@@ -3,8 +3,8 @@
         "channels": [],
         "triggers": []
     },
-    "runtime": {
-        "id": "test-runtime",
+    "workflow": {
+        "id": "test-workflow",
         "description": "",
         "enabled": true,
         "jobs": [

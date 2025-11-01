@@ -3,8 +3,8 @@
         "channels": [],
         "triggers": []
     },
-    "runtime": {
-        "id": "test-runtime-aggregate",
+    "workflow": {
+        "id": "test-workflow-aggregate",
         "description": "Test aggregate transform",
         "enabled": true,
         "jobs": [

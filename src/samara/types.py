@@ -4,7 +4,7 @@ Core type definitions and patterns for the framework.
 Provides foundational building blocks for the framework's architecture, including
 singleton services, dynamic component registries, and type-safe collections. These
 patterns enable configuration-driven pipelines by supporting component registration,
-shared resource management, and runtime selection based on configuration definitions
+shared resource management, and workflow selection based on configuration definitions
 rather than hardcoded implementations.
 """
 

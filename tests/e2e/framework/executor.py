@@ -66,7 +66,7 @@ class JobTestExecutor:
                 "-m",
                 "samara",
                 "run",
-                "--runtime-filepath",
+                "--workflow-filepath",
                 str(self.isolated_config_path),
                 "--alert-filepath",
                 str(self.isolated_config_path),

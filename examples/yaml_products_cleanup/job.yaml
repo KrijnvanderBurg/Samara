@@ -1,4 +1,4 @@
-runtime:
+workflow:
   id: product-cleanup-pipeline
   description: ETL pipeline for cleaning and standardizing product catalog data
   enabled: true

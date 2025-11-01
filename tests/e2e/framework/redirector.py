@@ -25,7 +25,7 @@ class PathRedirector:
         Returns:
             Modified configuration with redirected output paths
         """
-        for job in config["runtime"]["jobs"]:
+        for job in config["workflow"]["jobs"]:
             # Leave input paths as-is (no need to copy read-only files)
 
             # Redirect load paths (outputs) to tmp

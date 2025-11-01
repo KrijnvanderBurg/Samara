@@ -184,7 +184,7 @@ class TestExceptionRegexRuleEvaluation:
     def test_evaluate__with_partial_matching__returns_true(self, exception_rule: ExceptionRegexRule) -> None:
         """Test evaluation returns True when pattern matches part of exception message."""
         # Arrange
-        exception = RuntimeError("A critical error has been detected in the system")
+        exception = WorkflowError("A critical error has been detected in the system")
 
         # Act
         result = exception_rule.evaluate(exception)
@@ -244,8 +244,8 @@ class TestExceptionRegexRuleEvaluation:
         """Test evaluation with multiline exception messages."""
         # Arrange
         rule = create_exception_regex_rule(r"Stack trace:.*")
-        multiline_msg = "Stack trace:\n  File 'main.py', line 42\n    raise RuntimeError()"
-        exception = RuntimeError(multiline_msg)
+        multiline_msg = "Stack trace:\n  File 'main.py', line 42\n    raise WorkflowError()"
+        exception = WorkflowError(multiline_msg)
 
         # Act
         result = rule.evaluate(exception)
@@ -271,7 +271,7 @@ class TestExceptionRegexRuleEvaluation:
 
         # Act & Assert - Test with different exception types
         assert rule.evaluate(ValueError("Operation failed")) is True
-        assert rule.evaluate(RuntimeError("Process failed")) is True
+        assert rule.evaluate(WorkflowError("Process failed")) is True
         assert rule.evaluate(KeyError("Key lookup failed")) is True
         assert rule.evaluate(Exception("Generic operation failed")) is True
 

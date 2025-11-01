@@ -30,7 +30,7 @@ Running this pipeline demonstrates data cleaning operations using YAML configura
 ### Configuration: [`examples/yaml_products_cleanup/job.yaml`](./yaml_products_cleanup/job.yaml)
 
 ```yaml
-runtime:
+workflow:
   id: product-cleanup-pipeline
   description: ETL pipeline for cleaning and standardizing product catalog data
   enabled: true
@@ -133,7 +133,7 @@ Running this pipeline demonstrates multi-source data integration using JSON conf
 ### Configuration: [`examples/join_select/job.jsonc`](./join_select/job.jsonc)
 ```jsonc
 {
-    "runtime": {
+    "workflow": {
         "id": "customer-orders-pipeline",
         "description": "ETL pipeline for processing customer orders data",
         "enabled": true,
@@ -224,6 +224,6 @@ Running this pipeline demonstrates multi-source data integration using JSON conf
 
 For more examples and detailed documentation, see:
 - [Getting Started Guide](../docs/getting_started.md)
-- [Runtime Configuration Reference](../docs/runtime/README.md)
-- [Transform Functions Reference](../docs/runtime/spark.md)
+- [Workflow Configuration Reference](../docs/workflow/README.md)
+- [Transform Functions Reference](../docs/workflow/spark.md)
 

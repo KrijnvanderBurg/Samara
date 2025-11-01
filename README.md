@@ -47,7 +47,7 @@ poetry install
 ```bash
 python -m samara run \
   --alert-filepath="examples/yaml_products_cleanup/alert.yaml" \
-  --runtime-filepath="examples/yaml_products_cleanup/job.yaml"
+  --workflow-filepath="examples/yaml_products_cleanup/job.yaml"
 ```
 
 ## 📚 Documentation
@@ -57,7 +57,7 @@ Samara's documentation guides you through installation, configuration, and devel
 - **[Example Pipelines](./examples/)** - Ready-to-run examples demonstrating key features
 - **[CLI Reference](./docs/cli.md)** - Command-line interface options and examples
 - **[Configuration Reference](./docs/README.md)** - Complete syntax guide for all configuration options
-  - **[Runtime System](./docs/runtime/README.md)** - ETL pipeline configuration (extracts, transforms, loads)
+  - **[Workflow System](./docs/workflow/README.md)** - ETL pipeline configuration (extracts, transforms, loads)
   - **[Alert System](./docs/alert/README.md)** - Error handling and notification configuration
 - **[Architecture](./docs/architecture.md)** - Design principles and framework structure
 - **[Custom Extensions](./docs/architecture.md#extending-with-custom-transforms)** - Building your own transforms
@@ -83,7 +83,7 @@ Running this pipeline demonstrates data cleaning operations using YAML configura
 ### Configuration: [`examples/yaml_products_cleanup/job.yaml`](./examples/yaml_products_cleanup/job.yaml)
 **Flexible Configuration**: Define pipelines in YAML or JSON—both formats are fully supported and functionally equivalent. Choose the format that best fits your team preferences.
 ```yaml
-runtime:
+workflow:
   id: product-cleanup-pipeline
   description: ETL pipeline for cleaning and standardizing product catalog data
   enabled: true

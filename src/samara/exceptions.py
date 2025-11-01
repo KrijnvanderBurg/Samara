@@ -98,8 +98,8 @@ class SamaraAlertConfigurationError(SamaraError):
         super().__init__(message=message, exit_code=ExitCode.CONFIGURATION_ERROR)
 
 
-class SamaraRuntimeConfigurationError(SamaraError):
-    """Raise when runtime configuration is invalid.
+class SamaraWorkflowConfigurationError(SamaraError):
+    """Raise when workflow configuration is invalid.
 
     Indicates issues with job, extract, transform, or load configuration
     including missing required fields or incompatible settings.
@@ -146,7 +146,7 @@ class SamaraAlertTestError(SamaraError):
         super().__init__(message=message, exit_code=ExitCode.ALERT_TEST_ERROR)
 
 
-class SamaraJobError(SamaraError):
+class SamaraWorkflowJobError(SamaraError):
     """Raise when ETL job execution fails.
 
     Covers errors during data extraction, transformation, or loading phases

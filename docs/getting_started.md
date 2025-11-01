@@ -17,7 +17,7 @@ Start with the included example pipeline:
 ```bash
 python -m samara run \
   --alert-filepath="examples/join_select/alert.jsonc" \
-  --runtime-filepath="examples/join_select/job.jsonc"
+  --workflow-filepath="examples/join_select/job.jsonc"
 ```
 
 ## Configuration Formats
@@ -26,7 +26,7 @@ Samara supports both **YAML** and **JSON** (including JSONC with comments) confi
 
 **YAML example:**
 ```yaml
-runtime:
+workflow:
   id: my-pipeline
   enabled: true
 ```
@@ -34,7 +34,7 @@ runtime:
 **JSON example:**
 ```json
 {
-  "runtime": {
+  "workflow": {
     "id": "my-pipeline",
     "enabled": true
   }
@@ -48,7 +48,7 @@ The structure is as follows, all of the following fields are required
 
 ```jsonc
 {
-    "runtime": {
+    "workflow": {
         "id": "unique-pipeline-id", // Unique identifier for the pipeline
         "description": "Pipeline description", // Brief description of what the pipeline does
         "enabled": true, // Whether the pipeline is active
@@ -136,15 +136,15 @@ Samara can export a JSON schema that enables autocompletion, validation, and inl
 **Export the schema:**
 
 ```bash
-python -m samara export-schema --output-filepath="./runtime_schema.json"
+python -m samara export-schema --output-filepath="./workflow_schema.json"
 ```
 
 **Reference it in your configuration:**
 
 ```jsonc
 {
-    "$schema": "./runtime_schema.json",
-    "runtime": {
+    "$schema": "./workflow_schema.json",
+    "workflow": {
         "id": "my-pipeline",
         // Your IDE now provides:
         // - Autocompletion of field names
@@ -163,7 +163,7 @@ The quickest way to start is by running the provided example:
 ```bash
 python -m samara run \
   --alert-filepath="examples/join_select/alert.jsonc" \
-  --runtime-filepath="examples/join_select/job.jsonc"
+  --workflow-filepath="examples/join_select/job.jsonc"
 ```
 
 ### 🔍 Example: Customer Order
@@ -186,7 +186,7 @@ Running this command executes a complete pipeline that showcases Samara's key ca
 #### Configuration: examples/join_select/job.jsonc
 ```jsonc
 {
-    "runtime": {
+    "workflow": {
         "id": "customer-orders-pipeline",
         "description": "ETL pipeline for processing customer orders data",
         "enabled": true,

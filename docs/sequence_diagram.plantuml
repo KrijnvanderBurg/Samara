@@ -8,7 +8,7 @@ title FLINT ETL Processing Framework - Sequence Diagram
 
 actor User
 participant "Main" as Main
-participant "Runtime" as Runtime
+participant "Workflow" as Workflow
 participant "Job" as Job
 participant "Extract" as Extract EXTRACT_COLOR
 participant "Transform" as Transform TRANSFORM_COLOR
@@ -20,19 +20,19 @@ participant "FileHandler" as FileHandler
 == Initialization & Configuration ==
 User -> Main: Run with config file
 activate Main
-Main -> Runtime: Runtime.from_file(config_filepath)
-activate Runtime
+Main -> Workflow: Workflow.from_file(config_filepath)
+activate Workflow
 
-Runtime -> FileHandler: read configuration
+Workflow -> FileHandler: read configuration
 activate FileHandler
-FileHandler --> Runtime: config dictionary
+FileHandler --> Workflow: config dictionary
 deactivate FileHandler
 
-Runtime --> Main: configured runtime
-Main -> Runtime: runtime.execute_all()
+Workflow --> Main: configured workflow
+Main -> Workflow: workflow.execute_all()
 
 == Data Processing Pipeline Execution ==
-Runtime -> Job: execute()
+Workflow -> Job: execute()
 activate Job EXTRACT_COLOR
 
 loop for each extract

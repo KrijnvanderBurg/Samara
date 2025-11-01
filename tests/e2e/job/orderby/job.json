@@ -3,9 +3,9 @@
         "channels": [],
         "triggers": []
     },
-    "runtime": {
-        "id": "test-runtime-orderby",
-        "description": "E2E test runtime for orderby transform",
+    "workflow": {
+        "id": "test-workflow-orderby",
+        "description": "E2E test workflow for orderby transform",
         "enabled": true,
         "jobs": [
             {

@@ -7,7 +7,7 @@ from pathlib import Path
 from pyspark.sql.session import SparkSession
 from pyspark.sql.types import StructType
 from pyspark.testing import assertDataFrameEqual
-from samara.runtime.jobs.spark.session import SparkHandler
+from samara.workflow.jobs.spark.session import SparkHandler
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class ResultVerifier:
         Args:
             isolated_config: Job configuration with tmp output paths
         """
-        for job in isolated_config["runtime"]["jobs"]:
+        for job in isolated_config["workflow"]["jobs"]:
             for load in job["loads"]:
                 expected_dir = self.job_dir / load["id"]
 

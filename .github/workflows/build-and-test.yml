@@ -97,8 +97,8 @@ jobs:
       - name: Validate ./examples/ jobs
         run: |
           for dir in ./examples/*/; do
-            runtime_file=$(find "$dir" -maxdepth 1 -name "job.*")
+            workflow_file=$(find "$dir" -maxdepth 1 -name "job.*")
             alert_file=$(find "$dir" -maxdepth 1 -name "alert.*")
             echo "Validating $(basename "$dir")..."
-            python -m samara --log-level WARNING validate --alert-filepath "$alert_file" --runtime-filepath "$runtime_file"
+            python -m samara --log-level WARNING validate --alert-filepath "$alert_file" --workflow-filepath "$workflow_file"
           done
