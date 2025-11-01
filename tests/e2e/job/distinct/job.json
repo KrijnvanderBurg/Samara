@@ -1,0 +1,66 @@
+{
+    "alert": {
+        "channels": [],
+        "triggers": []
+    },
+    "runtime": {
+        "id": "test-runtime",
+        "description": "Test distinct transform",
+        "enabled": true,
+        "jobs": [
+            {
+                "id": "test-job",
+                "description": "Test job for distinct transform",
+                "enabled": true,
+                "engine_type": "spark",
+                "extracts": [
+                    {
+                        "id": "extract-test",
+                        "extract_type": "file",
+                        "data_format": "csv",
+                        "location": "tests/e2e/job/distinct/extract-test/input_data.csv",
+                        "method": "batch",
+                        "options": {
+                            "delimiter": ",",
+                            "header": true,
+                            "inferSchema": false
+                        },
+                        "schema": "tests/e2e/job/distinct/extract-test/input_schema.json"
+                    }
+                ],
+                "transforms": [
+                    {
+                        "id": "transform-distinct",
+                        "upstream_id": "extract-test",
+                        "options": {},
+                        "functions": [
+                            {
+                                "function_type": "distinct",
+                                "arguments": {}
+                            }
+                        ]
+                    }
+                ],
+                "loads": [
+                    {
+                        "id": "load-test",
+                        "upstream_id": "transform-distinct",
+                        "load_type": "file",
+                        "data_format": "json",
+                        "location": "tests/e2e/job/distinct/load-test",
+                        "method": "batch",
+                        "mode": "overwrite",
+                        "options": {},
+                        "schema_export": "tests/e2e/job/distinct/schema_export.json"
+                    }
+                ],
+                "hooks": {
+                    "onStart": [],
+                    "onError": [],
+                    "onSuccess": [],
+                    "onFinally": []
+                }
+            }
+        ]
+    }
+}

@@ -12,6 +12,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import ValidationError
+from pyspark.sql import SparkSession
+from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual
 
 from samara.runtime.jobs.models.model_load import LoadMethod
 from samara.runtime.jobs.spark.load import LoadFileSpark
@@ -213,55 +216,84 @@ def fixture_load_file_spark(valid_load_config: dict[str, Any]) -> LoadFileSpark:
 
 
 class TestLoadFileSparkLoad:
-    """Test LoadFileSpark load functionality."""
+    """Test LoadFileSpark load functionality with real DataFrames."""
 
-    def test_load__with_batch_method__completes_successfully(self, load_file_spark: LoadFileSpark) -> None:
-        """Test load method completes successfully for batch loading."""
-        # Arrange
-        mock_dataframe = Mock()
-        mock_dataframe.count.return_value = 5
-        mock_dataframe.schema.jsonValue.return_value = {"type": "struct", "fields": []}
-        mock_dataframe.write = Mock()
-        mock_dataframe.write.save = Mock()
+    def test_load__with_batch_method__completes_successfully(
+        self, spark: SparkSession, load_file_spark: LoadFileSpark
+    ) -> None:
+        """Test load method completes successfully for batch loading with real DataFrame."""
+        # Arrange - create real DataFrame
+        test_data = [(1, "Alice", 30), (2, "Bob", 25)]
+        test_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+                StructField("age", IntegerType(), True),
+            ]
+        )
+        test_df = spark.createDataFrame(test_data, test_schema)
 
-        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
+        # Mock only the write I/O
+        mock_write = Mock()
+        mock_write.save = Mock()
 
-        # Act & Assert - should complete without exception
-        load_file_spark.load()
+        load_file_spark.data_registry[load_file_spark.upstream_id] = test_df
 
-        # Verify the dataframe was copied to the load step
-        assert load_file_spark.data_registry[load_file_spark.id_] == mock_dataframe
+        # Act - patch the write property
+        with patch.object(type(test_df), "write", mock_write):
+            load_file_spark.load()
 
-    def test_load__with_streaming_method__completes_successfully(self, valid_load_config: dict[str, Any]) -> None:
-        """Test load method completes successfully for streaming loading."""
+        # Assert - verify the dataframe was copied to the load step
+        result_df = load_file_spark.data_registry[load_file_spark.id_]
+        assertDataFrameEqual(result_df, test_df)
+        mock_write.save.assert_called_once()
+
+    def test_load__with_streaming_method__completes_successfully(
+        self, spark: SparkSession, valid_load_config: dict[str, Any]
+    ) -> None:
+        """Test load method completes successfully for streaming loading with real DataFrame."""
         # Arrange
         valid_load_config["method"] = "streaming"
         load_streaming = LoadFileSpark(**valid_load_config)
 
-        mock_dataframe = Mock()
-        mock_dataframe.schema.jsonValue.return_value = {"type": "struct", "fields": []}
+        test_data = [(1, "Alice"), (2, "Bob")]
+        test_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+            ]
+        )
+        test_df = spark.createDataFrame(test_data, test_schema)
+
+        # Mock streaming write
         mock_streaming_query = Mock()
         mock_streaming_query.id = "test-query-id"
         mock_write_stream = Mock()
         mock_write_stream.start.return_value = mock_streaming_query
-        mock_dataframe.writeStream = mock_write_stream
 
-        load_streaming.data_registry[load_streaming.upstream_id] = mock_dataframe
+        load_streaming.data_registry[load_streaming.upstream_id] = test_df
 
-        # Act & Assert - should complete without exception
-        load_streaming.load()
+        # Act - patch the writeStream property
+        with patch.object(type(test_df), "writeStream", mock_write_stream):
+            load_streaming.load()
 
-        # Verify the streaming query was registered
+        # Assert - verify the streaming query was registered
         assert load_streaming.streaming_query_registry[load_streaming.id_] == mock_streaming_query
+        mock_write_stream.start.assert_called_once()
 
-    def test_load__with_invalid_method__raises_value_error(self, load_file_spark: LoadFileSpark) -> None:
+    def test_load__with_invalid_method__raises_value_error(
+        self, spark: SparkSession, load_file_spark: LoadFileSpark
+    ) -> None:
         """Test load method raises ValueError for unsupported loading method."""
         # Arrange
         mock_method = Mock()
         mock_method.value = "invalid_method"
-        mock_dataframe = Mock()
 
-        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
+        test_data = [(1, "Alice")]
+        test_schema = StructType([StructField("id", IntegerType(), True), StructField("name", StringType(), True)])
+        test_df = spark.createDataFrame(test_data, test_schema)
+
+        load_file_spark.data_registry[load_file_spark.upstream_id] = test_df
 
         with patch.object(load_file_spark, "method", mock_method):
             # Assert
@@ -269,44 +301,65 @@ class TestLoadFileSparkLoad:
                 # Act
                 load_file_spark.load()
 
-    def test_load__with_empty_schema_export__skips_schema_export(self, load_file_spark: LoadFileSpark) -> None:
+    def test_load__with_empty_schema_export__skips_schema_export(
+        self, spark: SparkSession, load_file_spark: LoadFileSpark
+    ) -> None:
         """Test schema export is skipped when schema_export is empty."""
         # Arrange
         load_file_spark.schema_export = ""  # No schema export
 
-        mock_dataframe = Mock()
-        mock_dataframe.count.return_value = 5
-        mock_dataframe.write = Mock()
-        mock_dataframe.write.save = Mock()
+        test_data = [(1, "Alice", 30), (2, "Bob", 25)]
+        test_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+                StructField("age", IntegerType(), True),
+            ]
+        )
+        test_df = spark.createDataFrame(test_data, test_schema)
 
-        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
+        # Mock write
+        mock_write = Mock()
+        mock_write.save = Mock()
 
-        # Act
-        load_file_spark.load()
+        load_file_spark.data_registry[load_file_spark.upstream_id] = test_df
 
-        # Assert - no exception should be raised, load should complete
+        # Act - should complete without exception
+        with patch.object(type(test_df), "write", mock_write):
+            load_file_spark.load()
+
+        # Assert
+        mock_write.save.assert_called_once()
 
     def test_load__with_valid_schema_export__writes_schema_to_file(
-        self, tmp_path: Path, load_file_spark: LoadFileSpark
+        self, spark: SparkSession, tmp_path: Path, load_file_spark: LoadFileSpark
     ) -> None:
-        """Test schema export writes schema to file when schema_export is provided."""
+        """Test schema export writes schema to file when schema_export is provided with real DataFrame."""
         # Arrange
         schema_file = tmp_path / "test_schema.json"
         load_file_spark.schema_export = str(schema_file)
 
-        mock_dataframe = Mock()
-        mock_dataframe.count.return_value = 5
-        test_schema = {"type": "struct", "fields": [{"id": "id", "type": "integer"}]}
-        mock_dataframe.schema.jsonValue.return_value = test_schema
-        mock_dataframe.write = Mock()
-        mock_dataframe.write.save = Mock()
+        test_data = [(1, "Alice", 30), (2, "Bob", 25)]
+        test_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+                StructField("age", IntegerType(), True),
+            ]
+        )
+        test_df = spark.createDataFrame(test_data, test_schema)
 
-        load_file_spark.data_registry[load_file_spark.upstream_id] = mock_dataframe
+        # Mock write
+        mock_write = Mock()
+        mock_write.save = Mock()
+
+        load_file_spark.data_registry[load_file_spark.upstream_id] = test_df
 
         # Act
-        load_file_spark.load()
+        with patch.object(type(test_df), "write", mock_write):
+            load_file_spark.load()
 
         # Assert - schema file should exist and contain the expected schema
         assert schema_file.exists()
         written_schema = json.loads(schema_file.read_text(encoding="utf-8"))
-        assert written_schema == test_schema
+        assert written_schema == test_schema.jsonValue()

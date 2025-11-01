@@ -3,12 +3,38 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import DoubleType, IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual
+
 from samara.runtime.jobs.models.transforms.model_cast import CastArgs
 from samara.runtime.jobs.spark.transforms.cast import CastFunction
+
+# =========================================================================== #
+# ============================== TEST DATA ================================= #
+# =========================================================================== #
+
+
+@pytest.fixture
+def mixed_types_df(spark: SparkSession) -> DataFrame:
+    """Create a DataFrame with mixed types for testing cast operations."""
+    data = [
+        ("1", "25.5", "100"),
+        ("2", "30.0", "200"),
+        ("3", "35.7", "300"),
+    ]
+    schema = StructType(
+        [
+            StructField("id", StringType(), True),
+            StructField("age", StringType(), True),
+            StructField("salary", StringType(), True),
+        ]
+    )
+    return spark.createDataFrame(data, schema)
+
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
@@ -115,7 +141,7 @@ def test_cast_fixture(cast_func: CastFunction) -> None:
 
 
 class TestCastFunctionTransform:
-    """Test CastFunction transform behavior."""
+    """Test CastFunction transform behavior with real Spark DataFrames."""
 
     def test_transform__returns_callable(self, cast_func: CastFunction) -> None:
         """Test transform returns a callable function."""
@@ -125,18 +151,120 @@ class TestCastFunctionTransform:
         # Assert
         assert callable(transform_fn)
 
-    def test_transform__applies_cast_to_column(self, cast_func: CastFunction) -> None:
-        """Test transform applies cast operation to specified column."""
-
+    def test_transform__applies_cast_to_single_column(self, spark: SparkSession, mixed_types_df: DataFrame) -> None:
+        """Test transform casts a single column correctly."""
         # Arrange
-        mock_df = Mock()
-        mock_df.withColumn.return_value = mock_df
+        config = {"function_type": "cast", "arguments": {"columns": [{"column_name": "age", "cast_type": "double"}]}}
+        cast_func = CastFunction(**config)
+
+        expected_data = [
+            ("1", 25.5, "100"),
+            ("2", 30.0, "200"),
+            ("3", 35.7, "300"),
+        ]
+        expected_schema = StructType(
+            [
+                StructField("id", StringType(), True),
+                StructField("age", DoubleType(), True),
+                StructField("salary", StringType(), True),
+            ]
+        )
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
 
         # Act
         transform_fn = cast_func.transform()
-        transform_fn(mock_df)
+        result_df = transform_fn(mixed_types_df)
 
         # Assert
-        assert mock_df.withColumn.called
-        call_args = mock_df.withColumn.call_args[0]
-        assert call_args[0] == "age"
+        assertDataFrameEqual(result_df, expected_df)
+
+    def test_transform__applies_cast_to_multiple_columns(self, spark: SparkSession, mixed_types_df: DataFrame) -> None:
+        """Test transform casts multiple columns correctly."""
+        # Arrange
+        config = {
+            "function_type": "cast",
+            "arguments": {
+                "columns": [
+                    {"column_name": "id", "cast_type": "int"},
+                    {"column_name": "age", "cast_type": "double"},
+                    {"column_name": "salary", "cast_type": "int"},
+                ]
+            },
+        }
+        cast_func = CastFunction(**config)
+
+        expected_data = [
+            (1, 25.5, 100),
+            (2, 30.0, 200),
+            (3, 35.7, 300),
+        ]
+        expected_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("age", DoubleType(), True),
+                StructField("salary", IntegerType(), True),
+            ]
+        )
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
+
+        # Act
+        transform_fn = cast_func.transform()
+        result_df = transform_fn(mixed_types_df)
+
+        # Assert
+        assertDataFrameEqual(result_df, expected_df)
+
+    def test_transform__string_to_int_cast(self, spark: SparkSession, mixed_types_df: DataFrame) -> None:
+        """Test casting string to integer."""
+        # Arrange
+        config = {"function_type": "cast", "arguments": {"columns": [{"column_name": "salary", "cast_type": "int"}]}}
+        cast_func = CastFunction(**config)
+
+        expected_data = [
+            ("1", "25.5", 100),
+            ("2", "30.0", 200),
+            ("3", "35.7", 300),
+        ]
+        expected_schema = StructType(
+            [
+                StructField("id", StringType(), True),
+                StructField("age", StringType(), True),
+                StructField("salary", IntegerType(), True),
+            ]
+        )
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
+
+        # Act
+        transform_fn = cast_func.transform()
+        result_df = transform_fn(mixed_types_df)
+
+        # Assert
+        assertDataFrameEqual(result_df, expected_df)
+
+    def test_transform__preserves_column_order(self, spark: SparkSession, mixed_types_df: DataFrame) -> None:
+        """Test that cast preserves column order."""
+        # Arrange
+        config = {"function_type": "cast", "arguments": {"columns": [{"column_name": "age", "cast_type": "int"}]}}
+        cast_func = CastFunction(**config)
+
+        # Act
+        transform_fn = cast_func.transform()
+        result_df = transform_fn(mixed_types_df)
+
+        # Assert
+        assert result_df.columns == ["id", "age", "salary"]
+
+    def test_transform__with_empty_columns_list__returns_unchanged_df(
+        self, spark: SparkSession, mixed_types_df: DataFrame
+    ) -> None:
+        """Test that empty columns list returns unchanged DataFrame."""
+        # Arrange
+        config = {"function_type": "cast", "arguments": {"columns": []}}
+        cast_func = CastFunction(**config)
+
+        # Act
+        transform_fn = cast_func.transform()
+        result_df = transform_fn(mixed_types_df)
+
+        # Assert
+        assertDataFrameEqual(result_df, mixed_types_df)

@@ -1,0 +1,8 @@
+{
+    "fields": [
+        {"name": "store_id", "type": "string", "nullable": true},
+        {"name": "product_category", "type": "string", "nullable": true},
+        {"name": "month", "type": "string", "nullable": true},
+        {"name": "revenue", "type": "integer", "nullable": true}
+    ]
+}

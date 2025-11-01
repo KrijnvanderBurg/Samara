@@ -1,0 +1,9 @@
+{
+    "fields": [
+        {"name": "store_id", "type": "string", "nullable": true},
+        {"name": "product_category", "type": "string", "nullable": true},
+        {"name": "February", "type": "long", "nullable": true},
+        {"name": "January", "type": "long", "nullable": true},
+        {"name": "March", "type": "long", "nullable": true}
+    ]
+}

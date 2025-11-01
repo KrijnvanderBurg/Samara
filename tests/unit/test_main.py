@@ -1,6 +1,7 @@
 """Unit tests for the Samara __main__ module entry point."""
 
 from click.testing import CliRunner
+
 from samara.cli import cli
 
 
@@ -18,7 +19,7 @@ class TestMainModule:
 
         # Assert
         assert result.exit_code == 0
-        assert "Samara: Configuration-driven PySpark ETL framework" in result.output
+        assert "Samara: Configuration-driven ETL framework" in result.output
 
     def test_main_module__with_version_flag__displays_version(self) -> None:
         """Test that __main__ module passes system arguments to CLI for version display."""
@@ -86,4 +87,4 @@ class TestMainModule:
 
         # Assert
         assert result.exit_code == 0
-        assert "Samara: Configuration-driven PySpark ETL framework" in result.output
+        assert "Samara: Configuration-driven ETL framework" in result.output

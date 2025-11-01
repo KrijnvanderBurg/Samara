@@ -1,0 +1,91 @@
+{
+    "alert": {
+        "channels": [],
+        "triggers": []
+    },
+    "runtime": {
+        "id": "test-runtime",
+        "description": "",
+        "enabled": true,
+        "jobs": [
+            {
+                "id": "test-job",
+                "description": "",
+                "enabled": true,
+                "engine_type": "spark",
+                "extracts": [
+                    {
+                        "id": "extract-sales",
+                        "extract_type": "file",
+                        "data_format": "parquet",
+                        "location": "tests/e2e/job/groupby/extract-sales/sales_data.parquet",
+                        "method": "batch",
+                        "options": {},
+                        "schema": "tests/e2e/job/groupby/extract-sales/input_schema.json"
+                    }
+                ],
+                "transforms": [
+                    {
+                        "id": "transform-groupby-test",
+                        "upstream_id": "extract-sales",
+                        "options": {},
+                        "functions": [
+                            {
+                                "function_type": "groupby",
+                                "arguments": {
+                                    "group_columns": ["region", "product_category"],
+                                    "aggregations": [
+                                        {
+                                            "function": "sum",
+                                            "input_column": "sales_amount",
+                                            "output_column": "total_sales"
+                                        },
+                                        {
+                                            "function": "avg",
+                                            "input_column": "discount_percent",
+                                            "output_column": "avg_discount"
+                                        },
+                                        {
+                                            "function": "count",
+                                            "input_column": null,
+                                            "output_column": "transaction_count"
+                                        },
+                                        {
+                                            "function": "max",
+                                            "input_column": "sale_date",
+                                            "output_column": "latest_sale_date"
+                                        },
+                                        {
+                                            "function": "min",
+                                            "input_column": "sale_date",
+                                            "output_column": "earliest_sale_date"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "loads": [
+                    {
+                        "id": "load-aggregated",
+                        "upstream_id": "transform-groupby-test",
+                        "data_format": "json",
+                        "load_type": "file",
+                        "location": "tests/e2e/job/groupby/load-aggregated",
+                        "method": "batch",
+                        "mode": "overwrite",
+                        "options": {},
+                        "schema_export": "tests/e2e/job/groupby/schema_export.json"
+                    }
+                ],
+                "hooks": {
+                    "onStart": [],
+                    "onError": [],
+                    "onSuccess": [],
+                    "onFinally": []
+                }
+            }
+        ]
+    }
+}

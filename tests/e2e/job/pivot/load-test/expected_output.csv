@@ -1,0 +1,7 @@
+store_id,product_category,February,January,March
+S001,Clothing,9500,8000,11000
+S001,Electronics,18000,15000,20000
+S002,Clothing,7000,6000,8500
+S002,Electronics,14000,12000,16000
+S003,Clothing,,10000,12000
+S003,Electronics,19000,18000,

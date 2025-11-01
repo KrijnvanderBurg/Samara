@@ -1,0 +1,11 @@
+{
+    "type": "struct",
+    "fields": [
+        {"name": "transaction_id", "type": "string", "nullable": false, "metadata": {}},
+        {"name": "region", "type": "string", "nullable": false, "metadata": {}},
+        {"name": "product_category", "type": "string", "nullable": false, "metadata": {}},
+        {"name": "sales_amount", "type": "double", "nullable": false, "metadata": {}},
+        {"name": "discount_percent", "type": "double", "nullable": false, "metadata": {}},
+        {"name": "sale_date", "type": "string", "nullable": false, "metadata": {}}
+    ]
+}

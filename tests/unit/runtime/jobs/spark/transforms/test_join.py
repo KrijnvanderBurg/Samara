@@ -3,11 +3,51 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import FloatType, IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual
+
 from samara.runtime.jobs.models.transforms.model_join import JoinArgs
 from samara.runtime.jobs.spark.transforms.join import JoinFunction
+
+# =========================================================================== #
+# ============================== TEST DATA ================================= #
+# =========================================================================== #
+
+
+@pytest.fixture
+def users_df(spark: SparkSession) -> DataFrame:
+    """Create users DataFrame for join testing."""
+    data = [(1, "Alice"), (2, "Bob"), (3, "Charlie"), (4, "Diana")]
+    schema = StructType(
+        [
+            StructField("user_id", IntegerType(), False),
+            StructField("name", StringType(), True),
+        ]
+    )
+    return spark.createDataFrame(data, schema)
+
+
+@pytest.fixture
+def orders_df(spark: SparkSession) -> DataFrame:
+    """Create orders DataFrame for join testing."""
+    data = [
+        (101, 1, 100.0),
+        (102, 2, 200.0),
+        (103, 1, 150.0),
+        (104, 5, 300.0),  # user_id 5 doesn't exist in users
+    ]
+    schema = StructType(
+        [
+            StructField("order_id", IntegerType(), False),
+            StructField("user_id", IntegerType(), False),
+            StructField("amount", FloatType(), True),
+        ]
+    )
+    return spark.createDataFrame(data, schema)
+
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
@@ -56,7 +96,7 @@ def test_join_fixture__args(join_func: JoinFunction) -> None:
 
 
 class TestJoinFunctionTransform:
-    """Test JoinFunction transform behavior."""
+    """Test JoinFunction transform behavior with real Spark DataFrames."""
 
     def test_transform__returns_callable(self, join_func: JoinFunction) -> None:
         """Test transform returns a callable function."""
@@ -66,22 +106,110 @@ class TestJoinFunctionTransform:
         # Assert
         assert callable(transform_fn)
 
-    def test_transform__applies_join_operation(self, join_func: JoinFunction) -> None:
-        """Test transform applies join with correct parameters."""
+    def test_transform__inner_join(self, spark: SparkSession, users_df: DataFrame, orders_df: DataFrame) -> None:
+        """Test inner join with real DataFrames using assertDataFrameEqual."""
+        # Setup
+        config = {
+            "function_type": "join",
+            "arguments": {"other_upstream_id": "orders", "on": "user_id", "how": "inner"},
+        }
+        join_func = JoinFunction(**config)
 
-        # Arrange
-        mock_df = Mock()
-        mock_other_df = Mock()
-        mock_df.join.return_value = mock_df
-        mock_df.count.return_value = 100  # Mock count for logging
-        mock_other_df.count.return_value = 50  # Mock count for logging
-        mock_other_df.columns = ["id", "city"]  # Mock columns for logging
+        # Set up registry with real DataFrame
+        join_func.data_registry["orders"] = orders_df
 
-        JoinFunction.data_registry["other_df"] = mock_other_df
+        # Expected result - only matching rows
+        expected_data = [
+            (1, "Alice", 101, 100.0),
+            (1, "Alice", 103, 150.0),
+            (2, "Bob", 102, 200.0),
+        ]
+        expected_schema = StructType(
+            [
+                StructField("user_id", IntegerType(), False),
+                StructField("name", StringType(), True),
+                StructField("order_id", IntegerType(), False),
+                StructField("amount", FloatType(), True),
+            ]
+        )
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
 
         # Act
         transform_fn = join_func.transform()
-        transform_fn(mock_df)
+        result_df = transform_fn(users_df)
+
+        # Assert - Use checkRowOrder=False since join order may vary
+        assertDataFrameEqual(result_df, expected_df, checkRowOrder=False)
+
+        # Clean up
+        join_func.data_registry.clear()
+
+    def test_transform__left_join(self, spark: SparkSession, users_df: DataFrame, orders_df: DataFrame) -> None:
+        """Test left join includes all users even without orders."""
+        # Setup
+        config = {
+            "function_type": "join",
+            "arguments": {"other_upstream_id": "orders", "on": "user_id", "how": "left"},
+        }
+        join_func = JoinFunction(**config)
+        join_func.data_registry["orders"] = orders_df
+
+        # Act
+        transform_fn = join_func.transform()
+        result_df = transform_fn(users_df)
 
         # Assert
-        mock_df.join.assert_called_once_with(mock_other_df, on="id", how="inner")
+        assert result_df.count() == 5  # Alice appears twice (2 orders) + Bob + Charlie + Diana
+
+        # Check that users without orders have null values
+        no_orders = result_df.filter("name IN ('Charlie', 'Diana')").select("order_id", "amount").collect()
+        for row in no_orders:
+            assert row["order_id"] is None
+            assert row["amount"] is None
+
+        # Clean up
+        join_func.data_registry.clear()
+
+    def test_transform__right_join(self, spark: SparkSession, users_df: DataFrame, orders_df: DataFrame) -> None:
+        """Test right join includes all orders even for non-existent users."""
+        # Setup
+        config = {
+            "function_type": "join",
+            "arguments": {"other_upstream_id": "orders", "on": "user_id", "how": "right"},
+        }
+        join_func = JoinFunction(**config)
+        join_func.data_registry["orders"] = orders_df
+
+        # Act
+        transform_fn = join_func.transform()
+        result_df = transform_fn(users_df)
+
+        # Assert
+        assert result_df.count() == 4  # All 4 orders
+
+        # Check that order 104 (user_id=5) has null name
+        orphan_order = result_df.filter("order_id = 104").select("name").collect()
+        assert orphan_order[0]["name"] is None
+
+        # Clean up
+        join_func.data_registry.clear()
+
+    def test_transform__outer_join(self, spark: SparkSession, users_df: DataFrame, orders_df: DataFrame) -> None:
+        """Test outer join includes all users and all orders."""
+        # Setup
+        config = {
+            "function_type": "join",
+            "arguments": {"other_upstream_id": "orders", "on": "user_id", "how": "outer"},
+        }
+        join_func = JoinFunction(**config)
+        join_func.data_registry["orders"] = orders_df
+
+        # Act
+        transform_fn = join_func.transform()
+        result_df = transform_fn(users_df)
+
+        # Assert
+        assert result_df.count() == 6  # Alice(2 orders) + Bob + Charlie + Diana + orphan order(104)
+
+        # Clean up
+        join_func.data_registry.clear()

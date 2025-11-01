@@ -12,7 +12,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import ValidationError
-from pyspark.sql.types import StringType, StructField, StructType
+from pyspark.sql import SparkSession
+from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual
 
 from samara.runtime.jobs.models.model_extract import ExtractMethod
 from samara.runtime.jobs.spark.extract import ExtractFileSpark
@@ -223,46 +225,70 @@ def fixture_extract_file_spark(valid_extract_config: dict[str, Any]) -> ExtractF
 
 
 class TestExtractFileSparkExtract:
-    """Test ExtractFileSpark extraction functionality."""
+    """Test ExtractFileSpark extraction functionality with real DataFrames."""
 
     def test_extract__with_batch_method__creates_dataframe_in_registry(
-        self, extract_file_spark: ExtractFileSpark
+        self, spark: SparkSession, extract_file_spark: ExtractFileSpark
     ) -> None:
-        """Test extract method creates DataFrame for batch extraction."""
-        mock_dataframe = Mock()
-        mock_dataframe.count.return_value = 10
+        """Test extract method creates DataFrame for batch extraction using real DataFrame."""
+        # Arrange - create real test DataFrame
+        test_data = [(1, "Alice", 30), (2, "Bob", 25)]
+        test_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+                StructField("age", IntegerType(), True),
+            ]
+        )
+        mock_dataframe = spark.createDataFrame(test_data, test_schema)
+
+        # Mock only the file I/O
         mock_read = Mock()
         mock_read.load.return_value = mock_dataframe
         mock_session = Mock()
         mock_session.read = mock_read
-
-        extract_file_spark.spark = Mock()
         extract_file_spark.spark.session = mock_session
-        extract_file_spark.spark.add_configs = Mock()
 
+        # Act
         extract_file_spark.extract()
 
+        # Assert - verify load was called and real DataFrame was stored
         mock_read.load.assert_called_once()
+        result_df = extract_file_spark.data_registry[extract_file_spark.id_]
+        assertDataFrameEqual(result_df, mock_dataframe)
 
     def test_extract__with_streaming_method__creates_streaming_query(
-        self, valid_extract_config: dict[str, Any]
+        self, spark: SparkSession, valid_extract_config: dict[str, Any]
     ) -> None:
-        """Test extract method creates StreamingQuery for streaming extraction."""
+        """Test extract method creates StreamingQuery for streaming extraction using real DataFrame."""
+        # Arrange
         valid_extract_config["method"] = "streaming"
         extract_streaming = ExtractFileSpark(**valid_extract_config)
-        mock_dataframe = Mock()
+
+        # Create real streaming-like DataFrame
+        test_data = [(1, "Alice"), (2, "Bob")]
+        test_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+            ]
+        )
+        mock_dataframe = spark.createDataFrame(test_data, test_schema)
+
+        # Mock only the streaming I/O
         mock_read_stream = Mock()
         mock_read_stream.load.return_value = mock_dataframe
         mock_session = Mock()
         mock_session.readStream = mock_read_stream
-
-        extract_streaming.spark = Mock()
         extract_streaming.spark.session = mock_session
-        extract_streaming.spark.add_configs = Mock()
 
+        # Act
         extract_streaming.extract()
 
+        # Assert
         mock_read_stream.load.assert_called_once()
+        result_df = extract_streaming.data_registry[extract_streaming.id_]
+        assertDataFrameEqual(result_df, mock_dataframe)
 
     def test_extract__with_invalid_method__raises_value_error(self, extract_file_spark: ExtractFileSpark) -> None:
         """Test extract method raises ValueError for unsupported extraction method."""

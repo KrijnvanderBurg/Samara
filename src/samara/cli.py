@@ -41,21 +41,21 @@ logger: logging.Logger = get_logger(__name__)
     help="Set the logging level (default: INFO).",
 )
 def cli(log_level: str | None = None) -> None:
-    """Initialize the CLI group and configure logging.
+    """Samara: Configuration-driven ETL framework for Apache Spark and Polars.
 
-    Create the main command group for the CLI interface and set up logging
-    based on the specified level. This command group serves as the entry point
-    for all subcommands (validate, run, export-schema).
+    Build and execute data pipelines through declarative JSON/YAML configuration
+    instead of writing code. Define extracts, transforms, and loads with built-in
+    support for alerts, validation, and schema management.
 
     Args:
         log_level: The logging level as a string. Must be one of DEBUG, INFO,
             WARNING, ERROR, or CRITICAL (case-insensitive). Defaults to INFO
             level if not specified.
 
-    Note:
-        The log level is set globally for all subsequent CLI operations.
-        Use DEBUG for detailed diagnostic information or INFO for standard
-        operational messages.
+    Commands:
+        validate: Validate pipeline configurations without execution
+        run: Execute ETL pipeline with integrated alerting
+        export-schema: Generate JSON schema for pipeline configs
     """
     set_logger(level=log_level)
 

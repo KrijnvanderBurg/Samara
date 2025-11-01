@@ -1,0 +1,7 @@
+department,location,avg_salary,total_salary,employee_count,min_salary,max_salary
+Engineering,New York,90666.66666666667,272000,3,85000,95000
+Engineering,San Francisco,101500.0,203000,2,98000,105000
+HR,New York,65000.0,65000,1,65000,65000
+HR,San Francisco,68000.0,68000,1,68000,68000
+Sales,Los Angeles,72500.0,145000,2,70000,75000
+Sales,New York,72000.0,72000,1,72000,72000

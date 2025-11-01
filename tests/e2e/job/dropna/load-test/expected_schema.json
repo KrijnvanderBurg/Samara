@@ -1,0 +1,10 @@
+{
+    "type": "struct",
+    "fields": [
+        {"name": "id", "type": "integer", "nullable": true},
+        {"name": "name", "type": "string", "nullable": true},
+        {"name": "age", "type": "integer", "nullable": true},
+        {"name": "department", "type": "string", "nullable": true},
+        {"name": "salary", "type": "integer", "nullable": true}
+    ]
+}

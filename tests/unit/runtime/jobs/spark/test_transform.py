@@ -9,12 +9,38 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import ExitStack
 from typing import Any
-from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import ValidationError
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual
 
 from samara.runtime.jobs.spark.transform import TransformSpark
+
+# =========================================================================== #
+# ============================== TEST DATA ================================= #
+# =========================================================================== #
+
+
+@pytest.fixture
+def sample_df(spark: SparkSession) -> DataFrame:
+    """Create a sample DataFrame for transformation testing."""
+    data = [
+        (1, "Alice", 30),
+        (2, "Bob", 25),
+        (3, "Charlie", 35),
+        (4, "Diana", 28),
+    ]
+    schema = StructType(
+        [
+            StructField("id", IntegerType(), True),
+            StructField("name", StringType(), True),
+            StructField("age", IntegerType(), True),
+        ]
+    )
+    return spark.createDataFrame(data, schema)
+
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
@@ -178,91 +204,85 @@ def fixture_transform_spark(transform_config: dict[str, Any]) -> TransformSpark:
 
 
 class TestTransformSparkTransform:
-    """Test TransformSpark transformation functionality."""
+    """Test TransformSpark transformation functionality with real DataFrames."""
 
-    def test_transform__with_empty_functions__completes_successfully(self, transform_spark: TransformSpark) -> None:
+    def test_transform__with_empty_functions__completes_successfully(
+        self, spark: SparkSession, transform_spark: TransformSpark, sample_df: DataFrame
+    ) -> None:
         """Test transform method completes successfully with no transformation functions."""
-        # Arrange
-        mock_dataframe = Mock()
-        mock_dataframe.count.return_value = 10
-
-        transform_spark.data_registry[transform_spark.upstream_id] = mock_dataframe
+        # Arrange - add real DataFrame to registry
+        transform_spark.data_registry[transform_spark.upstream_id] = sample_df
 
         # Act
         transform_spark.transform()
 
         # Assert - dataframe should be copied to transform name
-        assert transform_spark.data_registry[transform_spark.id_] == mock_dataframe
+        result_df = transform_spark.data_registry[transform_spark.id_]
+        assertDataFrameEqual(result_df, sample_df)
 
-    def test_transform__with_single_function__applies_transformation(self, transform_config: dict[str, Any]) -> None:
-        """Test transform method applies single transformation function."""
-        # Arrange
+    def test_transform__with_single_function__applies_transformation(
+        self, spark: SparkSession, transform_config: dict[str, Any], sample_df: DataFrame
+    ) -> None:
+        """Test transform method applies single transformation function with real DataFrame."""
+        # Arrange - configure a select transformation
         transform_config["functions"] = [
             {"function_type": "select", "arguments": {"columns": ["id", "name"]}},
         ]
         transform = TransformSpark(**transform_config)
+        transform.data_registry[transform.upstream_id] = sample_df
 
-        mock_dataframe = Mock()
-        mock_dataframe.count.return_value = 10
-        mock_transformed_df = Mock()
-        mock_transformed_df.count.return_value = 10
+        # Expected result after selecting only id and name
+        expected_data = [
+            (1, "Alice"),
+            (2, "Bob"),
+            (3, "Charlie"),
+            (4, "Diana"),
+        ]
+        expected_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+            ]
+        )
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
 
-        mock_callable = Mock(return_value=mock_transformed_df)
+        # Act
+        transform.transform()
 
-        transform.data_registry[transform.upstream_id] = mock_dataframe
+        # Assert
+        result_df = transform.data_registry[transform.id_]
+        assertDataFrameEqual(result_df, expected_df)
 
-        with patch(
-            "samara.runtime.jobs.spark.transforms.select.SelectFunction.transform",
-            return_value=mock_callable,
-        ) as mock_transform_func:
-            # Act
-            transform.transform()
-
-            # Assert
-            mock_transform_func.assert_called_once()
-            mock_callable.assert_called_once_with(df=mock_dataframe)
-            assert transform.data_registry[transform.id_] == mock_transformed_df
-
-    def test_transform__with_multiple_functions__applies_in_sequence(self, transform_config: dict[str, Any]) -> None:
-        """Test transform method applies multiple transformation functions in sequence."""
-        # Arrange
+    def test_transform__with_multiple_functions__applies_in_sequence(
+        self, spark: SparkSession, transform_config: dict[str, Any], sample_df: DataFrame
+    ) -> None:
+        """Test transform method applies multiple transformation functions in sequence with real DataFrames."""
+        # Arrange - configure select then filter transformations
         transform_config["functions"] = [
             {"function_type": "select", "arguments": {"columns": ["id", "name", "age"]}},
-            {"function_type": "filter", "arguments": {"condition": "age > 18"}},
+            {"function_type": "filter", "arguments": {"condition": "age > 27"}},
         ]
         transform = TransformSpark(**transform_config)
+        transform.data_registry[transform.upstream_id] = sample_df
 
-        mock_df_original = Mock()
-        mock_df_original.count.return_value = 100
+        # Expected result after select (all columns) then filter (age > 27)
+        expected_data = [
+            (1, "Alice", 30),
+            (3, "Charlie", 35),
+            (4, "Diana", 28),
+        ]
+        expected_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+                StructField("age", IntegerType(), True),
+            ]
+        )
+        expected_df = spark.createDataFrame(expected_data, expected_schema)
 
-        mock_df_after_select = Mock()
-        mock_df_after_select.count.return_value = 100
+        # Act
+        transform.transform()
 
-        mock_df_after_filter = Mock()
-        mock_df_after_filter.count.return_value = 80
-
-        mock_select_callable = Mock(return_value=mock_df_after_select)
-        mock_filter_callable = Mock(return_value=mock_df_after_filter)
-
-        transform.data_registry[transform.upstream_id] = mock_df_original
-
-        with (
-            patch(
-                "samara.runtime.jobs.spark.transforms.select.SelectFunction.transform",
-                return_value=mock_select_callable,
-            ),
-            patch(
-                "samara.runtime.jobs.spark.transforms.filter.FilterFunction.transform",
-                return_value=mock_filter_callable,
-            ),
-        ):
-            # Act
-            transform.transform()
-
-            # Assert
-            # First function should receive original dataframe
-            mock_select_callable.assert_called_once_with(df=mock_df_original)
-            # Second function should receive result from first function
-            mock_filter_callable.assert_called_once_with(df=mock_df_after_select)
-            # Final result should be in registry
-            assert transform.data_registry[transform.id_] == mock_df_after_filter
+        # Assert - final result should have filtered rows
+        result_df = transform.data_registry[transform.id_]
+        assertDataFrameEqual(result_df, expected_df, checkRowOrder=False)

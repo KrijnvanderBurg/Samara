@@ -1,0 +1,3 @@
+{
+    "extract-sales": "tests/e2e/job/groupby/extract-sales/input_schema.json"
+}

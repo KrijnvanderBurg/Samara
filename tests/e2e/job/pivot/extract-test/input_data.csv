@@ -1,0 +1,17 @@
+store_id,product_category,month,revenue
+S001,Electronics,January,15000
+S001,Electronics,February,18000
+S001,Electronics,March,20000
+S001,Clothing,January,8000
+S001,Clothing,February,9500
+S001,Clothing,March,11000
+S002,Electronics,January,12000
+S002,Electronics,February,14000
+S002,Electronics,March,16000
+S002,Clothing,January,6000
+S002,Clothing,February,7000
+S002,Clothing,March,8500
+S003,Electronics,January,18000
+S003,Electronics,February,19000
+S003,Clothing,January,10000
+S003,Clothing,March,12000

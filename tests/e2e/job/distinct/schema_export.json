@@ -1,0 +1,9 @@
+{
+    "fields": [
+        {"name": "customer_id", "type": "string", "nullable": true},
+        {"name": "order_date", "type": "string", "nullable": true},
+        {"name": "product_id", "type": "string", "nullable": true},
+        {"name": "quantity", "type": "string", "nullable": true},
+        {"name": "price", "type": "string", "nullable": true}
+    ]
+}

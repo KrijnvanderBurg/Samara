@@ -1,0 +1,4 @@
+{
+    "extract-test": "./extract-test/input_schema.json",
+    "load-test": "./load-test/expected_schema.json"
+}

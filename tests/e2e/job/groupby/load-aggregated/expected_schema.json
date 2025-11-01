@@ -1,0 +1,12 @@
+{
+    "type": "struct",
+    "fields": [
+        {"name": "region", "type": "string", "nullable": true, "metadata": {}},
+        {"name": "product_category", "type": "string", "nullable": true, "metadata": {}},
+        {"name": "total_sales", "type": "double", "nullable": true, "metadata": {}},
+        {"name": "avg_discount", "type": "double", "nullable": true, "metadata": {}},
+        {"name": "transaction_count", "type": "long", "nullable": false, "metadata": {}},
+        {"name": "latest_sale_date", "type": "string", "nullable": true, "metadata": {}},
+        {"name": "earliest_sale_date", "type": "string", "nullable": true, "metadata": {}}
+    ]
+}
