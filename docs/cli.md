@@ -8,7 +8,7 @@ Samara provides a command-line interface to validate configurations and execute 
 
 ## Configuration File Formats
 
-Samara accepts both **YAML** (`.yaml`, `.yml`) and **JSON** (`.json`, `.jsonc`) configuration files. Both formats are functionally equivalent, and the framework automatically detects the format based on the file extension. You can mix formats—for example, use YAML for runtime configuration and JSON for alert configuration, or vice versa.
+Samara accepts both **YAML** (`.yaml`, `.yml`) and **JSON** (`.json`, `.jsonc`) configuration files. Both formats are functionally equivalent, and the framework automatically detects the format based on the file extension. You can mix formats—for example, use YAML for workflow configuration and JSON for alert configuration, or vice versa.
 
 ## Commands
 
@@ -19,7 +19,7 @@ Validates configuration files and optionally tests alert routing rules without e
 ```bash
 python -m samara validate \
     --alert-filepath="path/to/alerts.yaml" \   # Path to alert configuration file (.yaml, .yml, .json, .jsonc)
-    --runtime-filepath="path/to/job.yaml" \    # Path to pipeline runtime configuration (.yaml, .yml, .json, .jsonc)
+    --workflow-filepath="path/to/job.yaml" \    # Path to pipeline workflow configuration (.yaml, .yml, .json, .jsonc)
     [--test-exception="error message"] \       # Optional: Simulates an error to test alert routing
     [--test-env-var="KEY=VALUE"]                 # Optional: Set environment variables for testing triggers
 ```
@@ -28,7 +28,7 @@ Example:
 ```bash
 python -m samara validate \
     --alert-filepath="examples/join_select/alert.jsonc" \
-    --runtime-filepath="examples/join_select/job.jsonc" \
+    --workflow-filepath="examples/join_select/job.jsonc" \
     --test-exception="Failed to connect to database" \
     --test-env-var="ENVIRONMENT=PROD"
 ```
@@ -40,7 +40,7 @@ Executes the configured data pipeline using the provided configuration files.
 ```bash
 python -m samara run \
     --alert-filepath path/to/alerts.yaml \   # Path to alert configuration file (.yaml, .yml, .json, .jsonc)
-    --runtime-filepath path/to/job.yaml \    # Path to pipeline runtime configuration (.yaml, .yml, .json, .jsonc)
+    --workflow-filepath path/to/job.yaml \    # Path to pipeline workflow configuration (.yaml, .yml, .json, .jsonc)
     [--log-level LEVEL]                      # Optional: Override logging level
 ```
 
@@ -48,13 +48,13 @@ Example:
 ```bash
 python -m samara run \
     --alert-filepath="examples/join_select/slack_alerts.jsonc" \
-    --runtime-filepath="examples/join_select/job.jsonc" \
+    --workflow-filepath="examples/join_select/job.jsonc" \
     --log-level="DEBUG"
 ```
 
 ### export-schema
 
-Exports the runtime configuration JSON schema to a file. This schema enables IDE features like autocompletion, validation, and inline documentation when editing configuration files.
+Exports the workflow configuration JSON schema to a file. This schema enables IDE features like autocompletion, validation, and inline documentation when editing configuration files.
 
 ```bash
 python -m samara export-schema \
@@ -73,7 +73,7 @@ Once exported, reference the schema in your configuration files to enable IDE su
 ```jsonc
 {
     "$schema": "path/to/runtime_schema.json",
-    "runtime": {
+    "workflow": {
         "id": "my-pipeline",
         // IDE now provides autocompletion and validation
     }
@@ -108,7 +108,7 @@ Example:
 ```bash
 # Set logging level via environment variable
 export FLINT_LOG_LEVEL=DEBUG
-python -m samara run --alert-filepath ./alerts.jsonc --runtime-filepath ./pipeline.jsonc
+python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
 ```
 
 ## Exit Codes
@@ -119,7 +119,7 @@ python -m samara run --alert-filepath ./alerts.jsonc --runtime-filepath ./pipeli
 - `20`: IO_ERROR - Input/output error (file access issues)
 - `30`: CONFIGURATION_ERROR - General configuration error
 - `31`: ALERT_CONFIGURATION_ERROR - Alert configuration specific error
-- `32`: RUNTIME_CONFIGURATION_ERROR - Runtime configuration specific error
+- `32`: RUNTIME_CONFIGURATION_ERROR - Workflow configuration specific error
 - `40`: VALIDATION_ERROR - Configuration validation failed
 - `41`: ALERT_TEST_ERROR - Alert testing functionality failed
 - `50`: JOB_ERROR - Error during pipeline execution

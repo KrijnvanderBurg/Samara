@@ -26,8 +26,8 @@ from samara.exceptions import (
     SamaraRuntimeConfigurationError,
     SamaraValidationError,
 )
-from samara.runtime.controller import RuntimeController
 from samara.utils.logger import get_logger, set_logger
+from samara.workflow.controller import RuntimeController
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -68,10 +68,10 @@ def cli(log_level: str | None = None) -> None:
     help="Path to alert configuration file",
 )
 @click.option(
-    "--runtime-filepath",
+    "--workflow-filepath",
     required=True,
     type=click.Path(exists=False, path_type=Path),
-    help="Path to runtime configuration file",
+    help="Path to workflow configuration file",
 )
 @click.option(
     "--test-exception",
@@ -93,7 +93,7 @@ def validate(
 ) -> None:
     """Validate pipeline configuration files with optional alert testing.
 
-    Load and validate both alert and runtime configuration files to ensure they
+    Load and validate both alert and workflow configuration files to ensure they
     conform to expected schemas and contain valid settings. This command performs
     fail-fast validation without alerting on configuration errors (unlike the run
     command), making it suitable for local development and CI/CD pipelines where
@@ -106,7 +106,7 @@ def validate(
         alert_filepath: Path to the alert configuration file in JSON or YAML
             format. The file must exist and contain valid alert configuration
             with triggers and channels.
-        runtime_filepath: Path to the runtime (ETL) configuration file in JSON
+        runtime_filepath: Path to the workflow (ETL) configuration file in JSON
             or YAML format. The file must exist and define valid pipeline
             extracts, transforms, and loads.
         test_exception: Optional test exception message string. When provided,
@@ -122,7 +122,7 @@ def validate(
             - ExitCode.IO_ERROR: Cannot access configuration files
             - ExitCode.VALIDATION_ERROR: Configuration schema validation failed
             - ExitCode.KEYBOARD_INTERRUPT: User interrupted execution
-            - ExitCode.UNEXPECTED_ERROR: Unexpected runtime error
+            - ExitCode.UNEXPECTED_ERROR: Unexpected workflow error
 
     Note:
         This command does NOT send alerts on configuration errors, only on
@@ -160,10 +160,10 @@ def validate(
             # Not alerting on exceptions as a validate command is often run locally or from CICD
             # and thus an alert would be drowning out real alerts
         except SamaraIOError as e:
-            logger.error("Cannot access runtime configuration file: %s", e)
+            logger.error("Cannot access workflow configuration file: %s", e)
             raise click.exceptions.Exit(e.exit_code)
         except SamaraRuntimeConfigurationError as e:
-            logger.error("Runtime configuration is invalid: %s", e)
+            logger.error("Workflow configuration is invalid: %s", e)
             raise click.exceptions.Exit(e.exit_code)
         except SamaraValidationError as e:
             logger.error("Validation failed: %s", e)
@@ -201,15 +201,15 @@ def validate(
     help="Path to alert configuration file",
 )
 @click.option(
-    "--runtime-filepath",
+    "--workflow-filepath",
     required=True,
     type=click.Path(exists=False, path_type=Path),
-    help="Path to runtime configuration file",
+    help="Path to workflow configuration file",
 )
 def run(alert_filepath: Path, runtime_filepath: Path) -> None:
     """Execute the ETL pipeline with integrated alert monitoring.
 
-    Load runtime and alert configurations, then execute the complete ETL pipeline.
+    Load workflow and alert configurations, then execute the complete ETL pipeline.
     The pipeline processes all defined jobs in sequence, applying configured
     transforms to ingest, transform, and load data according to specifications.
     Errors during pipeline execution are captured and alerts are sent based on
@@ -219,7 +219,7 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
         alert_filepath: Path to the alert configuration file in JSON or YAML
             format. Defines alert channels (email, HTTP, file) and trigger rules
             that determine when and how alerts are sent during execution.
-        runtime_filepath: Path to the runtime configuration file in JSON or YAML
+        runtime_filepath: Path to the workflow configuration file in JSON or YAML
             format. Defines the complete ETL pipeline including data sources,
             transformation chains, and output destinations.
 
@@ -230,7 +230,7 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
             - ExitCode.VALIDATION_ERROR: Configuration validation failed
             - ExitCode.RUNTIME_ERROR: Error during pipeline execution
             - ExitCode.KEYBOARD_INTERRUPT: User interrupted execution
-            - ExitCode.UNEXPECTED_ERROR: Unexpected runtime error
+            - ExitCode.UNEXPECTED_ERROR: Unexpected workflow error
 
     Note:
         All exceptions during pipeline execution trigger alert evaluation,
@@ -252,22 +252,22 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
             raise click.exceptions.Exit(e.exit_code)
 
         try:
-            runtime = RuntimeController.from_file(filepath=runtime_filepath)
-            runtime.execute_all()
+            workflow = RuntimeController.from_file(filepath=runtime_filepath)
+            workflow.execute_all()
             logger.info("ETL pipeline completed successfully")
             logger.info(
                 "Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name
             )
         except SamaraIOError as e:
-            logger.error("Cannot access runtime configuration file: %s", e)
+            logger.error("Cannot access workflow configuration file: %s", e)
             alert.evaluate_trigger_and_alert(
-                title="ETL Configuration File Error", body="Failed to read runtime configuration file", exception=e
+                title="ETL Configuration File Error", body="Failed to read workflow configuration file", exception=e
             )
             raise click.exceptions.Exit(e.exit_code)
         except SamaraRuntimeConfigurationError as e:
-            logger.error("Runtime configuration is invalid: %s", e)
+            logger.error("Workflow configuration is invalid: %s", e)
             alert.evaluate_trigger_and_alert(
-                title="ETL Configuration Error", body="Invalid runtime configuration", exception=e
+                title="ETL Configuration Error", body="Invalid workflow configuration", exception=e
             )
             raise click.exceptions.Exit(e.exit_code)
         except SamaraValidationError as e:
@@ -279,7 +279,7 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
         except SamaraJobError as e:
             logger.error("ETL job failed: %s", e)
             alert.evaluate_trigger_and_alert(
-                title="ETL Execution Error", body="Runtime error during ETL execution", exception=e
+                title="ETL Execution Error", body="Workflow error during ETL execution", exception=e
             )
             raise click.exceptions.Exit(e.exit_code)
 
@@ -303,9 +303,9 @@ def run(alert_filepath: Path, runtime_filepath: Path) -> None:
     help="Path where the JSON schema file will be saved",
 )
 def export_schema(output_filepath: Path) -> None:
-    """Generate and save the runtime configuration JSON schema.
+    """Generate and save the workflow configuration JSON schema.
 
-    Export the complete JSON Schema for runtime (ETL pipeline) configurations.
+    Export the complete JSON Schema for workflow (ETL pipeline) configurations.
     This schema documents all valid configuration keys, types, constraints, and
     structure for pipeline definitions. The exported schema can be used for
     configuration file validation, IDE auto-completion, and documentation.
@@ -320,17 +320,17 @@ def export_schema(output_filepath: Path) -> None:
             - ExitCode.SUCCESS: Schema exported successfully
             - ExitCode.IO_ERROR: Cannot write schema file to specified path
             - ExitCode.KEYBOARD_INTERRUPT: User interrupted execution
-            - ExitCode.UNEXPECTED_ERROR: Unexpected runtime error
+            - ExitCode.UNEXPECTED_ERROR: Unexpected workflow error
 
     Note:
         The generated schema includes all supported transforms, source types,
-        and load destinations. Use this schema to validate custom runtime
+        and load destinations. Use this schema to validate custom workflow
         configurations or integrate with schema validation tooling in your
         development workflow.
     """
     try:
         logger.info("Running 'export-schema' command...")
-        logger.info("Exporting runtime configuration schema to: %s", output_filepath)
+        logger.info("Exporting workflow configuration schema to: %s", output_filepath)
 
         try:
             schema = RuntimeController.export_schema()
@@ -342,7 +342,7 @@ def export_schema(output_filepath: Path) -> None:
             with open(output_filepath, "w", encoding="utf-8") as f:
                 json.dump(schema, f, indent=4, ensure_ascii=False)
 
-            logger.info("Runtime configuration schema exported successfully to: %s", output_filepath)
+            logger.info("Workflow configuration schema exported successfully to: %s", output_filepath)
             logger.info(
                 "Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name
             )

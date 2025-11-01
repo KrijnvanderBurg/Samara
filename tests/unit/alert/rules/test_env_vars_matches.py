@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
+
 from samara.alert.rules.env_vars_matches import EnvVarsMatchesRule
 
 # =========================================================================== #
@@ -264,6 +265,6 @@ class TestEnvVarsMatchesRuleEvaluation:
         with patch.dict(os.environ, {"TEST_ENV": "true"}):
             # Act & Assert - Test with different exception types
             assert env_rule.evaluate(ValueError("Value error")) is True
-            assert env_rule.evaluate(RuntimeError("Runtime error")) is True
+            assert env_rule.evaluate(RuntimeError("Workflow error")) is True
             assert env_rule.evaluate(KeyError("Key error")) is True
             assert env_rule.evaluate(Exception("Generic exception")) is True

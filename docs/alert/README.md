@@ -28,7 +28,7 @@ Alert configuration can be defined inline within your job or in a separate file 
 # Separate alert configuration for reuse
 python -m samara run \
     --alert-filepath="examples/alerts.jsonc" \
-    --runtime-filepath="examples/job.jsonc"
+    --workflow-filepath="examples/job.jsonc"
 ```
 
 The configuration requires this structure:
@@ -139,7 +139,7 @@ Test alert configuration without running a full pipeline using the `validate` co
 ```bash
 python -m samara validate \
     --alert-filepath="examples/alerts.jsonc" \
-    --runtime-filepath="examples/job.jsonc" \
+    --workflow-filepath="examples/job.jsonc" \
     --test-exception="database connection failed" \
     --test-env-var=ENVIRONMENT=production
 ```

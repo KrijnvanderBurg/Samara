@@ -1,4 +1,4 @@
-# Spark Runtime Implementation
+# Spark Workflow Implementation
 
 Configuration reference for Spark engine.
 
@@ -161,7 +161,7 @@ For complete options, see [Spark Data Sources documentation](https://spark.apach
 
 ```jsonc
 {
-    "runtime": {
+    "workflow": {
         "id": "customer-orders-pipeline",
         "description": "ETL pipeline for processing customer orders data",
         "enabled": true,

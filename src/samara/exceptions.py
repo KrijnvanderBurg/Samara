@@ -99,7 +99,7 @@ class SamaraAlertConfigurationError(SamaraError):
 
 
 class SamaraRuntimeConfigurationError(SamaraError):
-    """Raise when runtime configuration is invalid.
+    """Raise when workflow configuration is invalid.
 
     Indicates issues with job, extract, transform, or load configuration
     including missing required fields or incompatible settings.

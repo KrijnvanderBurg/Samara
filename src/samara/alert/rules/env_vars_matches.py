@@ -2,7 +2,7 @@
 
 This module provides a rule that matches current environment variables
 against configured expected values, enabling conditional alert triggering
-based on runtime environment conditions.
+based on workflow environment conditions.
 """
 
 import logging
@@ -22,7 +22,7 @@ class EnvVarsMatchesRule(AlertRule):
 
     This rule evaluates to True if the current environment contains a
     configured variable that matches one of the expected values. Use this
-    rule to conditionally activate alerts based on runtime environment
+    rule to conditionally activate alerts based on workflow environment
     conditions (e.g., environment name, feature flags, deployment context).
 
     Attributes:

@@ -6,7 +6,7 @@ This folder contains several specialized DevContainers for different development
 ## Available Containers
 ### [Python/Spark -Code Quality- DevContainer](./python-spark)
 A complete Python development environment with:
-- Python runtime and Poetry package manager
+- Python workflow and Poetry package manager
 - Comprehensive linting and static analysis tools (Ruff, PyLint, Flake8, MyPy)
 - Code quality tools (Bandit, Semgrep)
 - Testing configuration with pytest and coverage reporting

@@ -22,14 +22,14 @@ Understand Samara's design principles and how the framework processes pipelines:
 ## Core Systems
 Samara's architecture consists of two integrated systems that work together through configuration:
 
-### [Runtime System](./runtime/README.md)
-The runtime system orchestrates ETL pipelines through configuration files:
+### [Workflow System](./workflow/README.md)
+The workflow system orchestrates ETL pipelines through configuration files:
 - **Extracts**: Configure data sources (CSV, JSON, databases)
 - **Transforms**: Chain operations through configuration
 - **Loads**: Define outputs with formats and parameters
  
 ETL engines and specific configurations:
-- **[Spark Engine](./runtime/spark.md)**: Spark-specific configuration options
+- **[Spark Engine](./workflow/spark.md)**: Spark-specific configuration options
 - **Polars Engine**: Under development.
 
 ### [Alert System](./alert/README.md)
@@ -40,7 +40,7 @@ Configure notifications when pipeline errors occur:
 
 ## [Example Configurations](../examples/)
 The examples folder includes complete examples of:
-- Runtime pipeline configurations
+- Workflow pipeline configurations
 - Spark-specific configurations
 - Alert system configurations
 

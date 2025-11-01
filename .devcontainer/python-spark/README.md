@@ -12,7 +12,7 @@ This DevContainer includes 20+ carefully curated industry-standard Python develo
 
 - **🎨 Code Formatters**: Ruff - Ensure consistent code style across your team
 - **🔍 Linters & Analyzers**: Pylint, Flake8, Ruff Linter - Catch bugs and enforce best practices
-- **🔒 Type Checkers**: Mypy, Pyright, Pylance - Prevent type-related errors before runtime
+- **🔒 Type Checkers**: Mypy, Pyright, Pylance - Prevent type-related errors before workflow
 - **🛡️ Security Scanners**: Bandit, Semgrep - Identify vulnerabilities and security issues
 - **🔐 Secret Detection**: TruffleHog - Prevent credential leaks in your repository
 - **🧪 Testing & Coverage**: Pytest with Coverage.py - Ensure code reliability and test completeness

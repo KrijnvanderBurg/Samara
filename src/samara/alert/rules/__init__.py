@@ -2,7 +2,7 @@
 
 This module provides alert trigger rules that define conditions for when
 alerts should be fired within a data pipeline. Rules evaluate exceptions
-and runtime state to determine alert triggering based on configuration.
+and workflow state to determine alert triggering based on configuration.
 
 The rule system follows a discriminator-based union pattern, enabling
 pipeline authors to mix different rule types within the same configuration.

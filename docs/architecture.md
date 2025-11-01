@@ -10,7 +10,7 @@ The software adheres to these core design principles:
 
 - **Type Safety** — Configurations are validated against strongly-typed models
   - Configuration errors are caught before execution
-  - Runtime type errors are minimized
+  - Workflow type errors are minimized
   - IDE tooling can provide autocompletion and validation
 - **Agnosticism** — Same configuration works across different processing backends
   - Pipeline definitions independent of execution engine

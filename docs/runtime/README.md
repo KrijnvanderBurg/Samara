@@ -1,14 +1,14 @@
-# Runtime
+# Workflow
 
-The runtime system orchestrates ETL pipelines through configuration files. Define your data sources, transformations, and destinations in YAML or JSON—no coding required.
+The workflow system orchestrates ETL pipelines through configuration files. Define your data sources, transformations, and destinations in YAML or JSON—no coding required.
 
 ## Overview
 
-Samara's runtime executes data pipelines defined entirely through configuration. This declarative approach transforms data engineering from a programming task to a configuration exercise, making pipelines more maintainable and accessible.
+Samara's workflow executes data pipelines defined entirely through configuration. This declarative approach transforms data engineering from a programming task to a configuration exercise, making pipelines more maintainable and accessible.
 
 ## Configuration Formats
 
-All runtime configurations can be written in either **YAML** or **JSON** format. Both formats are functionally equivalent:
+All workflow configurations can be written in either **YAML** or **JSON** format. Both formats are functionally equivalent:
 
 - **YAML** (`.yaml`, `.yml`): More readable, supports comments natively
 - **JSON/JSONC** (`.json`, `.jsonc`): Structured format, widely supported in tools
@@ -27,7 +27,7 @@ Execute a pipeline using the Samara CLI:
 
 ```bash
 python -m samara run \
-    --runtime-filepath="examples/join_select/job.jsonc" \
+    --workflow-filepath="examples/join_select/job.jsonc" \
     --alert-filepath="examples/join_select/alert.jsonc"
 ```
 
@@ -38,10 +38,10 @@ A Samara pipeline is defined by a YAML or JSON configuration file with this stru
 **JSON format:**
 ```jsonc
 {
-    "runtime": {
+    "workflow": {
         "id": "unique-pipeline-id",         // Unique identifier
         "description": "Pipeline description", 
-        "enabled": true,                    // Enable/disable the entire runtime
+        "enabled": true,                    // Enable/disable the entire workflow
         "jobs": [
             /* Job definitions */
         ]
@@ -51,10 +51,10 @@ A Samara pipeline is defined by a YAML or JSON configuration file with this stru
 
 **YAML format:**
 ```yaml
-runtime:
+workflow:
   id: unique-pipeline-id        # Unique identifier
   description: Pipeline description
-  enabled: true                 # Enable/disable the entire runtime
+  enabled: true                 # Enable/disable the entire workflow
   jobs:
     # Job definitions
 ```
@@ -257,7 +257,7 @@ Below is a complete example of a pipeline that:
 
 ```jsonc
 {
-    "runtime": {
+    "workflow": {
         "id": "customer-analytics",
         "description": "Process customer orders with analytics",
         "enabled": true,
