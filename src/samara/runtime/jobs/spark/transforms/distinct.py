@@ -20,18 +20,17 @@ class DistinctFunction(DistinctFunctionModel, FunctionSpark):
     """Remove duplicate rows from a DataFrame.
 
     This transform enables selecting only unique rows from a DataFrame, removing
-    duplicates based on all columns or a specified subset. Use it to deduplicate
-    data after joins, aggregations, or when cleaning raw input data.
+    duplicates based on all columns. Use it to deduplicate data after joins,
+    aggregations, or when cleaning raw input data.
 
     Attributes:
         function_type: The name of the function (always "distinct")
-        arguments: Container for the distinct operation parameters with optional
-            column list
+        arguments: Container for the distinct operation parameters
 
     Example:
         >>> distinct_fn = DistinctFunction(
         ...     function_type="distinct",
-        ...     arguments=DistinctArgs(columns=["user_id", "date"])
+        ...     arguments=DistinctArgs()
         ... )
         >>> transformed_df = distinct_fn.transform()(df)
 
@@ -44,9 +43,7 @@ class DistinctFunction(DistinctFunctionModel, FunctionSpark):
             "functions": [
                 {
                     "function_type": "distinct",
-                    "arguments": {
-                        "columns": ["customer_id", "order_date"]
-                    }
+                    "arguments": {}
                 }
             ]
         }
@@ -59,16 +56,13 @@ class DistinctFunction(DistinctFunctionModel, FunctionSpark):
         upstream_id: extract-data
         functions:
           - function_type: distinct
-            arguments:
-              columns:
-                - customer_id
-                - order_date
+            arguments: {}
         ```
 
     Note:
-        When columns is null or empty, all columns are considered for uniqueness.
-        The distinct operation keeps the first occurrence of each unique combination.
-        For large datasets, consider the performance implications of distinct operations.
+        All columns are considered for uniqueness. The distinct operation keeps
+        the first occurrence of each unique combination. For large datasets,
+        consider the performance implications of distinct operations.
     """
 
     def transform(self) -> Callable:
@@ -96,11 +90,6 @@ class DistinctFunction(DistinctFunctionModel, FunctionSpark):
             Returns:
                 DataFrame with duplicate rows removed based on configured columns
             """
-            if self.arguments.columns is None or len(self.arguments.columns) == 0:
-                # Consider all columns for uniqueness
-                return df.distinct()
-            else:
-                # Consider only specified columns for uniqueness
-                return df.dropDuplicates(self.arguments.columns)
+            return df.distinct()
 
         return __f

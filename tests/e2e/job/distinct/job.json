@@ -36,9 +36,7 @@
                         "functions": [
                             {
                                 "function_type": "distinct",
-                                "arguments": {
-                                    "columns": ["customer_id", "order_date"]
-                                }
+                                "arguments": {}
                             }
                         ]
                     }

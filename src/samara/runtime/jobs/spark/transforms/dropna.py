@@ -49,7 +49,7 @@ class DropNaFunction(DropNaFunctionModel, FunctionSpark):
                     "function_type": "dropna",
                     "arguments": {
                         "how": "any",
-                        "thresh": 0,
+                        "thresh": null,
                         "subset": ["user_id", "email"]
                     }
                 }
@@ -66,16 +66,16 @@ class DropNaFunction(DropNaFunctionModel, FunctionSpark):
           - function_type: dropna
             arguments:
               how: any
-              thresh: 0
+              thresh: null
               subset:
                 - user_id
                 - email
         ```
 
     Note:
-        When 'thresh' is greater than 0, it overrides the 'how' parameter. The thresh
+        When 'thresh' is specified, it overrides the 'how' parameter. The thresh
         value specifies the minimum number of non-null values required to keep a row.
-        If 'subset' is an empty list, all columns are checked for null values.
+        If 'subset' is null, all columns are checked for null values.
     """
 
     def transform(self) -> Callable:
@@ -103,21 +103,6 @@ class DropNaFunction(DropNaFunctionModel, FunctionSpark):
             Returns:
                 DataFrame with rows containing null values removed based on criteria
             """
-            # If subset is empty, return the DataFrame unchanged
-            if len(self.arguments.subset) == 0 and self.arguments.thresh == 0:
-                return df
-
-            # Build kwargs for the dropna call
-            kwargs = {}
-
-            if self.arguments.thresh > 0:
-                kwargs["thresh"] = self.arguments.thresh
-            else:
-                kwargs["how"] = self.arguments.how
-
-            if len(self.arguments.subset) > 0:
-                kwargs["subset"] = self.arguments.subset
-
-            return df.dropna(**kwargs)
+            return df.dropna(how=self.arguments.how, thresh=self.arguments.thresh, subset=self.arguments.subset)
 
         return __f

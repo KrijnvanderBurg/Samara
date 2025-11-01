@@ -16,61 +16,45 @@ from samara.runtime.jobs.models.model_transform import ArgsModel, FunctionModel
 class DistinctArgs(ArgsModel):
     """Container for distinct operation parameters.
 
-    Attributes:
-        columns: List of column names to consider for determining uniqueness.
-            When specified, rows are considered duplicates if they have the same
-            values in all specified columns. When null or empty, all columns
-            are considered.
+    The distinct operation considers all columns when determining uniqueness.
 
     Example:
         **Configuration in JSON:**
         ```
-        {
-            "columns": ["user_id", "timestamp"]
-        }
+        {}
         ```
 
         **Configuration in YAML:**
         ```
-        columns:
-          - user_id
-          - timestamp
+        {}
         ```
     """
-
-    columns: list[str] | None = Field(..., description="Column names to consider for uniqueness, null for all columns")
 
 
 class DistinctFunctionModel(FunctionModel[DistinctArgs]):
     """Configure distinct row selection transformations.
 
-    This model defines the complete configuration for a distinct transform operation,
-    allowing you to specify which columns should be considered when determining
-    row uniqueness within your pipeline definition.
+    This model defines the complete configuration for a distinct transform operation.
+    The distinct operation considers all columns when determining row uniqueness.
 
     Attributes:
         function_type: Identifies this transform as a distinct operation. Always
             set to "distinct".
-        arguments: Container holding the list of columns to consider for uniqueness.
+        arguments: Container for the distinct operation parameters.
 
     Example:
         **Configuration in JSON:**
         ```
         {
             "function_type": "distinct",
-            "arguments": {
-                "columns": ["customer_id", "order_date"]
-            }
+            "arguments": {}
         }
         ```
 
         **Configuration in YAML:**
         ```
         function_type: distinct
-        arguments:
-          columns:
-            - customer_id
-            - order_date
+        arguments: {}
         ```
 
     Note:

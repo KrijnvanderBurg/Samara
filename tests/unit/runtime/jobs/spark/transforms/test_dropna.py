@@ -54,7 +54,7 @@ def fixture_dropna_config() -> dict[str, Any]:
     """Configuration dict for DropNaFunction."""
     return {
         "function_type": "dropna",
-        "arguments": {"how": "any", "thresh": 0, "subset": ["name", "age"]},
+        "arguments": {"how": "any", "thresh": None, "subset": ["name", "age"]},
     }
 
 
@@ -64,7 +64,7 @@ def test_dropna_creation__from_config__creates_valid_model(dropna_config: dict[s
     assert f.function_type == "dropna"
     assert isinstance(f.arguments, DropNaArgs)
     assert f.arguments.how == "any"
-    assert f.arguments.thresh == 0
+    assert f.arguments.thresh is None
     assert f.arguments.subset == ["name", "age"]
 
 
@@ -141,14 +141,14 @@ class TestDropNaFunctionValidation:
         assert dropna_function.arguments.how == "all"
 
     def test_create_dropna_function__with_null_subset__succeeds(self, dropna_config: dict[str, Any]) -> None:
-        """Test DropNaFunction creation succeeds with empty subset."""
-        dropna_config["arguments"]["subset"] = []
+        """Test DropNaFunction creation succeeds with null subset."""
+        dropna_config["arguments"]["subset"] = None
 
         # Act
         dropna_function = DropNaFunction(**dropna_config)
 
         # Assert
-        assert dropna_function.arguments.subset == []
+        assert dropna_function.arguments.subset is None
 
     def test_create_dropna_function__with_thresh_value__succeeds(self, dropna_config: dict[str, Any]) -> None:
         """Test DropNaFunction creation succeeds with thresh value."""
@@ -191,7 +191,7 @@ def test_dropna_fixture(dropna_func: DropNaFunction) -> None:
     assert dropna_func.function_type == "dropna"
     assert isinstance(dropna_func.arguments, DropNaArgs)
     assert dropna_func.arguments.how == "any"
-    assert dropna_func.arguments.thresh == 0
+    assert dropna_func.arguments.thresh is None
     assert dropna_func.arguments.subset == ["name", "age"]
 
 
@@ -218,7 +218,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": ["name", "age"]},
+            "arguments": {"how": "any", "thresh": None, "subset": ["name", "age"]},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -245,7 +245,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "all", "thresh": 0, "subset": []},
+            "arguments": {"how": "all", "thresh": None, "subset": None},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -272,11 +272,11 @@ class TestDropNaFunctionTransform:
     def test_transform__drops_rows_with_any_null_all_columns(
         self, spark: SparkSession, data_with_nulls_df: DataFrame
     ) -> None:
-        """Test transform with empty subset and thresh=0 returns unchanged DataFrame."""
+        """Test transform drops rows with any null when checking all columns."""
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": []},
+            "arguments": {"how": "any", "thresh": None, "subset": None},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -284,8 +284,23 @@ class TestDropNaFunctionTransform:
         transform_fn = dropna_func.transform()
         result_df = transform_fn(data_with_nulls_df)
 
-        # Assert
-        assertDataFrameEqual(result_df, data_with_nulls_df)
+        # Assert - Only rows with no nulls should remain
+        expected_data = [
+            (1, "Alice", 30, "Engineering", 75000),
+            (6, "Frank", 45, "Engineering", 90000),
+            (8, "Henry", 38, "Sales", 72000),
+        ]
+        expected_schema = StructType(
+            [
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+                StructField("age", IntegerType(), True),
+                StructField("department", StringType(), True),
+                StructField("salary", IntegerType(), True),
+            ]
+        )
+        expected_df = spark.createDataFrame(expected_data, schema=expected_schema)
+        assertDataFrameEqual(result_df, expected_df)
 
     def test_transform__uses_thresh_to_keep_rows_with_minimum_non_nulls(
         self, spark: SparkSession, data_with_nulls_df: DataFrame
@@ -294,7 +309,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 4, "subset": []},
+            "arguments": {"how": "any", "thresh": 4, "subset": None},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -348,7 +363,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": ["name"]},
+            "arguments": {"how": "any", "thresh": None, "subset": ["name"]},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -376,7 +391,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": []},
+            "arguments": {"how": "any", "thresh": None, "subset": []},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -392,7 +407,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": ["age"]},
+            "arguments": {"how": "any", "thresh": None, "subset": ["age"]},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -408,7 +423,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": ["name"]},
+            "arguments": {"how": "any", "thresh": None, "subset": ["name"]},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -426,7 +441,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": []},
+            "arguments": {"how": "any", "thresh": 0, "subset": None},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -444,7 +459,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 10, "subset": []},
+            "arguments": {"how": "any", "thresh": 10, "subset": None},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -462,7 +477,7 @@ class TestDropNaFunctionTransform:
         # Arrange
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "all", "thresh": 0, "subset": ["name", "age"]},
+            "arguments": {"how": "all", "thresh": None, "subset": ["name", "age"]},
         }
         dropna_func = DropNaFunction(**config)
 
@@ -505,7 +520,7 @@ class TestDropNaFunctionTransform:
 
         config = {
             "function_type": "dropna",
-            "arguments": {"how": "any", "thresh": 0, "subset": []},
+            "arguments": {"how": "any", "thresh": None, "subset": None},
         }
         dropna_func = DropNaFunction(**config)
 

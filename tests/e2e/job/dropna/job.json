@@ -38,7 +38,7 @@
                                 "function_type": "dropna",
                                 "arguments": {
                                     "how": "any",
-                                    "thresh": 0,
+                                    "thresh": null,
                                     "subset": ["name", "age"]
                                 }
                             }

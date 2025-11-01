@@ -19,16 +19,16 @@ class DropNaArgs(ArgsModel):
         how: Determines how to drop rows with nulls. "any" drops rows with
             any null values, "all" drops only rows where all values are null.
         thresh: Minimum number of non-null values required to keep a row.
-            If specified (> 0), overrides the 'how' parameter. Use 0 to disable.
-        subset: List of column names to consider for null checking. Use empty
-            list to check all columns.
+            If specified, overrides the 'how' parameter. Use null to disable.
+        subset: List of column names to consider for null checking. Use null
+            to check all columns.
 
     Example:
         **Configuration in JSON:**
         ```
         {
             "how": "any",
-            "thresh": 0,
+            "thresh": null,
             "subset": ["column1", "column2"]
         }
         ```
@@ -36,7 +36,7 @@ class DropNaArgs(ArgsModel):
         **Configuration in YAML:**
         ```
         how: any
-        thresh: 0
+        thresh: null
         subset:
           - column1
           - column2
@@ -44,8 +44,10 @@ class DropNaArgs(ArgsModel):
     """
 
     how: Literal["any", "all"] = Field(..., description="How to determine if row should be dropped")
-    thresh: int = Field(..., description="Minimum number of non-null values to keep row (0 to disable)")
-    subset: list[str] = Field(..., description="Column names to check for null values (empty list for all columns)")
+    thresh: int | None = Field(
+        ..., description="Minimum number of non-null values to keep row (None to use 'how' parameter)"
+    )
+    subset: list[str] | None = Field(..., description="Column names to check for null values (None for all columns)")
 
 
 class DropNaFunctionModel(FunctionModel[DropNaArgs]):
@@ -67,7 +69,7 @@ class DropNaFunctionModel(FunctionModel[DropNaArgs]):
             "function_type": "dropna",
             "arguments": {
                 "how": "any",
-                "thresh": 0,
+                "thresh": null,
                 "subset": ["user_id", "transaction_amount"]
             }
         }
@@ -78,7 +80,7 @@ class DropNaFunctionModel(FunctionModel[DropNaArgs]):
         function_type: dropna
         arguments:
           how: any
-          thresh: 0
+          thresh: null
           subset:
             - user_id
             - transaction_amount

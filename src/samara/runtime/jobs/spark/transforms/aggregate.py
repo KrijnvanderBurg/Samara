@@ -119,21 +119,14 @@ class AggregateFunction(AggregateFunctionModel, FunctionSpark):
             Returns:
                 DataFrame with aggregation results based on group-by columns
             """
-            # Build list of aggregation expressions
-            agg_exprs = []
-            for agg_col in self.arguments.aggregate_columns:
-                # Get the appropriate Spark aggregation function
-                agg_func = getattr(F, agg_col.function)
-                agg_exprs.append(agg_func(F.col(agg_col.column_name)).alias(agg_col.alias))
+            agg_exprs = [
+                getattr(F, agg_col.function)(agg_col.column_name).alias(agg_col.alias)
+                for agg_col in self.arguments.aggregate_columns
+            ]
 
-            # Apply aggregation with or without grouping
             if self.arguments.group_by_columns:
-                # Group by specified columns then aggregate
-                result = df.groupBy(*self.arguments.group_by_columns).agg(*agg_exprs)
-            else:
-                # Global aggregation (no grouping)
-                result = df.agg(*agg_exprs)
+                return df.groupBy(*self.arguments.group_by_columns).agg(*agg_exprs)
 
-            return result
+            return df.agg(*agg_exprs)
 
         return __f

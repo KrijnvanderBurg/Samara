@@ -128,33 +128,19 @@ class GroupByFunction(GroupByFunctionModel, FunctionSpark):
             Raises:
                 RuntimeError: If aggregate function configuration is invalid
             """
-            # Start with groupBy operation
-            grouped = df.groupBy(*self.arguments.group_columns)
-
-            # Build aggregation expressions
             agg_exprs = []
             for agg in self.arguments.aggregations:
-                # Map function names to PySpark functions
-                func_name = "mean" if agg.function == "avg" else agg.function
-
                 if agg.function == "count":
-                    # Count requires input_column to be explicitly null
                     if agg.input_column is not None:
                         raise RuntimeError(f"Count function requires input_column to be null, got: {agg.input_column}")
                     agg_exprs.append(F.count("*").alias(agg.output_column))
                 else:
-                    # All other functions require a valid input_column
                     if agg.input_column is None:
                         raise RuntimeError(
                             f"Aggregate function '{agg.function}' requires a valid input_column, got null"
                         )
-                    # Get the appropriate PySpark function
-                    spark_func = getattr(F, func_name)
-                    agg_exprs.append(spark_func(agg.input_column).alias(agg.output_column))
+                    agg_exprs.append(getattr(F, agg.function)(agg.input_column).alias(agg.output_column))
 
-            # Apply all aggregations
-            result = grouped.agg(*agg_exprs)
-
-            return result
+            return df.groupBy(*self.arguments.group_columns).agg(*agg_exprs)
 
         return __f
