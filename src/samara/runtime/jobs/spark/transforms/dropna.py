@@ -106,18 +106,18 @@ class DropNaFunction(DropNaFunctionModel, FunctionSpark):
             # If subset is empty, return the DataFrame unchanged
             if len(self.arguments.subset) == 0 and self.arguments.thresh == 0:
                 return df
-            
+
             # Build kwargs for the dropna call
             kwargs = {}
-            
+
             if self.arguments.thresh > 0:
                 kwargs["thresh"] = self.arguments.thresh
             else:
                 kwargs["how"] = self.arguments.how
-            
+
             if len(self.arguments.subset) > 0:
                 kwargs["subset"] = self.arguments.subset
-            
+
             return df.dropna(**kwargs)
 
         return __f
