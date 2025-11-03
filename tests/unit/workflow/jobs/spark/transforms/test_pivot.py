@@ -8,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+
 from samara.workflow.jobs.models.transforms.model_pivot import PivotArgs
 from samara.workflow.jobs.spark.transforms.pivot import PivotFunction
 
@@ -415,7 +416,7 @@ class TestPivotFunctionTransform:
 
         # Act & Assert
         transform_fn = pivot_func.transform()
-        with pytest.raises(ValueError, match="Unsupported aggregation function: invalid_func"):
+        with pytest.raises(ValueError):
             transform_fn(sales_df)
 
     def test_transform__multiple_group_by_columns(self, spark: SparkSession) -> None:

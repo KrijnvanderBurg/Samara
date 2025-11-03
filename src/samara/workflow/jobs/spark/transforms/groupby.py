@@ -112,7 +112,7 @@ class GroupByFunction(GroupByFunctionModel, FunctionSpark):
             with grouped and aggregated data.
 
         Raises:
-            WorkflowError: If a count function has a non-null input_column, or if
+            SamaraWorkflowJobError: If a count function has a non-null input_column, or if
                 a non-count function has a null input_column.
         """
 
@@ -127,7 +127,7 @@ class GroupByFunction(GroupByFunctionModel, FunctionSpark):
                 functions applied, containing group columns and aggregate result columns
 
             Raises:
-                WorkflowError: If aggregate function configuration is invalid
+                SamaraWorkflowJobError: If aggregate function configuration is invalid
             """
             agg_exprs = []
             for agg in self.arguments.aggregations:
