@@ -142,7 +142,7 @@ class AlertController(BaseModel):
             >>> alert_config.evaluate_trigger_and_alert(
             ...     title="Pipeline Failed",
             ...     body="Check logs for details",
-            ...     exception=WorkflowError("Transform failed")
+            ...     exception=SamaraWorkflowError("Transform failed")
             ... )
         """
         logger.info("Creating AlertManager from file: %s", filepath)

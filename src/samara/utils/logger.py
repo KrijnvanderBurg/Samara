@@ -1,10 +1,13 @@
 """Structured logging utilities for the Samara framework."""
 
 import logging
-import os
 from typing import Any
 
 import structlog
+
+from samara.settings import get_settings
+
+settings = get_settings()
 
 
 def set_logger(name: str | None = None, level: str | None = None) -> structlog.BoundLogger:
@@ -12,14 +15,14 @@ def set_logger(name: str | None = None, level: str | None = None) -> structlog.B
 
     Args:
         name: Optional logger name.
-        level: Logging level (e.g., "INFO", "DEBUG"). Checks FLINT_LOG_LEVEL
-            or LOG_LEVEL environment variables if not provided.
+        level: Logging level (e.g., "INFO", "DEBUG"). If not provided,
+            uses the log level from application settings.
 
     Returns:
         A structlog BoundLogger instance configured with the specified level.
     """
-    # Get log level from environment variables with fallback
-    log_level = level or os.environ.get("FLINT_LOG_LEVEL") or os.environ.get("LOG_LEVEL") or "INFO"
+    # get log level from settings if not provided via CLI
+    log_level = level or settings.log_level or "INFO"
 
     # Configure structlog only once
     if not structlog.is_configured():

@@ -24,7 +24,7 @@ from samara.exceptions import (
     SamaraIOError,
     SamaraValidationError,
     SamaraWorkflowConfigurationError,
-    SamaraWorkflowJobError,
+    SamaraWorkflowError,
 )
 from samara.utils.logger import get_logger, set_logger
 from samara.workflow.controller import WorkflowController
@@ -38,7 +38,7 @@ logger: logging.Logger = get_logger(__name__)
     "--log-level",
     default=None,
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
-    help="Set the logging level (default: INFO).",
+    help="Set the logging level (default: INFO or from environment variable).",
 )
 def cli(log_level: str | None = None) -> None:
     """Samara: Configuration-driven ETL framework for Apache Spark and Polars.
@@ -49,14 +49,16 @@ def cli(log_level: str | None = None) -> None:
 
     Args:
         log_level: The logging level as a string. Must be one of DEBUG, INFO,
-            WARNING, ERROR, or CRITICAL (case-insensitive). Defaults to INFO
-            level if not specified.
+            WARNING, ERROR, or CRITICAL (case-insensitive). If not specified,
+            uses the value from application settings (SAMARA_LOG_LEVEL env var)
+            or defaults to INFO level.
 
     Commands:
         validate: Validate pipeline configurations without execution
         run: Execute ETL pipeline with integrated alerting
         export-schema: Generate JSON schema for pipeline configs
     """
+    # Log level will fall back to settings if not provided
     set_logger(level=log_level)
 
 
@@ -276,7 +278,7 @@ def run(alert_filepath: Path, workflow_filepath: Path) -> None:
                 title="ETL Validation Error", body="Configuration validation failed", exception=e
             )
             raise click.exceptions.Exit(e.exit_code)
-        except SamaraWorkflowJobError as e:
+        except SamaraWorkflowError as e:
             logger.error("ETL job failed: %s", e)
             alert.evaluate_trigger_and_alert(
                 title="ETL Execution Error", body="Workflow error during ETL execution", exception=e

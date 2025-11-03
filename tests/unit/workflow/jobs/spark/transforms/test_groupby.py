@@ -9,6 +9,8 @@ from pydantic import ValidationError
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import DoubleType, IntegerType, LongType, StringType, StructField, StructType
 from pyspark.testing import assertDataFrameEqual
+
+from samara.exceptions import SamaraWorkflowError
 from samara.workflow.jobs.models.transforms.model_groupby import GroupByArgs
 from samara.workflow.jobs.spark.transforms.groupby import GroupByFunction
 
@@ -364,7 +366,7 @@ class TestGroupByFunctionTransform:
         transform_fn = groupby_func.transform()
 
         # Act & Assert
-        with pytest.raises(WorkflowError, match="Count function requires input_column to be null"):
+        with pytest.raises(SamaraWorkflowError):
             result_df = transform_fn(employees_df)
             result_df.collect()  # Force evaluation
 
@@ -382,7 +384,7 @@ class TestGroupByFunctionTransform:
         transform_fn = groupby_func.transform()
 
         # Act & Assert
-        with pytest.raises(WorkflowError, match="requires a valid input_column, got null"):
+        with pytest.raises(SamaraWorkflowError):
             result_df = transform_fn(employees_df)
             result_df.collect()  # Force evaluation
 

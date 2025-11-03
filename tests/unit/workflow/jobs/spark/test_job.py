@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 import pytest
 from pydantic import ValidationError
 
-from samara.exceptions import SamaraWorkflowJobError
+from samara.exceptions import SamaraWorkflowError
 from samara.workflow.jobs.spark.job import JobSpark
 
 # =========================================================================== #
@@ -440,7 +440,7 @@ class TestJobSparkExecute:
         mock_extract.extract.side_effect = ValueError("Extract failed")
         job_spark.extracts = [mock_extract]
 
-        with pytest.raises(SamaraWorkflowJobError):
+        with pytest.raises(SamaraWorkflowError):
             job_spark.execute()
 
         mock_error_action.execute.assert_called_once()
@@ -454,7 +454,7 @@ class TestJobSparkExecute:
         job_spark.transforms = []
         job_spark.loads = [mock_load]
 
-        with pytest.raises(SamaraWorkflowJobError):
+        with pytest.raises(SamaraWorkflowError):
             job_spark.execute()
 
     def test_execute__with_key_error__wraps_in_samara_job_error(self, job_spark: JobSpark) -> None:
@@ -466,7 +466,7 @@ class TestJobSparkExecute:
         job_spark.transforms = [mock_transform]
         job_spark.loads = []
 
-        with pytest.raises(SamaraWorkflowJobError):
+        with pytest.raises(SamaraWorkflowError):
             job_spark.execute()
 
 

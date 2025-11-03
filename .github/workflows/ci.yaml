@@ -93,3 +93,53 @@ jobs:
   build-and-test:
     uses: ./.github/workflows/build-and-test.yml
 
+  devcontainer-build:
+    name: DevContainer Build Test
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        devcontainer:
+          - python-spark
+          # Add more devcontainers here as needed
+          # - spark-cluster
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install DevContainer CLI
+        run: npm install -g @devcontainers/cli
+
+      - name: Build DevContainer - ${{ matrix.devcontainer }}
+        run: |
+          devcontainer build \
+            --workspace-folder . \
+            --config .devcontainer/${{ matrix.devcontainer }}/devcontainer.json \
+            --image-name samara-devcontainer-${{ matrix.devcontainer }}:test
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDKIT_PROGRESS: plain
+          PROGRESS_NO_TRUNC: 1
+          CI: true
+
+      - name: Verify DevContainer Build
+        run: |
+          echo "DevContainer ${{ matrix.devcontainer }} built successfully"
+          docker images | grep samara-devcontainer-${{ matrix.devcontainer }}
+
+      - name: Test DevContainer Startup
+        run: |
+          devcontainer up \
+            --workspace-folder . \
+            --config .devcontainer/${{ matrix.devcontainer }}/devcontainer.json
+
+      - name: Run Basic Commands in DevContainer
+        run: |
+          devcontainer exec \
+            --workspace-folder . \
+            --config .devcontainer/${{ matrix.devcontainer }}/devcontainer.json \
+            bash -c "python --version && poetry --version"

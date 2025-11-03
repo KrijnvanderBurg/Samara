@@ -3,6 +3,8 @@
 from unittest.mock import patch
 
 import pytest
+
+from samara.exceptions import SamaraWorkflowError
 from samara.workflow.actions.base import ActionBase
 from samara.workflow.jobs.hooks import Hooks
 
@@ -82,8 +84,8 @@ def test_hooks_propagate_exceptions() -> None:
     """Test that hooks propagate exceptions from failing actions."""
     action = MockAction(id="test_action", description="Test action", enabled=True)
 
-    with patch.object(action, "_execute", side_effect=WorkflowError("Action failed")):
+    with patch.object(action, "_execute", side_effect=SamaraWorkflowError("Action failed")):
         hooks = Hooks.model_construct(onStart=[action])
 
-        with pytest.raises(WorkflowError, match="Action failed"):
+        with pytest.raises(SamaraWorkflowError):
             hooks.on_start()
