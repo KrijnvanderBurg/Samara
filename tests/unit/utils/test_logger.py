@@ -1,6 +1,8 @@
 """Unit tests for logging utility functions."""
 
 import pytest
+
+from samara.settings import get_settings
 from samara.utils.logger import bind_context, clear_context, get_logger, set_logger
 
 
@@ -25,44 +27,47 @@ class TestSetLogger:
         assert logger is not None
         logger.debug("debug message")
 
-    def test_respects_samara_log_level_env_variable(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that set_logger uses FLINT_LOG_LEVEL environment variable."""
+    def test_uses_settings_when_no_level_provided(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that set_logger uses application settings when no level is provided."""
         # Arrange
-        monkeypatch.setenv("FLINT_LOG_LEVEL", "DEBUG")
-        monkeypatch.delenv("LOG_LEVEL", raising=False)
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("SAMARA_LOG_LEVEL", "DEBUG")
 
         # Act
-        logger = set_logger("test_logger_env1")
+        logger = set_logger("test_logger_from_settings")
 
         # Assert
         assert logger is not None
-        logger.debug("debug message")
+        logger.debug("debug message from settings")
 
-    def test_falls_back_to_log_level_env_variable(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that set_logger falls back to LOG_LEVEL when FLINT_LOG_LEVEL is not set."""
+    def test_explicit_level_overrides_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that explicit level parameter overrides settings."""
         # Arrange
-        monkeypatch.delenv("FLINT_LOG_LEVEL", raising=False)
-        monkeypatch.setenv("LOG_LEVEL", "WARNING")
 
-        # Act
-        logger = set_logger("test_logger_env2")
+        get_settings.cache_clear()
+        monkeypatch.setenv("SAMARA_LOG_LEVEL", "DEBUG")
+
+        # Act - explicitly pass ERROR level
+        logger = set_logger("test_logger_override", level="ERROR")
 
         # Assert
         assert logger is not None
-        logger.warning("warning message")
+        logger.error("error message")
 
-    def test_samara_log_level_takes_precedence_over_log_level(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that FLINT_LOG_LEVEL takes precedence over LOG_LEVEL."""
+    def test_defaults_to_info_when_no_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that logger defaults to INFO level when no environment variables are set."""
         # Arrange
-        monkeypatch.setenv("FLINT_LOG_LEVEL", "WARNING")
-        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+
+        get_settings.cache_clear()
+        monkeypatch.delenv("SAMARA_LOG_LEVEL", raising=False)
 
         # Act
-        logger = set_logger("test_logger_priority")
+        logger = set_logger("test_logger_default")
 
         # Assert
         assert logger is not None
-        logger.warning("warning message")
+        logger.info("info message with default level")
 
 
 class TestGetLogger:
