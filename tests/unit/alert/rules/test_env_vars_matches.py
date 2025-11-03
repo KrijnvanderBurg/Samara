@@ -12,6 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from samara.alert.rules.env_vars_matches import EnvVarsMatchesRule
+from samara.exceptions import SamaraWorkflowError
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
@@ -162,7 +163,7 @@ class TestEnvVarsMatchesRuleEvaluation:
         # Mock environment variable to simulate matching condition
         with patch.dict(os.environ, {"TEST_ENV": "1"}):
             # Act
-            result = env_rule.evaluate(WorkflowError("Another test exception"))
+            result = env_rule.evaluate(SamaraWorkflowError("Another test exception"))
 
             # Assert
             assert result is True
@@ -265,6 +266,6 @@ class TestEnvVarsMatchesRuleEvaluation:
         with patch.dict(os.environ, {"TEST_ENV": "true"}):
             # Act & Assert - Test with different exception types
             assert env_rule.evaluate(ValueError("Value error")) is True
-            assert env_rule.evaluate(WorkflowError("Workflow error")) is True
+            assert env_rule.evaluate(SamaraWorkflowError("Workflow error")) is True
             assert env_rule.evaluate(KeyError("Key error")) is True
             assert env_rule.evaluate(Exception("Generic exception")) is True

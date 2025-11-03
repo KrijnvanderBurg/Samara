@@ -9,7 +9,9 @@ from typing import Any
 
 import pytest
 from pydantic import ValidationError
+
 from samara.alert.rules.exception_regex import ExceptionRegexRule
+from samara.exceptions import SamaraWorkflowError
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #
@@ -184,7 +186,7 @@ class TestExceptionRegexRuleEvaluation:
     def test_evaluate__with_partial_matching__returns_true(self, exception_rule: ExceptionRegexRule) -> None:
         """Test evaluation returns True when pattern matches part of exception message."""
         # Arrange
-        exception = WorkflowError("A critical error has been detected in the system")
+        exception = SamaraWorkflowError("A critical error has been detected in the system")
 
         # Act
         result = exception_rule.evaluate(exception)
@@ -244,8 +246,8 @@ class TestExceptionRegexRuleEvaluation:
         """Test evaluation with multiline exception messages."""
         # Arrange
         rule = create_exception_regex_rule(r"Stack trace:.*")
-        multiline_msg = "Stack trace:\n  File 'main.py', line 42\n    raise WorkflowError()"
-        exception = WorkflowError(multiline_msg)
+        multiline_msg = "Stack trace:\n  File 'main.py', line 42\n    raise SamaraWorkflowError()"
+        exception = SamaraWorkflowError(multiline_msg)
 
         # Act
         result = rule.evaluate(exception)
@@ -271,7 +273,7 @@ class TestExceptionRegexRuleEvaluation:
 
         # Act & Assert - Test with different exception types
         assert rule.evaluate(ValueError("Operation failed")) is True
-        assert rule.evaluate(WorkflowError("Process failed")) is True
+        assert rule.evaluate(SamaraWorkflowError("Process failed")) is True
         assert rule.evaluate(KeyError("Key lookup failed")) is True
         assert rule.evaluate(Exception("Generic operation failed")) is True
 
@@ -282,6 +284,8 @@ class TestExceptionRegexRuleEvaluation:
 
         # Create custom exception that str() returns "None"
         class CustomException(Exception):
+            """Custom exception for testing."""
+
             def __str__(self) -> str:
                 return "None"
 

@@ -15,7 +15,7 @@ from samara.exceptions import (
     SamaraIOError,
     SamaraValidationError,
     SamaraWorkflowConfigurationError,
-    SamaraWorkflowJobError,
+    SamaraWorkflowError,
 )
 from samara.workflow.controller import WorkflowController
 
@@ -179,7 +179,7 @@ class TestValidateCommand:
 
         # Act
         # Mock unexpected exception to test general error handling
-        with patch.object(AlertController, "from_file", side_effect=WorkflowError):
+        with patch.object(AlertController, "from_file", side_effect=SamaraWorkflowError):
             result = runner.invoke(
                 cli,
                 ["validate", "--alert-filepath", "/test/alert.json", "--workflow-filepath", "/test/workflow.json"],
@@ -249,7 +249,7 @@ class TestRunCommand:
             (SamaraIOError, ExitCode.IO_ERROR),
             (SamaraWorkflowConfigurationError, ExitCode.CONFIGURATION_ERROR),
             (SamaraValidationError, ExitCode.VALIDATION_ERROR),
-            (SamaraWorkflowJobError, ExitCode.JOB_ERROR),
+            (SamaraWorkflowError, ExitCode.JOB_ERROR),
         ],
     )
     def test_run__when_workflow_error_occurs__triggers_alert_and_exits_with_correct_code(
@@ -283,7 +283,7 @@ class TestRunCommand:
         mock_alert = Mock()
         mock_workflow = Mock()
         # Configure execute_all to raise SamaraJobError
-        mock_workflow.execute_all.side_effect = SamaraWorkflowJobError("Job execution failed")
+        mock_workflow.execute_all.side_effect = SamaraWorkflowError("Job execution failed")
 
         # Act
         with (
@@ -321,7 +321,7 @@ class TestRunCommand:
 
         # Act
         # Mock unexpected exception to test general error handling
-        with patch.object(AlertController, "from_file", side_effect=WorkflowError):
+        with patch.object(AlertController, "from_file", side_effect=SamaraWorkflowError):
             result = runner.invoke(
                 cli, ["run", "--alert-filepath", "/test/alert.json", "--workflow-filepath", "/test/workflow.json"]
             )
@@ -376,7 +376,7 @@ class TestExportSchemaCommand:
 
         # Act
         # Mock unexpected exception to test general error handling
-        with patch.object(WorkflowController, "export_schema", side_effect=WorkflowError("Unexpected error")):
+        with patch.object(WorkflowController, "export_schema", side_effect=SamaraWorkflowError("Unexpected error")):
             result = runner.invoke(cli, ["export-schema", "--output-filepath", "schema.json"])
 
         # Assert

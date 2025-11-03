@@ -13,7 +13,7 @@ from typing import Generic, Self, TypeVar
 from pydantic import Field, model_validator
 
 from samara import BaseModel
-from samara.exceptions import SamaraWorkflowJobError
+from samara.exceptions import SamaraWorkflowError
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.hooks import Hooks
 from samara.workflow.jobs.models.model_extract import ExtractModel
@@ -337,7 +337,7 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
         except (ValueError, KeyError, OSError) as e:
             logger.error("Job '%s' failed: %s", self.id_, e)
             self.hooks.on_error()
-            raise SamaraWorkflowJobError(f"Error occurred during job '{self.id_}' execution") from e
+            raise SamaraWorkflowError(f"Error occurred during job '{self.id_}' execution") from e
         finally:
             self.hooks.on_finally()
             self._clear()

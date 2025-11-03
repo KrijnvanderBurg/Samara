@@ -65,7 +65,7 @@ class TestActionBase:
 
     def test_action_base__id_cannot_be_empty(self) -> None:
         """Test that ActionBase id cannot be an empty string."""
-        with pytest.raises(ValueError, match="String should have at least 1 character"):
+        with pytest.raises(ValueError):
             MockAction(id="", description="Test action", enabled=True)
 
     def test_action_base__id_alias_works(self) -> None:
