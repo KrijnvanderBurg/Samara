@@ -5,15 +5,10 @@ BaseSettings. Settings can be loaded from environment variables and accessed
 globally throughout the application with automatic caching and validation.
 """
 
-import logging
 from functools import lru_cache
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from samara.utils.logger import get_logger
-
-logger: logging.Logger = get_logger(__name__)
 
 
 class AppSettings(BaseSettings):
@@ -85,5 +80,4 @@ def get_settings() -> AppSettings:
         ensuring only one settings instance exists during the application
         lifecycle. This is thread-safe and efficient.
     """
-    logger.debug("Loading application settings")
     return AppSettings()
