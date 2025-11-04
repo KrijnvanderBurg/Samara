@@ -40,16 +40,14 @@ Executes the configured data pipeline using the provided configuration files.
 ```bash
 python -m samara run \
     --alert-filepath path/to/alerts.yaml \   # Path to alert configuration file (.yaml, .yml, .json, .jsonc)
-    --workflow-filepath path/to/job.yaml \    # Path to pipeline workflow configuration (.yaml, .yml, .json, .jsonc)
-    [--log-level LEVEL]                      # Optional: Override logging level
+    --workflow-filepath path/to/job.yaml     # Path to pipeline workflow configuration (.yaml, .yml, .json, .jsonc)
 ```
 
 Example:
 ```bash
 python -m samara run \
     --alert-filepath="examples/join_select/slack_alerts.jsonc" \
-    --workflow-filepath="examples/join_select/job.jsonc" \
-    --log-level="DEBUG"
+    --workflow-filepath="examples/join_select/job.jsonc"
 ```
 
 ### export-schema
@@ -91,24 +89,64 @@ This provides:
 The following options can be used with any command:
 
 ```bash
---log-level LEVEL     # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
--v, --version         # Show version information and exit
+--log-level LEVEL           # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+--traceparent TRACEPARENT   # W3C Trace Context traceparent for distributed tracing
+--tracestate TRACESTATE     # W3C Trace Context tracestate for distributed tracing
+-v, --version               # Show version information and exit
+```
+
+Example with global options:
+```bash
+python -m samara run \
+    --log-level DEBUG \
+    --traceparent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" \
+    --alert-filepath ./alerts.jsonc \
+    --workflow-filepath ./pipeline.jsonc
 ```
 
 ## Environment Variables
 
-Samara respects the following environment variables:
+Samara respects the following environment variables (CLI arguments take priority over environment variables):
 
-- `FLINT_LOG_LEVEL`: Sets the logging level for the application
-- `LOG_LEVEL`: Used as fallback if `FLINT_LOG_LEVEL` is not set
+### Logging
+
+- `SAMARA_LOG_LEVEL`: Sets the logging level for the application
+- `LOG_LEVEL`: Used as fallback if `SAMARA_LOG_LEVEL` is not set
 
 Both variables accept standard Python logging levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`. If neither is set, Samara defaults to `INFO` level.
 
 Example:
 ```bash
 # Set logging level via environment variable
-export FLINT_LOG_LEVEL=DEBUG
+export SAMARA_LOG_LEVEL=DEBUG
 python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
+```
+
+### Distributed Tracing
+
+- `SAMARA_TRACEPARENT`: W3C Trace Context traceparent header for distributed tracing
+- `SAMARA_TRACESTATE`: W3C Trace Context tracestate header for distributed tracing
+
+These variables enable Samara to participate in distributed tracing by continuing an existing trace. The format follows the [W3C Trace Context](https://www.w3.org/TR/trace-context/) specification.
+
+**Traceparent Format:** `version-trace_id-parent_span_id-trace_flags`
+- `version`: 2-digit hex (currently `00`)
+- `trace_id`: 32-digit hex representing the trace
+- `parent_span_id`: 16-digit hex representing the parent span
+- `trace_flags`: 2-digit hex for trace flags
+
+Example:
+```bash
+# Continue an existing trace via environment variable
+export SAMARA_TRACEPARENT="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
+
+# CLI arguments take priority over environment variables
+export SAMARA_TRACEPARENT="00-OLD_TRACE_ID-b7ad6b7169203331-01"
+python -m samara run \
+    --traceparent="00-NEW_TRACE_ID-b7ad6b7169203331-01" \
+    --alert-filepath ./alerts.jsonc \
+    --workflow-filepath ./pipeline.jsonc
 ```
 
 ## Exit Codes

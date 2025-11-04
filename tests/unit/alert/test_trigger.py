@@ -12,6 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from samara.alert.trigger import AlertTrigger
+from samara.exceptions import SamaraWorkflowError
 
 # =========================================================================== #
 # ============================== CONFIG (dict) ============================== #

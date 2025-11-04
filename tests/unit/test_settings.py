@@ -16,10 +16,10 @@ class TestAppSettingsValidation:
     """Test AppSettings model validation and instantiation."""
 
     def test_default_log_level(self) -> None:
-        """Verify default log level is INFO when no environment variable is set."""
+        """Verify default log level is None when no environment variable is set."""
         with patch.dict(os.environ, {}, clear=True):
             settings = AppSettings()
-            assert settings.log_level == "INFO"
+            assert settings.log_level is None
 
     def test_log_level_from_env_uppercase(self) -> None:
         """Verify log level is loaded from SAMARA_LOG_LEVEL environment variable."""
@@ -28,10 +28,10 @@ class TestAppSettingsValidation:
             assert settings.log_level == "DEBUG"
 
     def test_log_level_from_env_lowercase(self) -> None:
-        """Verify log level is case-insensitive when loaded from environment."""
+        """Verify log level is loaded from environment as-is."""
         with patch.dict(os.environ, {"SAMARA_LOG_LEVEL": "debug"}, clear=True):
             settings = AppSettings()
-            assert settings.log_level == "DEBUG"
+            assert settings.log_level == "debug"
 
     def test_log_level_all_valid_values(self) -> None:
         """Verify all valid log levels are accepted."""
@@ -41,11 +41,11 @@ class TestAppSettingsValidation:
                 settings = AppSettings()
                 assert settings.log_level == level
 
-    def test_invalid_log_level_raises_error(self) -> None:
-        """Verify invalid log level raises validation error."""
+    def test_invalid_log_level_accepted(self) -> None:
+        """Verify settings accepts any log level string (validation happens in logger)."""
         with patch.dict(os.environ, {"SAMARA_LOG_LEVEL": "INVALID"}, clear=True):
-            with pytest.raises(ValueError):
-                AppSettings()
+            settings = AppSettings()
+            assert settings.log_level == "INVALID"
 
     def test_extra_env_vars_ignored(self) -> None:
         """Verify extra environment variables with SAMARA_ prefix are ignored."""
@@ -79,11 +79,11 @@ class TestGetSettingsSingleton:
             assert settings1 is not settings2
 
     def test_get_settings_with_default_values(self) -> None:
-        """Verify get_settings returns correct defaults when no env vars set."""
+        """Verify get_settings returns None for log_level when no env vars set."""
         get_settings.cache_clear()
         with patch.dict(os.environ, {}, clear=True):
             settings = get_settings()
-            assert settings.log_level == "INFO"
+            assert settings.log_level is None
 
 
 class TestSettingsIntegration:
@@ -94,7 +94,14 @@ class TestSettingsIntegration:
 
         get_settings.cache_clear()
         settings = get_settings()
-        assert settings.log_level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        # log_level can be None or a valid level string
+        assert settings.log_level is None or settings.log_level in [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL",
+        ]
 
     def test_settings_reflect_environment_changes_after_cache_clear(self) -> None:
         """Verify settings reflect environment changes after cache clear."""

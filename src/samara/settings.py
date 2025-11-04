@@ -22,22 +22,12 @@ class AppSettings(BaseSettings):
         log_level: Logging level for the application (DEBUG, INFO, WARNING,
             ERROR, CRITICAL). Defaults to INFO if not specified via
             SAMARA_LOG_LEVEL environment variable.
-
-    Example:
-        Access settings anywhere in the application:
-
-        >>> from samara.settings import get_settings
-        >>> settings = get_settings()
-        >>> settings.log_level
-        'INFO'
-
-        Override via environment variable:
-
-        >>> import os
-        >>> os.environ['SAMARA_LOG_LEVEL'] = 'DEBUG'
-        >>> settings = get_settings()
-        >>> settings.log_level
-        'DEBUG'
+        trace_parent: W3C Trace Context traceparent for distributed tracing.
+            Loaded from SAMARA_TRACE_PARENT environment variable if set.
+        trace_state: W3C Trace Context tracestate for distributed tracing.
+            Loaded from SAMARA_TRACE_STATE environment variable if set.
+        otlp_endpoint: OTLP endpoint for exporting traces, e.g., "localhost:4317".
+            Loaded from SAMARA_OTLP_ENDPOINT environment variable if set.
 
     Note:
         Settings are cached using lru_cache, so the singleton instance is
@@ -47,9 +37,13 @@ class AppSettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         case_sensitive=False,
+        env_prefix="SAMARA_",
     )
 
-    log_level: str = Field(default="INFO", description="Logging level for the application")
+    log_level: str | None = Field(default=None, description="Logging level for the application")
+    trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
+    trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
+    otlp_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
 
 
 @lru_cache

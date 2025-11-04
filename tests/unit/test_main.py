@@ -19,7 +19,7 @@ class TestMainModule:
 
         # Assert
         assert result.exit_code == 0
-        assert "Samara: Configuration-driven ETL framework" in result.output
+        assert "Samara: Configuration-driven workflow framework" in result.output
 
     def test_main_module__with_version_flag__displays_version(self) -> None:
         """Test that __main__ module passes system arguments to CLI for version display."""
@@ -87,4 +87,4 @@ class TestMainModule:
 
         # Assert
         assert result.exit_code == 0
-        assert "Samara: Configuration-driven ETL framework" in result.output
+        assert "Samara: Configuration-driven workflow framework" in result.output
