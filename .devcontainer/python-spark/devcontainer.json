@@ -31,6 +31,24 @@
 		"PIP_DISABLE_PIP_VERSION_CHECK": "1",
 		"POETRY_VIRTUALENVS_CREATE": "false"
 	},
+	//
+	// Port forwarding for Jaeger UI and OTLP endpoints
+	//
+	"forwardPorts": [16686, 4317, 4318],
+	"portsAttributes": {
+		"16686": {
+			"label": "Jaeger UI",
+			"onAutoForward": "notify"
+		},
+		"4317": {
+			"label": "OTLP gRPC",
+			"onAutoForward": "silent"
+		},
+		"4318": {
+			"label": "OTLP HTTP",
+			"onAutoForward": "silent"
+		}
+	},
 	// "onCreateCommand": {},
 	// "updateContentCommand": {},
 	// "postCreateCommand": {},

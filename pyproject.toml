@@ -20,19 +20,10 @@ pydantic-settings = "^2.8.0"
 email-validator = "^2.2.0"
 pyjson5 = "^1.6.9"
 click = "^8.1.0"
-# OpenTelemetry core packages
-opentelemetry-api = "^1.20.0"
-opentelemetry-sdk = "^1.20.0"
-opentelemetry-instrumentation = "^0.41b0"
-# OTLP exporters for traces
-opentelemetry-exporter-otlp = "^1.20.0"
-opentelemetry-exporter-otlp-proto-grpc = "^1.20.0"
-# Prometheus Remote Write exporter (push-only)
-opentelemetry-exporter-prometheus-remote-write = "^0.41b0"
-# W3C trace context propagation
-opentelemetry-propagator-b3 = "^1.20.0"
-# For runtime metrics collection
-psutil = "^5.9.0"
+# OpenTelemetry core packages - using compatible versions
+opentelemetry-api = "^1.38.0"
+opentelemetry-sdk = "^1.38.0"
+opentelemetry-exporter-otlp = "^1.38.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.3.0"

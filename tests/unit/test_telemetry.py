@@ -25,7 +25,7 @@ class TestTelemetrySetup:
             setup_telemetry(service_name="test-service", otlp_endpoint="http://localhost:4318")
 
             # OTLP exporter should be created with the endpoint
-            mock_exporter.assert_called_once_with(endpoint="http://localhost:4318", insecure=True)
+            mock_exporter.assert_called_once_with(endpoint="http://localhost:4318")
 
     def test_setup_telemetry_with_invalid_otlp_endpoint_logs_warning(self) -> None:
         """Test telemetry setup with invalid OTLP endpoint logs warning."""

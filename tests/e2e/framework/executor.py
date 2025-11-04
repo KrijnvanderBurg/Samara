@@ -65,6 +65,8 @@ class JobTestExecutor:
                 "--source=samara",
                 "-m",
                 "samara",
+                "--otlp-endpoint",
+                "http://jaeger:4318/v1/traces",
                 "run",
                 "--workflow-filepath",
                 str(self.isolated_config_path),
@@ -75,6 +77,11 @@ class JobTestExecutor:
             text=True,
             check=False,
         )
+
+        if result.returncode != 0:
+            logger.error("Command failed with exit code %d", result.returncode)
+            logger.error("STDOUT:\n%s", result.stdout)
+            logger.error("STDERR:\n%s", result.stderr)
 
         assert result.returncode == 0
 

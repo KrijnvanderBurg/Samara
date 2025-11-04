@@ -12,7 +12,7 @@ from typing import Any
 
 from opentelemetry import context, trace
 from opentelemetry.context import Context
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
@@ -57,7 +57,7 @@ def setup_telemetry(
     # Add OTLP exporter if endpoint is provided
     if otlp_endpoint:
         try:
-            otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+            otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
             provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
             logger.info("Telemetry initialized with OTLP endpoint: %s", otlp_endpoint)
         except Exception as e:  # pylint: disable=broad-except
