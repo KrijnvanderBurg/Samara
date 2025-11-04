@@ -12,6 +12,20 @@ services:
             - devcontainer-bashhistory:/commandhistory
             - poetry-cache:/home/vscode/.cache/pypoetry
         command: sleep infinity
+
+    jaeger:
+        image: jaegertracing/all-in-one:latest
+        platform: linux/amd64
+        ports:
+            - "16686:16686"  # Jaeger UI
+            - "4317:4317"    # OTLP gRPC receiver
+            - "4318:4318"    # OTLP HTTP receiver
+        environment:
+            - COLLECTOR_OTLP_ENABLED=true
+            - LOG_LEVEL=info
+        networks:
+            - default
+
 volumes:
     profile:
     devcontainer-bashhistory:

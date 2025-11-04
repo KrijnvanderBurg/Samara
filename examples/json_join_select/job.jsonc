@@ -15,7 +15,7 @@
                         "id": "extract-customers",
                         "extract_type": "file", // Read from file system
                         "data_format": "csv", // CSV input format
-                        "location": "examples/json_json_join_select/customers/", // Source directory
+                        "location": "examples/json_join_select/customers/", // Source directory
                         "method": "batch", // Process all files at once
                         "options": {
                             "delimiter": ",", // CSV delimiter character

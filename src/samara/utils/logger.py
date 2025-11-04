@@ -5,12 +5,8 @@ from typing import Any
 
 import structlog
 
-from samara.settings import get_settings
 
-settings = get_settings()
-
-
-def set_logger(name: str | None = None, level: str | None = None) -> structlog.BoundLogger:
+def set_logger(name: str = "Samara", level: str = "INFO") -> structlog.BoundLogger:
     """Configure and return a structured logger with console output.
 
     Args:
@@ -22,7 +18,6 @@ def set_logger(name: str | None = None, level: str | None = None) -> structlog.B
         A structlog BoundLogger instance configured with the specified level.
     """
     # get log level from settings if not provided via CLI
-    log_level = level or settings.log_level or "INFO"
 
     # Configure structlog only once
     if not structlog.is_configured():
@@ -33,7 +28,7 @@ def set_logger(name: str | None = None, level: str | None = None) -> structlog.B
                 structlog.processors.add_log_level,
                 structlog.dev.ConsoleRenderer(colors=True),
             ],
-            wrapper_class=structlog.make_filtering_bound_logger(log_level),
+            wrapper_class=structlog.make_filtering_bound_logger(level),
             logger_factory=structlog.PrintLoggerFactory(),
             cache_logger_on_first_use=True,
         )
