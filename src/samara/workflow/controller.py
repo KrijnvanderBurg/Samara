@@ -13,6 +13,7 @@ from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 from samara import BaseModel
 from samara.exceptions import SamaraIOError, SamaraWorkflowConfigurationError
+from samara.telemetry import tracer
 from samara.utils.file import FileHandlerContext
 from samara.utils.logger import get_logger
 from samara.workflow.jobs import JobUnion
@@ -213,10 +214,12 @@ class WorkflowController(BaseModel):
             logger.info("Workflow is disabled")
             return
 
-        logger.info("Executing all %d jobs in ETL pipeline", len(self.jobs))
+        with tracer.start_as_current_span("execute_workflow"):
+            logger.info("Executing all %d jobs in ETL pipeline", len(self.jobs))
 
-        for i, job in enumerate(self.jobs):
-            logger.info("Executing job %d/%d: %s", i + 1, len(self.jobs), job.id_)
-            job.execute()
+            for i, job in enumerate(self.jobs):
+                with tracer.start_as_current_span(f"execute_job_{job.id_}"):
+                    logger.info("Executing job %d/%d: %s", i + 1, len(self.jobs), job.id_)
+                    job.execute()
 
-        logger.info("All jobs in ETL pipeline executed successfully")
+            logger.info("All jobs in ETL pipeline executed successfully")

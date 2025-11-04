@@ -26,10 +26,16 @@ from samara.exceptions import (
     SamaraWorkflowConfigurationError,
     SamaraWorkflowError,
 )
+from samara.settings import AppSettings, get_settings
+from samara.telemetry import init_telemetry, tracer
 from samara.utils.logger import get_logger, set_logger
 from samara.workflow.controller import WorkflowController
 
+settings: AppSettings = get_settings()
 logger: logging.Logger = get_logger(__name__)
+
+# Initialize telemetry
+init_telemetry()
 
 
 @click.group()
@@ -40,7 +46,9 @@ logger: logging.Logger = get_logger(__name__)
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
     help="Set the logging level (default: INFO or from environment variable).",
 )
-def cli(log_level: str | None = None) -> None:
+def cli(
+    log_level: str | None = None,
+) -> None:
     """Samara: Configuration-driven ETL framework for Apache Spark and Polars.
 
     Build and execute data pipelines through declarative JSON/YAML configuration
@@ -59,6 +67,7 @@ def cli(log_level: str | None = None) -> None:
         export-schema: Generate JSON schema for pipeline configs
     """
     # Log level will fall back to settings if not provided
+    log_level = log_level or settings.log_level or "INFO"
     set_logger(level=log_level)
 
 
@@ -240,61 +249,62 @@ def run(alert_filepath: Path, workflow_filepath: Path) -> None:
         error type and severity. This enables operational visibility into
         pipeline failures and automating incident response workflows.
     """
-    try:
-        logger.info("Running 'run' command...")
-        logger.info("Running ETL pipeline with config: %s", workflow_filepath)
-
+    with tracer.start_as_current_span("run_pipeline"):
         try:
-            alert = AlertController.from_file(filepath=alert_filepath)
-        except SamaraIOError as e:
-            logger.error("Cannot access alert configuration file: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
-        except SamaraAlertConfigurationError as e:
-            logger.error("Alert configuration is invalid: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            logger.info("Running 'run' command...")
+            logger.info("Running ETL pipeline with config: %s", workflow_filepath)
 
-        try:
-            workflow = WorkflowController.from_file(filepath=workflow_filepath)
-            workflow.execute_all()
-            logger.info("ETL pipeline completed successfully")
-            logger.info(
-                "Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name
-            )
-        except SamaraIOError as e:
-            logger.error("Cannot access workflow configuration file: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="ETL Configuration File Error", body="Failed to read workflow configuration file", exception=e
-            )
-            raise click.exceptions.Exit(e.exit_code)
-        except SamaraWorkflowConfigurationError as e:
-            logger.error("Workflow configuration is invalid: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="ETL Configuration Error", body="Invalid workflow configuration", exception=e
-            )
-            raise click.exceptions.Exit(e.exit_code)
-        except SamaraValidationError as e:
-            logger.error("Configuration validation failed: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="ETL Validation Error", body="Configuration validation failed", exception=e
-            )
-            raise click.exceptions.Exit(e.exit_code)
-        except SamaraWorkflowError as e:
-            logger.error("ETL job failed: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="ETL Execution Error", body="Workflow error during ETL execution", exception=e
-            )
-            raise click.exceptions.Exit(e.exit_code)
+            try:
+                alert = AlertController.from_file(filepath=alert_filepath)
+            except SamaraIOError as e:
+                logger.error("Cannot access alert configuration file: %s", e)
+                raise click.exceptions.Exit(e.exit_code)
+            except SamaraAlertConfigurationError as e:
+                logger.error("Alert configuration is invalid: %s", e)
+                raise click.exceptions.Exit(e.exit_code)
 
-    except click.exceptions.Exit:
-        # Re-raise Click's Exit exceptions (these are our controlled exits with proper codes)
-        raise
-    except KeyboardInterrupt as e:
-        logger.warning("Process interrupted by user")
-        raise click.exceptions.Exit(ExitCode.KEYBOARD_INTERRUPT) from e
-    except Exception as e:  # pylint: disable=broad-except
-        logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
-        logger.error("Exception details:", exc_info=True)
-        raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
+            try:
+                workflow = WorkflowController.from_file(filepath=workflow_filepath)
+                workflow.execute_all()
+                logger.info("ETL pipeline completed successfully")
+                logger.info(
+                    "Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name
+                )
+            except SamaraIOError as e:
+                logger.error("Cannot access workflow configuration file: %s", e)
+                alert.evaluate_trigger_and_alert(
+                    title="ETL Configuration File Error", body="Failed to read workflow configuration file", exception=e
+                )
+                raise click.exceptions.Exit(e.exit_code)
+            except SamaraWorkflowConfigurationError as e:
+                logger.error("Workflow configuration is invalid: %s", e)
+                alert.evaluate_trigger_and_alert(
+                    title="ETL Configuration Error", body="Invalid workflow configuration", exception=e
+                )
+                raise click.exceptions.Exit(e.exit_code)
+            except SamaraValidationError as e:
+                logger.error("Configuration validation failed: %s", e)
+                alert.evaluate_trigger_and_alert(
+                    title="ETL Validation Error", body="Configuration validation failed", exception=e
+                )
+                raise click.exceptions.Exit(e.exit_code)
+            except SamaraWorkflowError as e:
+                logger.error("ETL job failed: %s", e)
+                alert.evaluate_trigger_and_alert(
+                    title="ETL Execution Error", body="Workflow error during ETL execution", exception=e
+                )
+                raise click.exceptions.Exit(e.exit_code)
+
+        except click.exceptions.Exit:
+            # Re-raise Click's Exit exceptions (these are our controlled exits with proper codes)
+            raise
+        except KeyboardInterrupt as e:
+            logger.warning("Process interrupted by user")
+            raise click.exceptions.Exit(ExitCode.KEYBOARD_INTERRUPT) from e
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
+            logger.error("Exception details:", exc_info=True)
+            raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
 
 
 @cli.command("export-schema")
