@@ -7,8 +7,6 @@ variable loading, caching mechanism, and settings access patterns.
 import os
 from unittest.mock import patch
 
-import pytest
-
 from samara.settings import AppSettings, get_settings
 
 
