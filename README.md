@@ -9,16 +9,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/krijnvanderburg/config-driven-ETL-framework/stargazers">⭐ Star this repo</a> •
+  <a href="https://github.com/krijnvanderburg/Samara/stargazers">⭐ Star this repo</a> •
   <a href="./docs/README.md">📚 Documentation</a> •
-  <a href="https://github.com/krijnvanderburg/config-driven-ETL-framework/issues">🐛 Report Issues</a> •
-  <a href="https://github.com/krijnvanderburg/config-driven-ETL-framework/discussions">💬 Join Discussions</a>
+  <a href="https://github.com/krijnvanderburg/Samara/issues">🐛 Report Issues</a> •
+  <a href="https://github.com/krijnvanderburg/Samara/discussions">💬 Join Discussions</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/krijnvanderburg/config-driven-ETL-framework/releases">📥 Releases</a> •
-  <a href="https://github.com/krijnvanderburg/config-driven-ETL-framework/blob/main/CHANGELOG.md">📝 Changelog (TBD)</a> •
-  <a href="https://github.com/krijnvanderburg/config-driven-ETL-framework/blob/main/CONTRIBUTING.md">🤝 Contributing</a>
+  <a href="https://github.com/krijnvanderburg/Samara/releases">📥 Releases</a> •
+  <a href="https://github.com/krijnvanderburg/Samara/blob/main/CHANGELOG.md">📝 Changelog (TBD)</a> •
+  <a href="https://github.com/krijnvanderburg/Samara/blob/main/CONTRIBUTING.md">🤝 Contributing</a>
 </p>
 
 <p align="center">
@@ -36,8 +36,8 @@ The processing engine is abstracted away through configuration, making it easy t
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/krijnvanderburg/config-driven-ETL-framework.git
-cd config-driven-ETL-framework
+git clone https://github.com/krijnvanderburg/Samara.git
+cd Samara
 
 # Install dependencies
 poetry install
@@ -166,7 +166,7 @@ workflow:
 ## 🚀 Getting Help
 - [**Documentation**](./docs/README.md): Refer to the Configuration Reference section for detailed syntax
 - [**Examples**](./examples/): Explore working samples in the examples directory
-- [**Community**](https://github.com/krijnvanderburg/config-driven-ETL-framework/issues): Ask questions and report issues on GitHub Issues
+- [**Community**](https://github.com/krijnvanderburg/Samara/issues): Ask questions and report issues on GitHub Issues
 - [**Source Code**](./src/samara/): Browse the implementation in the src/samara directory
 
 ## 🤝 Contributing
