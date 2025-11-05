@@ -26,8 +26,10 @@ class AppSettings(BaseSettings):
             Loaded from SAMARA_TRACE_PARENT environment variable if set.
         trace_state: W3C Trace Context tracestate for distributed tracing.
             Loaded from SAMARA_TRACE_STATE environment variable if set.
-        otlp_endpoint: OTLP endpoint for exporting traces, e.g., "localhost:4317".
-            Loaded from SAMARA_OTLP_ENDPOINT environment variable if set.
+        otlp_traces_endpoint: OTLP endpoint for exporting traces, e.g., "http://localhost:4318/v1/traces".
+            Loaded from SAMARA_OTLP_TRACES_ENDPOINT environment variable if set.
+        otlp_metrics_endpoint: OTLP endpoint for exporting metrics, e.g., "http://localhost:4318/v1/metrics".
+            Loaded from SAMARA_OTLP_METRICS_ENDPOINT environment variable if set.
 
     Note:
         Settings are cached using lru_cache, so the singleton instance is
@@ -43,7 +45,8 @@ class AppSettings(BaseSettings):
     log_level: str | None = Field(default=None, description="Logging level for the application")
     trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
     trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
-    otlp_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
+    otlp_traces_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
+    otlp_metrics_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting metrics")
 
 
 @lru_cache

@@ -27,12 +27,20 @@ from samara.exceptions import (
     SamaraWorkflowError,
 )
 from samara.settings import get_settings
-from samara.telemetry import get_tracer, setup_telemetry
+from samara.telemetry import get_meter, get_tracer, setup_telemetry
 from samara.utils.logger import get_logger, set_logger
 from samara.workflow.controller import WorkflowController
 
 logger: logging.Logger = get_logger(__name__)
 tracer = get_tracer()
+meter = get_meter()
+
+# Create metrics
+run_command_counter = meter.create_counter(
+    name="samara.cli.run.invocations",
+    description="Number of times the run command has been invoked",
+    unit="1",
+)
 
 
 @click.group()
@@ -55,16 +63,23 @@ tracer = get_tracer()
     help="W3C trace state header for distributed tracing",
 )
 @click.option(
-    "--otlp-endpoint",
+    "--otlp-traces-endpoint",
     default=None,
     type=str,
     help="OTLP endpoint for trace export (e.g., http://localhost:4318/v1/traces)",
+)
+@click.option(
+    "--otlp-metrics-endpoint",
+    default=None,
+    type=str,
+    help="OTLP endpoint for metrics export (e.g., http://localhost:4318/v1/metrics)",
 )
 def cli(
     log_level: str | None = None,
     trace_parent: str | None = None,
     trace_state: str | None = None,
-    otlp_endpoint: str | None = None,
+    otlp_traces_endpoint: str | None = None,
+    otlp_metrics_endpoint: str | None = None,
 ) -> None:
     """Samara: Configuration-driven workflow framework for Apache Spark and Polars.
 
@@ -79,7 +94,8 @@ def cli(
             or defaults to INFO level.
         trace_parent: W3C trace parent header for distributed tracing continuation
         trace_state: W3C trace state header for distributed tracing
-        otlp_endpoint: OTLP endpoint URL for exporting traces
+        otlp_traces_endpoint: OTLP endpoint URL for exporting traces
+        otlp_metrics_endpoint: OTLP endpoint URL for exporting metrics
 
     Commands:
         validate: Validate workflow configurations without execution
@@ -93,7 +109,8 @@ def cli(
     # Initialize telemetry once at startup with trace continuation support
     setup_telemetry(
         service_name="samara",
-        otlp_endpoint=otlp_endpoint or settings.otlp_endpoint,
+        otlp_traces_endpoint=otlp_traces_endpoint or settings.otlp_traces_endpoint,
+        otlp_metrics_endpoint=otlp_metrics_endpoint or settings.otlp_metrics_endpoint,
         traceparent=trace_parent or settings.trace_parent,
         tracestate=trace_state or settings.trace_state,
     )
@@ -270,6 +287,9 @@ def run(
         workflow failures and automating incident response workflows.
     """
     with tracer.start_as_current_span("run_pipeline"):
+        # Increment the run command counter metric
+        run_command_counter.add(1, {"command": "run"})
+
         try:
             logger.info("Running 'run' command...")
             logger.info("Running workflow with config: %s", workflow_filepath)
