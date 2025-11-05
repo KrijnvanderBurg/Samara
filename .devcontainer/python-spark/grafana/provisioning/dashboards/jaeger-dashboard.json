@@ -1,0 +1,23 @@
+{
+  "title": "Samara Tracing Dashboard",
+  "uid": "samara-tracing",
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Samara Traces",
+      "gridPos": {"h": 20, "w": 24, "x": 0, "y": 0},
+      "datasource": {"type": "jaeger", "uid": "Jaeger"},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "search",
+          "service": "samara"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "time": {"from": "now-6h", "to": "now"},
+  "schemaVersion": 38
+}
