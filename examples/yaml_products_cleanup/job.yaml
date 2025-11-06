@@ -49,13 +49,7 @@ workflow:
             # Step 3: Select only the columns we need for the output
             - function_type: select
               arguments:
-                columns:
-                  - product_id
-                  - product_name
-                  - category
-                  - price
-                  - stock_quantity
-                  - is_available
+                columns: [product_id, product_name, category, price, stock_quantity, is_available]
       
       # Load the cleaned data to output
       loads:
