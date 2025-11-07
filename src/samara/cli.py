@@ -39,7 +39,7 @@ meter = get_meter()
 run_command_counter = meter.create_counter(
     name="samara.cli.run.invocations",
     description="Number of times the run command has been invoked",
-    unit="1",
+    unit="0",
 )
 
 
@@ -292,7 +292,7 @@ def run(
     """
     with tracer.start_as_current_span("run_pipeline"):
         # Increment the run command counter metric
-        run_command_counter.add(1, {"command": "run"})
+        run_command_counter.add(1)
 
         try:
             logger.info("Running 'run' command...")
