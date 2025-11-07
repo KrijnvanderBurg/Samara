@@ -48,7 +48,7 @@ def setup_telemetry(
         service_name: Name of the service for trace identification
         otlp_traces_endpoint: OTLP endpoint URL for traces (e.g., "http://localhost:4318/v1/traces")
                              If None, telemetry is configured but traces won't be exported
-        otlp_metrics_endpoint: OTLP endpoint URL for metrics (e.g., "http://localhost:4318/v1/metrics")
+        otlp_metrics_endpoint: OTLP endpoint URL for metrics (e.g., "http://localhost:9090/api/v1/otlp/v1/metrics")
                               If None, metrics won't be exported
         traceparent: W3C traceparent header for continuing existing trace
         tracestate: W3C tracestate header for continuing existing trace

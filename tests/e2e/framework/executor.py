@@ -68,7 +68,7 @@ class JobTestExecutor:
                 "--otlp-traces-endpoint",
                 "http://jaeger:4318/v1/traces",
                 "--otlp-metrics-endpoint",
-                "http://jaeger:4318/v1/metrics",
+                "http://prometheus:9090/api/v1/otlp/v1/metrics",
                 "run",
                 "--workflow-filepath",
                 str(self.isolated_config_path),

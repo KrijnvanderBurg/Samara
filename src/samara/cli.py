@@ -72,7 +72,7 @@ run_command_counter = meter.create_counter(
     "--otlp-metrics-endpoint",
     default=None,
     type=str,
-    help="OTLP endpoint for metrics export (e.g., http://localhost:4318/v1/metrics)",
+    help="OTLP endpoint for metrics export (e.g., http://localhost:9090/api/v1/otlp/v1/metrics)",
 )
 def cli(
     log_level: str | None = None,
