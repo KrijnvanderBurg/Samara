@@ -83,7 +83,7 @@ def setup_telemetry(
     if otlp_metrics_endpoint:
         try:
             metric_exporter = OTLPMetricExporter(endpoint=otlp_metrics_endpoint)
-            metric_reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=60000)
+            metric_reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=1000)
             meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
             metrics.set_meter_provider(meter_provider)
             logger.info("Metrics telemetry initialized with OTLP endpoint: %s", otlp_metrics_endpoint)
