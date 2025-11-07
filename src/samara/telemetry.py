@@ -2,10 +2,12 @@
 
 This module provides a simple OpenTelemetry configuration for:
 1. Continuing existing traces via W3C trace context
-2. Exporting traces to OTLP endpoints via push
-3. Collecting and exporting metrics to OTLP endpoints
+2. Exporting traces to any OTLP-compatible backend (OTEL Collector, Jaeger, etc.)
+3. Collecting and exporting metrics to any OTLP-compatible backend (OTEL Collector, Prometheus, etc.)
 
-Keep it basic and simple - just the essentials for distributed tracing and metrics.
+The design supports flexible backend configuration - use OTEL Collector as a central
+aggregation point, or send directly to specific backends. Each signal (traces, metrics)
+can be configured independently for maximum deployment flexibility.
 """
 
 import logging
@@ -34,28 +36,42 @@ def setup_telemetry(
     traceparent: str | None = None,
     tracestate: str | None = None,
 ) -> None:
-    """Initialize OpenTelemetry with OTLP exporters for traces and metrics.
+    """Initialize OpenTelemetry with flexible OTLP exporters for traces and metrics.
 
     Sets up a basic telemetry configuration with:
     - Service name identification
-    - OTLP HTTP exporter for traces (push-based)
-    - OTLP HTTP exporter for metrics (push-based)
+    - OTLP HTTP exporter for traces (push-based) - configurable backend
+    - OTLP HTTP exporter for metrics (push-based) - configurable backend
     - Batch span processor for efficient trace export
     - Periodic metric reader for regular metric export
     - Parent context attachment for trace continuation
 
+    Supports flexible backend configuration:
+    - Send both traces and metrics to OTEL Collector (recommended):
+      traces: "http://otel-collector:4318/v1/traces"
+      metrics: "http://otel-collector:4318/v1/metrics"
+    - Send directly to specific backends:
+      traces: "http://jaeger:4318/v1/traces"
+      metrics: "http://prometheus:9090/api/v1/otlp/v1/metrics"
+    - Mix and match as needed for your deployment architecture
+
     Args:
         service_name: Name of the service for trace identification
-        otlp_traces_endpoint: OTLP endpoint URL for traces (e.g., "http://localhost:4318/v1/traces")
-                             If None, telemetry is configured but traces won't be exported
-        otlp_metrics_endpoint: OTLP endpoint URL for metrics (e.g., "http://localhost:9090/api/v1/otlp/v1/metrics")
-                              If None, metrics won't be exported
+        otlp_traces_endpoint: OTLP endpoint URL for traces. Can be OTEL Collector,
+            Jaeger, or any OTLP-compatible backend (e.g., "http://localhost:4318/v1/traces").
+            If None, telemetry is configured but traces won't be exported.
+        otlp_metrics_endpoint: OTLP endpoint URL for metrics. Can be OTEL Collector,
+            Prometheus, or any OTLP-compatible backend (e.g., "http://localhost:4318/v1/metrics").
+            If None, metrics won't be exported.
         traceparent: W3C traceparent header for continuing existing trace
         tracestate: W3C tracestate header for continuing existing trace
 
     Note:
         This function is idempotent - calling it multiple times will only
         initialize once. Uses OpenTelemetry's global tracer and meter providers.
+        The flexible endpoint configuration allows you to adapt to different
+        deployment scenarios: local development, production with OTEL Collector,
+        or direct backend integration.
     """
     resource = Resource.create({"service.name": service_name})
 

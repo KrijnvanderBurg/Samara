@@ -26,11 +26,17 @@ class AppSettings(BaseSettings):
             Loaded from SAMARA_TRACE_PARENT environment variable if set.
         trace_state: W3C Trace Context tracestate for distributed tracing.
             Loaded from SAMARA_TRACE_STATE environment variable if set.
-        otlp_traces_endpoint: OTLP endpoint for exporting traces, e.g.,
-        "https://jaeger:4318/v1/traces".
+        otlp_traces_endpoint: OTLP endpoint for exporting traces. Supports any
+            OTLP-compatible backend:
+            - OTEL Collector (recommended): "http://otel-collector:4318/v1/traces"
+            - Direct to Jaeger: "http://jaeger:4318/v1/traces"
+            - Any OTLP HTTP endpoint
             Loaded from SAMARA_OTLP_TRACES_ENDPOINT environment variable if set.
-        otlp_metrics_endpoint: OTLP endpoint for exporting metrics, e.g.,
-        "https://prometheus:9090/api/v1/otlp/v1/metrics".
+        otlp_metrics_endpoint: OTLP endpoint for exporting metrics. Supports any
+            OTLP-compatible backend:
+            - OTEL Collector (recommended): "http://otel-collector:4318/v1/metrics"
+            - Direct to Prometheus: "http://prometheus:9090/api/v1/otlp/v1/metrics"
+            - Any OTLP HTTP endpoint
             Loaded from SAMARA_OTLP_METRICS_ENDPOINT environment variable if set.
 
     Note:

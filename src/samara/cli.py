@@ -66,13 +66,13 @@ run_command_counter = meter.create_counter(
     "--otlp-traces-endpoint",
     default=None,
     type=str,
-    help="OTLP endpoint for trace export (e.g., http://localhost:4318/v1/traces)",
+    help="OTLP endpoint for trace export (e.g., http://otel-collector:4318/v1/traces)",
 )
 @click.option(
     "--otlp-metrics-endpoint",
     default=None,
     type=str,
-    help="OTLP endpoint for metrics export (e.g., http://localhost:9090/api/v1/otlp/v1/metrics)",
+    help="OTLP endpoint for metrics export (e.g., http://otel-collector:4318/v1/metrics)",
 )
 def cli(
     log_level: str | None = None,
@@ -94,8 +94,12 @@ def cli(
             or defaults to INFO level.
         trace_parent: W3C trace parent header for distributed tracing continuation
         trace_state: W3C trace state header for distributed tracing
-        otlp_traces_endpoint: OTLP endpoint URL for exporting traces
-        otlp_metrics_endpoint: OTLP endpoint URL for exporting metrics
+        otlp_traces_endpoint: OTLP endpoint URL for exporting traces. Supports:
+            - OTEL Collector (recommended): Routes traces through central collector
+            - Direct backends: Jaeger, Zipkin, or any OTLP-compatible service
+        otlp_metrics_endpoint: OTLP endpoint URL for exporting metrics. Supports:
+            - OTEL Collector (recommended): Routes metrics through central collector
+            - Direct backends: Prometheus, or any OTLP-compatible service
 
     Commands:
         validate: Validate workflow configurations without execution

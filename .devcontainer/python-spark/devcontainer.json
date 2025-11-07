@@ -32,20 +32,28 @@
 		"POETRY_VIRTUALENVS_CREATE": "false"
 	},
 	//
-	// Port forwarding for Jaeger UI and OTLP endpoints
+	// Port forwarding for OTEL Collector and observability backends
 	//
-	"forwardPorts": [16686, 4317, 4318],
+	"forwardPorts": [16686, 4317, 4318, 9090, 3000],
 	"portsAttributes": {
 		"16686": {
 			"label": "Jaeger UI",
 			"onAutoForward": "notify"
 		},
 		"4317": {
-			"label": "OTLP gRPC",
+			"label": "OTEL Collector gRPC",
 			"onAutoForward": "silent"
 		},
 		"4318": {
-			"label": "OTLP HTTP",
+			"label": "OTEL Collector HTTP",
+			"onAutoForward": "silent"
+		},
+		"9090": {
+			"label": "Prometheus UI",
+			"onAutoForward": "silent"
+		},
+		"3000": {
+			"label": "Grafana UI",
 			"onAutoForward": "silent"
 		}
 	},

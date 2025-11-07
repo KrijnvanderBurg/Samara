@@ -18,8 +18,8 @@ The telemetry system consists of two main components:
 You can configure telemetry endpoints using environment variables:
 
 ```bash
-export SAMARA_OTLP_TRACES_ENDPOINT="http://jaeger:4318/v1/traces"
-export SAMARA_OTLP_METRICS_ENDPOINT="http://prometheus:9090/api/v1/otlp/v1/metrics"
+export SAMARA_OTLP_TRACES_ENDPOINT="http://otel-collector:4318/v1/traces"
+export SAMARA_OTLP_METRICS_ENDPOINT="http://otel-collector:4318/v1/metrics"
 export SAMARA_TRACE_PARENT="00-trace-id-span-id-01"  # Optional: for trace continuation
 export SAMARA_TRACE_STATE="key=value"  # Optional: for trace state
 ```
@@ -32,8 +32,8 @@ Alternatively, pass telemetry configuration via CLI options:
 samara run \
   --workflow-filepath job.json \
   --alert-filepath alert.json \
-  --otlp-traces-endpoint "http://jaeger:4318/v1/traces" \
-  --otlp-metrics-endpoint "http://prometheus:9090/api/v1/otlp/v1/metrics"
+  --otlp-traces-endpoint "http://otel-collector:4318/v1/traces" \
+  --otlp-metrics-endpoint "http://otel-collector:4318/v1/metrics"
 ```
 
 ## Metrics
@@ -123,6 +123,22 @@ services:
 The OTLP endpoint for Prometheus is:
 ```
 http://<prometheus-host>:9090/api/v1/otlp/v1/metrics
+```
+
+### OTEL Collector Setup
+
+OpenTelemetry Collector provides a vendor-agnostic way to receive, process, and export telemetry:
+
+```yaml
+# docker-compose.yml
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4318:4318"    # OTLP HTTP receiver
+    volumes:
+      - ./otel-config.yaml:/etc/otel/config.yaml
+    command: ["--config=/etc/otel/config.yaml"]
 ```
 
 ### Jaeger Setup
