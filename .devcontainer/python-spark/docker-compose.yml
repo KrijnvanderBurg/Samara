@@ -46,11 +46,13 @@ services:
         ports:
             - "9090:9090"    # Prometheus UI
         volumes:
-            # - prometheus-storage:/prometheus
+            - prometheus-storage:/prometheus
             - ../../.devcontainer/python-spark/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
         command:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=365d
+            - --storage.tsdb.retention.size=0
             - --web.enable-lifecycle
         depends_on:
             - otel-collector
@@ -80,5 +82,5 @@ services:
 volumes:
     devcontainer-bashhistory:
     poetry-cache:
-    # grafana-storage:
-    # prometheus-storage:
+    grafana-storage:
+    prometheus-storage:
