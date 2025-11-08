@@ -34,9 +34,9 @@ __maintainer__ = "Krijn van der Burg"
 __email__ = ""
 __status__ = "Prototype"
 
-
 import uuid
 from abc import ABC
+from datetime import datetime, timezone
 
 from pydantic import BaseModel as PydanticBaseModel
 
@@ -44,6 +44,7 @@ from pydantic import BaseModel as PydanticBaseModel
 # can reference the same run id. This is created at import time and is
 # stable for the lifetime of the process (or test run).
 RUN_ID: str = str(uuid.uuid4())
+RUN_DATETIME: datetime = datetime.now(timezone.utc)
 
 
 def get_run_id() -> str:
@@ -54,6 +55,16 @@ def get_run_id() -> str:
     logs, metrics and traces to correlate data.
     """
     return RUN_ID
+
+
+def get_run_datetime() -> datetime:
+    """Return the globally generated run datetime.
+
+    The run datetime is created on module import and is intended to
+    represent the start time of a single execution of the application.
+    This can be used in logs, metrics and traces to correlate data.
+    """
+    return RUN_DATETIME
 
 
 class BaseModel(PydanticBaseModel, ABC):

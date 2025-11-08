@@ -24,7 +24,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-from samara import get_run_id
+from samara import get_run_datetime, get_run_id
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
@@ -88,6 +88,7 @@ def setup_telemetry(
             "service.name": service_name,
             # Use the global run_id created at import time so the same id is used
             "service.instance.id": get_run_id(),  # Standard OTEL attribute for instance identity
+            "service.instance.datetime": str(get_run_datetime()),
         }
     )
 
