@@ -46,12 +46,12 @@ services:
         ports:
             - "9090:9090"    # Prometheus UI
         volumes:
+            # - prometheus-storage:/prometheus
             - ../../.devcontainer/python-spark/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-            - prometheus-storage:/prometheus
         command:
-            - '--config.file=/etc/prometheus/prometheus.yml'
-            - '--storage.tsdb.path=/prometheus'
-            - '--web.enable-lifecycle'
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.enable-lifecycle
         depends_on:
             - otel-collector
         networks:
@@ -68,7 +68,7 @@ services:
             - GF_AUTH_DISABLE_LOGIN_FORM=true
             - GF_SECURITY_ALLOW_EMBEDDING=true
         volumes:
-            - grafana-storage:/var/lib/grafana
+            # - grafana-storage:/var/lib/grafana
             - ./grafana/provisioning:/etc/grafana/provisioning
         depends_on:
             - jaeger
@@ -80,5 +80,5 @@ services:
 volumes:
     devcontainer-bashhistory:
     poetry-cache:
-    grafana-storage:
-    prometheus-storage:
+    # grafana-storage:
+    # prometheus-storage:

@@ -37,7 +37,7 @@ meter = get_meter()
 
 # Create metrics
 run_command_counter = meter.create_counter(
-    name="samara.cli.run.invocations",
+    name="cli.run.invocations",
     description="Number of times the run command has been invoked",
     unit="0",
 )
