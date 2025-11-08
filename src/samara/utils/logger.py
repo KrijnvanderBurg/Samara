@@ -5,9 +5,7 @@ from typing import Any
 
 import structlog
 
-# Avoid importing `samara` at module import time to prevent a circular
-# import: `samara.__init__ -> samara.utils.logger -> samara`.
-# Import `get_run_id` lazily inside functions that need it.
+from samara import get_run_id
 
 
 def set_logger(name: str = "Samara", level: str = "INFO") -> structlog.BoundLogger:
@@ -38,7 +36,6 @@ def set_logger(name: str = "Samara", level: str = "INFO") -> structlog.BoundLogg
         )
 
     # Import lazily to break circular import during package initialization.
-    from samara import get_run_id
 
     structlog.contextvars.bind_contextvars(run_id=get_run_id())
 
