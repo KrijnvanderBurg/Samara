@@ -24,7 +24,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-from samara import get_run_id
+from samara import get_run_datetime, get_run_id
 from samara.settings import AppSettings, get_settings
 from samara.utils.logger import get_logger
 
@@ -88,11 +88,11 @@ def setup_telemetry(
         {
             "service.name": service_name,
             "service.instance.id": get_run_id(),
-            # "service.instance.datetime": str(get_run_datetime()),
-            # "service.environment": str(settings.environment),
-            # "host.name": platform.node(),
-            # "host.arch": platform.machine(),
-            # "process.pid": str(getpid()),
+            "service.instance.datetime": str(get_run_datetime()),
+            "service.environment": str(settings.environment),
+            "host.name": platform.node(),
+            "host.arch": platform.machine(),
+            "process.pid": str(getpid()),
         }
     )
 
