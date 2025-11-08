@@ -52,7 +52,8 @@ class AppSettings(BaseSettings):
         case_sensitive=False,
     )
 
-    log_level: str | None = Field(default=None, description="Logging level for the application")
+    log_level: str | None = Field(default=None, description="Logging level of the system")
+    samara_log_level: str | None = Field(default=None, description="Logging level for the application")
     environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
     trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
     trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
