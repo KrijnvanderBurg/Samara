@@ -21,9 +21,15 @@ exporters:
     tls:
       insecure: true
 
-  # Export metrics to Prometheus
-  prometheus:
-    endpoint: 0.0.0.0:8889
+  # Export metrics to Prometheus via Remote Write
+  # This pushes metrics directly to Prometheus for permanent persistence
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    tls:
+      insecure: true
+    resource_to_telemetry_conversion:
+      enabled: true
+    add_metric_suffixes: true
     namespace: samara
 
   # Debug exporter for troubleshooting
@@ -40,4 +46,4 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [prometheus, debug]
+      exporters: [prometheusremotewrite, debug]

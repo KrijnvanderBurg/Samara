@@ -20,7 +20,6 @@ services:
             - "4317:4317"    # OTLP gRPC receiver
             - "4318:4318"    # OTLP HTTP receiver
             - "8888:8888"    # Prometheus metrics exposed by the collector
-            - "8889:8889"    # Prometheus exporter metrics
         volumes:
             - ../../.devcontainer/python-spark/otel-collector/otel-config.yaml:/etc/otel/config.yaml
         command: ["--config=/etc/otel/config.yaml"]
@@ -54,6 +53,7 @@ services:
             - --storage.tsdb.retention.time=365d
             - --storage.tsdb.retention.size=0
             - --web.enable-lifecycle
+            - --web.enable-remote-write-receiver
         depends_on:
             - otel-collector
         networks:
