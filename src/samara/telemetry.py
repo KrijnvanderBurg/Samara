@@ -11,6 +11,7 @@ can be configured independently for maximum deployment flexibility.
 """
 
 import logging
+import uuid
 from typing import Any
 
 from opentelemetry import context, metrics, trace
@@ -73,7 +74,21 @@ def setup_telemetry(
         deployment scenarios: local development, production with OTEL Collector,
         or direct backend integration.
     """
-    resource = Resource.create({"service.name": service_name})
+    # Attach parent context first if provided for trace continuation
+    parent_context = get_parent_context(traceparent=traceparent, tracestate=tracestate)
+    if parent_context:
+        context.attach(parent_context)
+        logger.debug("Attached parent context for trace continuation")
+
+    # Create shared resource for both traces and metrics
+    # Add execution ID to prevent metric overwrites on CLI restarts
+
+    resource = Resource.create(
+        {
+            "service.name": service_name,
+            "service.instance.id": str(uuid.uuid4()),  # Standard OTEL attribute for instance identity
+        }
+    )
 
     # Setup tracing
     trace_provider = TracerProvider(resource=resource)
@@ -107,12 +122,6 @@ def setup_telemetry(
             logger.warning("Failed to initialize OTLP metrics exporter: %s", e)
     else:
         logger.info("No OTLP metrics endpoint configured, metrics will not be exported")
-
-    # Attach parent context if provided for trace continuation
-    parent_context = get_parent_context(traceparent=traceparent, tracestate=tracestate)
-    if parent_context:
-        context.attach(parent_context)
-        logger.debug("Attached parent context for trace continuation")
 
 
 def get_tracer(name: str = "samara") -> trace.Tracer:
