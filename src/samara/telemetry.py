@@ -11,6 +11,8 @@ can be configured independently for maximum deployment flexibility.
 """
 
 import logging
+import platform
+from os import getpid
 from typing import Any
 
 from opentelemetry import context, metrics, trace
