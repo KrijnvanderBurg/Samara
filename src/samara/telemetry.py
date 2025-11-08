@@ -11,6 +11,8 @@ can be configured independently for maximum deployment flexibility.
 """
 
 import logging
+import platform
+from os import getpid
 from typing import Any
 
 from opentelemetry import context, metrics, trace
@@ -25,9 +27,11 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from samara import get_run_datetime, get_run_id
+from samara.settings import AppSettings, get_settings
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
+settings: AppSettings = get_settings()
 
 
 def setup_telemetry(
@@ -82,13 +86,15 @@ def setup_telemetry(
 
     # Create shared resource for both traces and metrics
     # Add execution ID to prevent metric overwrites on CLI restarts
-
     resource = Resource.create(
         {
             "service.name": service_name,
-            # Use the global run_id created at import time so the same id is used
-            "service.instance.id": get_run_id(),  # Standard OTEL attribute for instance identity
+            "service.instance.id": get_run_id(),
             "service.instance.datetime": str(get_run_datetime()),
+            "service.environment": str(settings.environment),
+            "host.name": platform.node(),
+            "host.arch": platform.machine(),
+            "process.pid": str(getpid()),
         }
     )
 

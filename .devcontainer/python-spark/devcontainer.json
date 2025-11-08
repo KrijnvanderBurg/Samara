@@ -29,7 +29,10 @@
 		"PYTHONUNBUFFERED": "1",
 		"PYTHONHASHSEED": "42",
 		"PIP_DISABLE_PIP_VERSION_CHECK": "1",
-		"POETRY_VIRTUALENVS_CREATE": "false"
+		"POETRY_VIRTUALENVS_CREATE": "false",
+		"ENVIRONMENT": "dev",
+		"OTLP_TRACES_ENDPOINT": "http://otel-collector:4318/v1/traces",
+		"OTLP_METRICS_ENDPOINT": "http://otel-collector:4318/v1/metrics"
 	},
 	//
 	// Port forwarding for OTEL Collector and observability backends

@@ -22,20 +22,23 @@ class AppSettings(BaseSettings):
         log_level: Logging level for the application (DEBUG, INFO, WARNING,
             ERROR, CRITICAL). Defaults to INFO if not specified via
             SAMARA_LOG_LEVEL environment variable.
+        environment: Deployment environment identifier (dev, staging, prod).
+            Defaults to "unknown" if not specified via SAMARA_ENVIRONMENT
+            environment variable. Used for telemetry and resource attribution.
         trace_parent: W3C Trace Context traceparent for distributed tracing.
             Loaded from SAMARA_TRACE_PARENT environment variable if set.
         trace_state: W3C Trace Context tracestate for distributed tracing.
             Loaded from SAMARA_TRACE_STATE environment variable if set.
         otlp_traces_endpoint: OTLP endpoint for exporting traces. Supports any
             OTLP-compatible backend:
-            - OTEL Collector (recommended): "http://otel-collector:4318/v1/traces"
-            - Direct to Jaeger: "http://jaeger:4318/v1/traces"
+            - OTEL Collector (recommended): "https://otel-collector:4318/v1/traces"
+            - Direct to Jaeger: "https://jaeger:4318/v1/traces"
             - Any OTLP HTTP endpoint
             Loaded from SAMARA_OTLP_TRACES_ENDPOINT environment variable if set.
         otlp_metrics_endpoint: OTLP endpoint for exporting metrics. Supports any
             OTLP-compatible backend:
-            - OTEL Collector (recommended): "http://otel-collector:4318/v1/metrics"
-            - Direct to Prometheus: "http://prometheus:9090/api/v1/otlp/v1/metrics"
+            - OTEL Collector (recommended): "https://otel-collector:4318/v1/metrics"
+            - Direct to Prometheus: "https://prometheus:9090/api/v1/otlp/v1/metrics"
             - Any OTLP HTTP endpoint
             Loaded from SAMARA_OTLP_METRICS_ENDPOINT environment variable if set.
 
@@ -47,10 +50,10 @@ class AppSettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         case_sensitive=False,
-        env_prefix="SAMARA_",
     )
 
     log_level: str | None = Field(default=None, description="Logging level for the application")
+    environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
     trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
     trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
     otlp_traces_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
