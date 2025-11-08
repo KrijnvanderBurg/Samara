@@ -39,7 +39,6 @@ meter = get_meter()
 run_command_counter = meter.create_counter(
     name="cli.run.invocations",
     description="Number of times the run command has been invoked",
-    unit="0",
 )
 
 
@@ -66,13 +65,13 @@ run_command_counter = meter.create_counter(
     "--otlp-traces-endpoint",
     default=None,
     type=str,
-    help="OTLP endpoint for trace export (e.g., http://otel-collector:4318/v1/traces)",
+    help="OTLP endpoint for trace export (e.g., https://otel-collector:4318/v1/traces)",
 )
 @click.option(
     "--otlp-metrics-endpoint",
     default=None,
     type=str,
-    help="OTLP endpoint for metrics export (e.g., http://otel-collector:4318/v1/metrics)",
+    help="OTLP endpoint for metrics export (e.g., https://otel-collector:4318/v1/metrics)",
 )
 def cli(
     log_level: str | None = None,

@@ -1,0 +1,22 @@
+{
+  "title": "Samara Metrics",
+  "uid": "samara-metrics",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Run Command Invocations (sum)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(samara_cli_run_invocations_total)",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "time": { "from": "1970-01-01T00:00:00Z", "to": "now" },
+  "schemaVersion": 38
+}
