@@ -35,6 +35,7 @@ __email__ = ""
 __status__ = "Prototype"
 
 
+import uuid
 from abc import ABC
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -42,6 +43,22 @@ from pydantic import BaseModel as PydanticBaseModel
 from samara.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+# Generate a run identifier as early as possible so the entire application
+# can reference the same run id. This is created at import time and is
+# stable for the lifetime of the process (or test run).
+RUN_ID: str = str(uuid.uuid4())
+
+
+def get_run_id() -> str:
+    """Return the globally generated run identifier.
+
+    The run id is created on module import and is intended to uniquely
+    identify a single execution of the application. This can be used in
+    logs, metrics and traces to correlate data.
+    """
+    return RUN_ID
 
 
 class BaseModel(PydanticBaseModel, ABC):

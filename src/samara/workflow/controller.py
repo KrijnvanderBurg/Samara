@@ -19,7 +19,7 @@ from samara.workflow.jobs import JobUnion
 
 logger = get_logger(__name__)
 
-RUNTIME: Final = "workflow"
+WORKFLOW: Final = "workflow"
 
 
 class PreserveFieldOrderJsonSchema(GenerateJsonSchema):
@@ -149,7 +149,7 @@ class WorkflowController(BaseModel):
             raise SamaraIOError(f"Cannot load workflow configuration from '{filepath}': {e}") from e
 
         try:
-            workflow = cls(**dict_[RUNTIME])
+            workflow = cls(**dict_[WORKFLOW])
             logger.info("Successfully created WorkflowManager from configuration file: %s", filepath)
             return workflow
         except KeyError as e:

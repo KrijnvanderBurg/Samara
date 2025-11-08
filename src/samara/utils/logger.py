@@ -5,6 +5,8 @@ from typing import Any
 
 import structlog
 
+from samara import get_run_id
+
 
 def set_logger(name: str = "Samara", level: str = "INFO") -> structlog.BoundLogger:
     """Configure and return a structured logger with console output.
@@ -32,6 +34,8 @@ def set_logger(name: str = "Samara", level: str = "INFO") -> structlog.BoundLogg
             logger_factory=structlog.PrintLoggerFactory(),
             cache_logger_on_first_use=True,
         )
+
+    structlog.contextvars.bind_contextvars(run_id=get_run_id())
 
     return structlog.get_logger(name)
 

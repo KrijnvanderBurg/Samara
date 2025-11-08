@@ -157,7 +157,7 @@ python -m samara run \
 - `20`: IO_ERROR - Input/output error (file access issues)
 - `30`: CONFIGURATION_ERROR - General configuration error
 - `31`: ALERT_CONFIGURATION_ERROR - Alert configuration specific error
-- `32`: RUNTIME_CONFIGURATION_ERROR - Workflow configuration specific error
+- `32`: WORKFLOW_CONFIGURATION_ERROR - Workflow configuration specific error
 - `40`: VALIDATION_ERROR - Configuration validation failed
 - `41`: ALERT_TEST_ERROR - Alert testing functionality failed
 - `50`: JOB_ERROR - Error during pipeline execution

@@ -11,7 +11,6 @@ can be configured independently for maximum deployment flexibility.
 """
 
 import logging
-import uuid
 from typing import Any
 
 from opentelemetry import context, metrics, trace
@@ -25,6 +24,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from samara import get_run_id
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
@@ -49,20 +49,20 @@ def setup_telemetry(
 
     Supports flexible backend configuration:
     - Send both traces and metrics to OTEL Collector (recommended):
-      traces: "http://otel-collector:4318/v1/traces"
-      metrics: "http://otel-collector:4318/v1/metrics"
+      traces: "https://otel-collector:4318/v1/traces"
+      metrics: "https://otel-collector:4318/v1/metrics"
     - Send directly to specific backends:
-      traces: "http://jaeger:4318/v1/traces"
-      metrics: "http://prometheus:9090/api/v1/otlp/v1/metrics"
+      traces: "https://jaeger:4318/v1/traces"
+      metrics: "https://prometheus:9090/api/v1/otlp/v1/metrics"
     - Mix and match as needed for your deployment architecture
 
     Args:
         service_name: Name of the service for trace identification
         otlp_traces_endpoint: OTLP endpoint URL for traces. Can be OTEL Collector,
-            Jaeger, or any OTLP-compatible backend (e.g., "http://localhost:4318/v1/traces").
+            Jaeger, or any OTLP-compatible backend (e.g., "https://localhost:4318/v1/traces").
             If None, telemetry is configured but traces won't be exported.
         otlp_metrics_endpoint: OTLP endpoint URL for metrics. Can be OTEL Collector,
-            Prometheus, or any OTLP-compatible backend (e.g., "http://localhost:4318/v1/metrics").
+            Prometheus, or any OTLP-compatible backend (e.g., "https://localhost:4318/v1/metrics").
             If None, metrics won't be exported.
         traceparent: W3C traceparent header for continuing existing trace
         tracestate: W3C tracestate header for continuing existing trace
@@ -86,7 +86,8 @@ def setup_telemetry(
     resource = Resource.create(
         {
             "service.name": service_name,
-            "service.instance.id": str(uuid.uuid4()),  # Standard OTEL attribute for instance identity
+            # Use the global run_id created at import time so the same id is used
+            "service.instance.id": get_run_id(),  # Standard OTEL attribute for instance identity
         }
     )
 
