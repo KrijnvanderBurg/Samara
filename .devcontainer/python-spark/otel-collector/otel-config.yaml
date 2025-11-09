@@ -1,5 +1,5 @@
 # OpenTelemetry Collector Configuration
-# Receives OTLP data from Samara and exports to Jaeger (traces) and Prometheus (metrics)
+# Receives OTLP data from Samara and exports to Jaeger (traces) and Mimir (metrics)
 
 receivers:
   otlp:
@@ -21,12 +21,14 @@ exporters:
     tls:
       insecure: true
 
-  # Export metrics to Prometheus via Remote Write
-  # This pushes metrics directly to Prometheus for permanent persistence
+  # Export metrics to Mimir via Remote Write
+  # This pushes metrics directly to Mimir for permanent persistence
   prometheusremotewrite:
-    endpoint: http://prometheus:9090/api/v1/write
+    endpoint: http://mimir:9009/api/v1/push
     tls:
       insecure: true
+    headers:
+      X-Scope-OrgID: anonymous
     resource_to_telemetry_conversion:
       enabled: true
     add_metric_suffixes: true

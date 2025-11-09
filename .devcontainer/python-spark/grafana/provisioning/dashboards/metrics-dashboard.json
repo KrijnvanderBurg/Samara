@@ -7,7 +7,7 @@
       "type": "stat",
       "title": "Total Run Command Invocations (sum)",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
       "targets": [
         {
           "expr": "sum(samara_cli_run_invocations_total)",

@@ -1,5 +1,0 @@
-global:
-  evaluation_interval: 15s
-
-# No scrape configs needed - using remote write receiver
-# Metrics are pushed from OTEL Collector to Prometheus via --web.enable-remote-write-receiver

@@ -39,21 +39,16 @@ services:
         networks:
             - default
 
-    prometheus:
-        image: prom/prometheus:latest
+    mimir:
+        image: grafana/mimir:latest
         platform: linux/amd64
         ports:
-            - "9090:9090"    # Prometheus UI
+            - "9090:9009"    # Mimir HTTP API
         volumes:
-            - prometheus-storage:/prometheus
-            - ../../.devcontainer/python-spark/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+            - mimir-storage:/data
+            - ../../.devcontainer/python-spark/mimir/mimir.yaml:/etc/mimir/mimir.yaml
         command:
-            - --config.file=/etc/prometheus/prometheus.yml
-            - --storage.tsdb.path=/prometheus
-            - --storage.tsdb.retention.time=365d
-            - --storage.tsdb.retention.size=0
-            - --web.enable-lifecycle
-            - --web.enable-remote-write-receiver
+            - -config.file=/etc/mimir/mimir.yaml
         depends_on:
             - otel-collector
         networks:
@@ -74,7 +69,7 @@ services:
             - ./grafana/provisioning:/etc/grafana/provisioning
         depends_on:
             - jaeger
-            - prometheus
+            - mimir
             - otel-collector
         networks:
             - default
@@ -83,4 +78,4 @@ volumes:
     devcontainer-bashhistory:
     poetry-cache:
     grafana-storage:
-    prometheus-storage:
+    mimir-storage:
