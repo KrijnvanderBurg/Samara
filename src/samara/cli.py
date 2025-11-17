@@ -12,6 +12,7 @@ CI/CD integration and operational monitoring.
 import json
 import logging
 import os
+import time
 from pathlib import Path
 
 import click
@@ -35,10 +36,17 @@ logger: logging.Logger = get_logger(__name__)
 tracer = get_tracer()
 meter = get_meter()
 
-# Create metrics
-run_command_counter = meter.create_counter(
-    name="cli.run.invocations",
-    description="Number of times the run command has been invoked",
+# Single metrics with labels for command and status. Using a single counter and
+# histogram keeps the metrics surface small and lets us filter by labels
+# (e.g. command="run") in dashboards.
+invocations_counter = meter.create_counter(
+    name="cli_invocations_total",
+    description="Number of times CLI commands have been invoked",
+)
+
+duration_histogram = meter.create_histogram(
+    name="cli_duration_seconds",
+    description="Duration of CLI commands in seconds",
 )
 
 
@@ -184,6 +192,8 @@ def validate(
         during development and validation cycles. For the actual workflow
         execution with alert integration, use the 'run' command.
     """
+    invocations_counter.add(1, {"command": "validate"})
+    start_time = time.perf_counter()
     try:
         logger.info("Running 'validate' command...")
 
@@ -245,6 +255,9 @@ def validate(
         logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
         logger.error("Exception details:", exc_info=True)
         raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
+    finally:
+        duration = time.perf_counter() - start_time
+        duration_histogram.record(duration, {"command": "validate"})
 
 
 @cli.command()
@@ -289,10 +302,10 @@ def run(
         error type and severity. This enables operational visibility into
         workflow failures and automating incident response workflows.
     """
+    invocations_counter.add(1, {"command": "run"})
+    start_time = time.perf_counter()
     with tracer.start_as_current_span("run_pipeline"):
         # Increment the run command counter metric
-        run_command_counter.add(1)
-
         try:
             logger.info("Running 'run' command...")
             logger.info("Running workflow with config: %s", workflow_filepath)
@@ -350,6 +363,9 @@ def run(
             logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
             logger.error("Exception details:", exc_info=True)
             raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
+        finally:
+            duration = time.perf_counter() - start_time
+            duration_histogram.record(duration, {"command": "run"})
 
 
 @cli.command("export-schema")
@@ -385,6 +401,8 @@ def export_schema(output_filepath: Path) -> None:
         configurations or integrate with schema validation tooling in your
         development workflow.
     """
+    invocations_counter.add(1, {"command": "export-schema"})
+    start_time = time.perf_counter()
     try:
         logger.info("Running 'export-schema' command...")
         logger.info("Exporting workflow configuration schema to: %s", output_filepath)
@@ -417,3 +435,6 @@ def export_schema(output_filepath: Path) -> None:
         logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
         logger.error("Exception details:", exc_info=True)
         raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
+    finally:
+        duration = time.perf_counter() - start_time
+        duration_histogram.record(duration, {"command": "export-schema"})

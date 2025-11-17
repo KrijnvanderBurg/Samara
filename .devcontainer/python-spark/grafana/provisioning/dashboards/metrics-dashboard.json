@@ -1,22 +1,150 @@
 {
   "title": "Samara Metrics",
   "uid": "samara-metrics",
+  "schemaVersion": 38,
+  "version": 1,
+  "editable": true,
+  "refresh": "5s",
+  "timezone": "",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Total Run Command Invocations (sum)",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "title": "Run Invocations (24h)",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
       "datasource": { "type": "mimir", "uid": "Mimir" },
       "targets": [
-        {
-          "expr": "sum(samara_cli_run_invocations_total)",
-          "refId": "A"
-        }
-      ]
+        { "expr": "sum(increase(samara_cli_run_invocations_total[1d]))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0 }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Validate Invocations (7d)",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "sum(increase(samara_cli_validate_invocations_total[7d]))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0 }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Export-Schema Invocations (7d)",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "sum(increase(samara_cli_export_schema_invocations_total[7d]))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0 }, "overrides": [] }
+    },
+
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Invocations Rate (run / validate / export) - 5m avg",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "rate(samara_cli_run_invocations_total[5m])", "refId": "A", "legendFormat": "run" },
+        { "expr": "rate(samara_cli_validate_invocations_total[5m])", "refId": "B", "legendFormat": "validate" },
+        { "expr": "rate(samara_cli_export_schema_invocations_total[5m])", "refId": "C", "legendFormat": "export-schema" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 3 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Average Duration (5m avg) - seconds",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "rate(samara_cli_run_duration_seconds_sum[5m]) / rate(samara_cli_run_duration_seconds_count[5m])", "refId": "A", "legendFormat": "run" },
+        { "expr": "rate(samara_cli_validate_duration_seconds_sum[5m]) / rate(samara_cli_validate_duration_seconds_count[5m])", "refId": "B", "legendFormat": "validate" },
+        { "expr": "rate(samara_cli_export_schema_duration_seconds_sum[5m]) / rate(samara_cli_export_schema_duration_seconds_count[5m])", "refId": "C", "legendFormat": "export-schema" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "P95 Duration (5m) - seconds",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(samara_cli_run_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "run p95" },
+        { "expr": "histogram_quantile(0.95, sum(rate(samara_cli_validate_duration_seconds_bucket[5m])) by (le))", "refId": "B", "legendFormat": "validate p95" },
+        { "expr": "histogram_quantile(0.95, sum(rate(samara_cli_export_schema_duration_seconds_bucket[5m])) by (le))", "refId": "C", "legendFormat": "export-schema p95" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+
+    {
+      "id": 7,
+      "type": "barchart",
+      "title": "Invocations by Status (7d)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "sum by (status, command) (increase(samara_cli_run_invocations_total[7d]))", "refId": "A", "legendFormat": "run - {{status}}" },
+        { "expr": "sum by (status, command) (increase(samara_cli_validate_invocations_total[7d]))", "refId": "B", "legendFormat": "validate - {{status}}" },
+        { "expr": "sum by (status, command) (increase(samara_cli_export_schema_invocations_total[7d]))", "refId": "C", "legendFormat": "export-schema - {{status}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0 }, "overrides": [] },
+      "options": { "orientation": "horizontal", "displayMode": "grouped", "legend": { "displayMode": "list", "placement": "right" }, "tooltip": { "mode": "single" } }
+    },
+
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Run Error Ratio (7d)",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 36 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "(sum(increase(samara_cli_run_invocations_total{status=\"error\"}[7d])) / sum(increase(samara_cli_run_invocations_total[7d]))) * 100", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2 }, "overrides": [] }
+    },
+
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Validate Error Ratio (7d)",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 36 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "(sum(increase(samara_cli_validate_invocations_total{status=\"error\"}[7d])) / sum(increase(samara_cli_validate_invocations_total[7d]))) * 100", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2 }, "overrides": [] }
+    },
+
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Export-Schema Error Ratio (7d)",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 36 },
+      "datasource": { "type": "mimir", "uid": "Mimir" },
+      "targets": [
+        { "expr": "(sum(increase(samara_cli_export_schema_invocations_total{status=\"error\"}[7d])) / sum(increase(samara_cli_export_schema_invocations_total[7d]))) * 100", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2 }, "overrides": [] }
     }
-  ],
-  "refresh": "5s",
-  "time": { "from": "1970-01-01T00:00:00Z", "to": "now" },
-  "schemaVersion": 38
+  ]
 }
