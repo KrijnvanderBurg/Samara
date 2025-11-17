@@ -18,7 +18,7 @@
       "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
       "datasource": { "type": "mimir", "uid": "Mimir" },
       "targets": [
-        { "expr": "sum without (telemetry_sdk_version, telemetry_sdk_name, telemetry_sdk_language) (sum_over_time(samara_cli_invocations_total[1d]))", "refId": "A" }
+        { "expr": "sum_over_time(samara_cli_invocations_total[1d])", "refId": "A" }
       ],
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "horizontal", "textMode": "value", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
       "fieldConfig": { "defaults": { "unit": "none", "decimals": 0 }, "overrides": [] }
