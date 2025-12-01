@@ -408,4 +408,3 @@ class TestTraceSpanDecorator:
 
         result = parent_function()
         assert result == 42
-
