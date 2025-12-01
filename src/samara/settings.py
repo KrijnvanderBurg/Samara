@@ -41,6 +41,12 @@ class AppSettings(BaseSettings):
             - Direct to Prometheus: "https://prometheus:9090/api/v1/otlp/v1/metrics"
             - Any OTLP HTTP endpoint
             Loaded from SAMARA_OTLP_METRICS_ENDPOINT environment variable if set.
+        otlp_logs_endpoint: OTLP endpoint for exporting logs. Supports any
+            OTLP-compatible backend:
+            - OTEL Collector (recommended): "https://otel-collector:4318/v1/logs"
+            - Direct to Loki: "https://loki:3100/loki/api/v1/push"
+            - Any OTLP HTTP endpoint
+            Loaded from SAMARA_OTLP_LOGS_ENDPOINT environment variable if set.
 
     Note:
         Settings are cached using lru_cache, so the singleton instance is
@@ -59,6 +65,7 @@ class AppSettings(BaseSettings):
     trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
     otlp_traces_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
     otlp_metrics_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting metrics")
+    otlp_logs_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting logs")
 
 
 @lru_cache

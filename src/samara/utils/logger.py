@@ -1,69 +1,44 @@
-"""Structured logging utilities for the Samara framework."""
+"""Logging utilities for the Samara framework.
+
+Uses Python's standard logging which integrates natively with OpenTelemetry.
+When OTLP logs endpoint is configured, logs are automatically exported with
+full structured attributes for querying in Loki/Grafana.
+"""
 
 import logging
-from typing import Any
-
-import structlog
-
-from samara import get_run_id
 
 
-def set_logger(name: str = "Samara", level: str = "INFO") -> structlog.BoundLogger:
-    """Configure and return a structured logger with console output.
+def set_logger(level: str = "INFO") -> None:
+    """Configure Python's standard logging system.
+
+    Sets up logging format and level for the entire application. Should be called
+    once at application startup before any logging occurs.
 
     Args:
-        name: Optional logger name.
-        level: Logging level (e.g., "INFO", "DEBUG"). If not provided,
-            uses the log level from application settings.
+        level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+            Defaults to INFO if not specified.
 
-    Returns:
-        A structlog BoundLogger instance configured with the specified level.
+    Example:
+        >>> from samara.utils.logger import set_logger, get_logger
+        >>> set_logger(level="DEBUG")
+        >>> logger = get_logger(__name__)
+        >>> logger.debug("Debug message")
     """
-    # get log level from settings if not provided via CLI
-
-    # Configure structlog only once
-    if not structlog.is_configured():
-        structlog.configure(
-            processors=[
-                structlog.contextvars.merge_contextvars,
-                structlog.processors.TimeStamper(fmt="ISO"),
-                structlog.processors.add_log_level,
-                structlog.dev.ConsoleRenderer(colors=True),
-            ],
-            wrapper_class=structlog.make_filtering_bound_logger(level),
-            logger_factory=structlog.PrintLoggerFactory(),
-            cache_logger_on_first_use=True,
-        )
-
-    # Import lazily to break circular import during package initialization.
-
-    structlog.contextvars.bind_contextvars(run_id=get_run_id())
-
-    return structlog.get_logger(name)
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=level.upper(),
+        force=True,  # Reconfigure even if already configured
+    )
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a structured logger instance by name.
+    """Return a standard Python logger instance by name.
 
     Args:
         name: Logger name, typically the module name.
 
     Returns:
-        A structlog logger instance bound to the specified name.
+        A standard Python Logger instance. When OTLP logs endpoint is configured,
+        logs will be automatically exported to the configured backend.
     """
-    return structlog.get_logger(name)
-
-
-def bind_context(**context: Any) -> None:
-    """Bind context variables to all subsequent log messages.
-
-    Args:
-        **context: Key-value pairs to include in log context. Examples: job_id,
-            pipeline_name, user_id.
-    """
-    structlog.contextvars.bind_contextvars(**context)
-
-
-def clear_context() -> None:
-    """Clear all bound context variables."""
-    structlog.contextvars.clear_contextvars()
+    return logging.getLogger(name)

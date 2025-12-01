@@ -1,111 +1,100 @@
 """Unit tests for logging utility functions."""
 
-import pytest
+import logging
 
-from samara.settings import get_settings
-from samara.utils.logger import bind_context, clear_context, get_logger, set_logger
+from samara.utils.logger import get_logger, set_logger
 
 
 class TestSetLogger:
     """Test set_logger function."""
 
-    def test_creates_logger_with_default_name(self) -> None:
-        """Test that set_logger creates a logger instance."""
+    def test_configures_logging_system(self) -> None:
+        """Test that set_logger configures the logging system."""
         # Act
-        logger = set_logger("test_logger")
+        set_logger(level="INFO")
+        logger = get_logger("test_logger")
 
         # Assert
         assert logger is not None
+        assert isinstance(logger, logging.Logger)
         logger.info("test message")
 
     def test_accepts_custom_log_level(self) -> None:
         """Test set_logger accepts custom log level parameter."""
         # Act
-        logger = set_logger("test_custom_level", level="DEBUG")
+        set_logger(level="DEBUG")
+        logger = get_logger("test_custom_level")
 
         # Assert
         assert logger is not None
+        assert logger.isEnabledFor(logging.DEBUG)
         logger.debug("debug message")
 
-    def test_uses_settings_when_no_level_provided(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that set_logger uses application settings when no level is provided."""
-        # Arrange
-
-        get_settings.cache_clear()
-        monkeypatch.setenv("SAMARA_LOG_LEVEL", "DEBUG")
-
+    def test_handles_lowercase_level(self) -> None:
+        """Test that set_logger handles lowercase log level strings."""
         # Act
-        logger = set_logger("test_logger_from_settings")
+        set_logger(level="warning")
+        logger = get_logger("test_lowercase")
 
         # Assert
         assert logger is not None
-        logger.debug("debug message from settings")
+        assert logger.isEnabledFor(logging.WARNING)
 
-    def test_explicit_level_overrides_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that explicit level parameter overrides settings."""
-        # Arrange
-
-        get_settings.cache_clear()
-        monkeypatch.setenv("SAMARA_LOG_LEVEL", "DEBUG")
-
-        # Act - explicitly pass ERROR level
-        logger = set_logger("test_logger_override", level="ERROR")
-
-        # Assert
-        assert logger is not None
-        logger.error("error message")
-
-    def test_defaults_to_info_when_no_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that logger defaults to INFO level when no environment variables are set."""
-        # Arrange
-
-        get_settings.cache_clear()
-        monkeypatch.delenv("SAMARA_LOG_LEVEL", raising=False)
-
+    def test_defaults_to_info_level(self) -> None:
+        """Test that logger defaults to INFO level when not specified."""
         # Act
-        logger = set_logger("test_logger_default")
+        set_logger()  # No level specified
+        logger = get_logger("test_default")
 
         # Assert
         assert logger is not None
+        assert logger.isEnabledFor(logging.INFO)
         logger.info("info message with default level")
+
+    def test_can_reconfigure_logging(self) -> None:
+        """Test that set_logger can be called multiple times to reconfigure."""
+        # Act
+        set_logger(level="ERROR")
+        logger1 = get_logger("test_reconfig")
+        assert logger1.isEnabledFor(logging.ERROR)
+
+        set_logger(level="DEBUG")
+        logger2 = get_logger("test_reconfig")
+
+        # Assert - same logger instance but reconfigured
+        assert logger1 is logger2
+        assert logger2.isEnabledFor(logging.DEBUG)
 
 
 class TestGetLogger:
     """Test get_logger function."""
 
     def test_returns_logger_instance(self) -> None:
-        """Test get_logger returns a logger that can log messages."""
+        """Test get_logger returns a standard Python logger."""
         # Act
         logger = get_logger("test_logger")
 
         # Assert
         assert logger is not None
-        logger.info("test message")
+        assert isinstance(logger, logging.Logger)
+        assert logger.name == "test_logger"
 
-
-class TestContextBinding:
-    """Test context binding and clearing functions."""
-
-    def test_bind_context_adds_context_variables(self) -> None:
-        """Test that bind_context adds context variables to subsequent logs."""
-        # Arrange
-        logger = set_logger("test_context")
-
+    def test_returns_different_loggers_for_different_names(self) -> None:
+        """Test that different names return different logger instances."""
         # Act
-        bind_context(user_id="123", request_id="abc")
-        logger.info("test message with context")
-
-        # Cleanup
-        clear_context()
-
-    def test_clear_context_removes_bound_variables(self) -> None:
-        """Test that clear_context removes all bound context variables."""
-        # Arrange
-        bind_context(user_id="456", request_id="def")
-
-        # Act
-        clear_context()
+        logger1 = get_logger("logger_one")
+        logger2 = get_logger("logger_two")
 
         # Assert
-        logger = get_logger("test_clear")
-        logger.info("test message after clear")
+        assert logger1 is not logger2
+        assert logger1.name == "logger_one"
+        assert logger2.name == "logger_two"
+
+    def test_returns_same_logger_for_same_name(self) -> None:
+        """Test that same name returns same logger instance (cached)."""
+        # Act
+        logger1 = get_logger("same_logger")
+        logger2 = get_logger("same_logger")
+
+        # Assert
+        assert logger1 is logger2

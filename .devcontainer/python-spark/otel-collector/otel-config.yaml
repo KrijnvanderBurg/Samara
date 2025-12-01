@@ -1,5 +1,5 @@
 # OpenTelemetry Collector Configuration
-# Receives OTLP data from Samara and exports to Jaeger (traces) and Mimir (metrics)
+# Receives OTLP data from Samara and exports to Jaeger (traces), Mimir (metrics), and debug output (logs)
 
 receivers:
   otlp:
@@ -34,6 +34,12 @@ exporters:
     add_metric_suffixes: true
     namespace: samara
 
+  # Export logs to Loki via OTLP
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
   # Debug exporter for troubleshooting
   debug:
     verbosity: detailed
@@ -49,3 +55,8 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [prometheusremotewrite, debug]
+    
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]

@@ -54,6 +54,21 @@ services:
         networks:
             - default
 
+    loki:
+        image: grafana/loki:latest
+        platform: linux/amd64
+        ports:
+            - "3100:3100"    # Loki HTTP API
+        volumes:
+            - loki-storage:/loki
+            - ../../.devcontainer/python-spark/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+        command:
+            - -config.file=/etc/loki/loki-config.yaml
+        depends_on:
+            - otel-collector
+        networks:
+            - default
+
     grafana:
         image: grafana/grafana:latest
         platform: linux/amd64
@@ -70,6 +85,7 @@ services:
         depends_on:
             - jaeger
             - mimir
+            - loki
             - otel-collector
         networks:
             - default
@@ -79,3 +95,4 @@ volumes:
     poetry-cache:
     grafana-storage:
     mimir-storage:
+    loki-storage:

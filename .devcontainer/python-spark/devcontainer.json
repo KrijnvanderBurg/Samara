@@ -30,14 +30,15 @@
 		"PYTHONHASHSEED": "42",
 		"PIP_DISABLE_PIP_VERSION_CHECK": "1",
 		"POETRY_VIRTUALENVS_CREATE": "false",
-		"SAMARA_ENVIRONMENT": "dev",
+		"SAMARA_ENVIRONMENT": "dev"
 		// "SAMARA_OTLP_TRACES_ENDPOINT": "http://otel-collector:4318/v1/traces",
 		// "SAMARA_OTLP_METRICS_ENDPOINT": "http://otel-collector:4318/v1/metrics"
+		// "SAMARA_OTLP_LOGS_ENDPOINT": "http://otel-collector:4318/v1/logs"
 	},
 	//
 	// Port forwarding for OTEL Collector and observability backends
 	//
-	"forwardPorts": [16686, 4317, 4318, 9090, 3000],
+	"forwardPorts": [16686, 4317, 4318, 9090, 3100, 3000],
 	"portsAttributes": {
 		"16686": {
 			"label": "Jaeger UI",
@@ -53,6 +54,10 @@
 		},
 		"9090": {
 			"label": "Mimir HTTP API",
+			"onAutoForward": "silent"
+		},
+		"3100": {
+			"label": "Loki HTTP API",
 			"onAutoForward": "silent"
 		},
 		"3000": {

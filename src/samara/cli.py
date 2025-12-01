@@ -81,12 +81,19 @@ duration_histogram = meter.create_histogram(
     type=str,
     help="OTLP endpoint for metrics export (e.g., https://otel-collector:4318/v1/metrics)",
 )
+@click.option(
+    "--otlp-logs-endpoint",
+    default=None,
+    type=str,
+    help="OTLP endpoint for logs export (e.g., https://otel-collector:4318/v1/logs)",
+)
 def cli(
     log_level: str | None = None,
     trace_parent: str | None = None,
     trace_state: str | None = None,
     otlp_traces_endpoint: str | None = None,
     otlp_metrics_endpoint: str | None = None,
+    otlp_logs_endpoint: str | None = None,
 ) -> None:
     """Samara: Configuration-driven workflow framework for Apache Spark and Polars.
 
@@ -107,6 +114,9 @@ def cli(
         otlp_metrics_endpoint: OTLP endpoint URL for exporting metrics. Supports:
             - OTEL Collector (recommended): Routes metrics through central collector
             - Direct backends: Prometheus, or any OTLP-compatible service
+        otlp_logs_endpoint: OTLP endpoint URL for exporting logs. Supports:
+            - OTEL Collector (recommended): Routes logs through central collector
+            - Direct backends: Loki, or any OTLP-compatible service
 
     Commands:
         validate: Validate workflow configurations without execution
@@ -122,6 +132,7 @@ def cli(
         service_name="samara",
         otlp_traces_endpoint=otlp_traces_endpoint or settings.otlp_traces_endpoint,
         otlp_metrics_endpoint=otlp_metrics_endpoint or settings.otlp_metrics_endpoint,
+        otlp_logs_endpoint=otlp_logs_endpoint or settings.otlp_logs_endpoint,
         traceparent=trace_parent or settings.trace_parent,
         tracestate=trace_state or settings.trace_state,
     )
@@ -195,7 +206,9 @@ def validate(
     invocations_counter.add(1, {"command": "validate"})
     start_time = time.perf_counter()
     try:
-        logger.info("Running 'validate' command...")
+        logger.info("Starting validation command")
+        logger.info("Workflow config: %s", workflow_filepath)
+        logger.info("Alert config: %s", alert_filepath)
 
         # Parse test env vars
         test_env_vars = None
@@ -257,6 +270,7 @@ def validate(
         raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
     finally:
         duration = time.perf_counter() - start_time
+        logger.info("Validate command completed in %.2f seconds", duration)
         duration_histogram.record(duration, {"command": "validate"})
 
 
@@ -307,8 +321,9 @@ def run(
     with tracer.start_as_current_span("run_pipeline"):
         # Increment the run command counter metric
         try:
-            logger.info("Running 'run' command...")
-            logger.info("Running workflow with config: %s", workflow_filepath)
+            logger.info("Starting workflow execution command")
+            logger.info("Workflow config: %s", workflow_filepath)
+            logger.info("Alert config: %s", alert_filepath)
 
             try:
                 alert = AlertController.from_file(filepath=alert_filepath)
@@ -321,6 +336,7 @@ def run(
 
             try:
                 workflow = WorkflowController.from_file(filepath=workflow_filepath)
+                logger.info("Executing workflow jobs...")
                 workflow.execute_all()
                 logger.info("Workflow completed successfully")
                 logger.info(
@@ -365,6 +381,7 @@ def run(
             raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
         finally:
             duration = time.perf_counter() - start_time
+            logger.info("Run command completed in %.2f seconds", duration)
             duration_histogram.record(duration, {"command": "run"})
 
 

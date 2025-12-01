@@ -17,9 +17,13 @@ import logging
 from typing import Any
 
 from opentelemetry import context, metrics, trace
+from opentelemetry._logs import set_logger_provider
 from opentelemetry.context import Context
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -39,26 +43,31 @@ def setup_telemetry(
     service_name: str,
     otlp_traces_endpoint: str | None = None,
     otlp_metrics_endpoint: str | None = None,
+    otlp_logs_endpoint: str | None = None,
     traceparent: str | None = None,
     tracestate: str | None = None,
 ) -> None:
-    """Initialize OpenTelemetry with flexible OTLP exporters for traces and metrics.
+    """Initialize OpenTelemetry with flexible OTLP exporters for traces, metrics, and logs.
 
     Sets up a basic telemetry configuration with:
     - Service name identification
     - OTLP HTTP exporter for traces (push-based) - configurable backend
     - OTLP HTTP exporter for metrics (push-based) - configurable backend
+    - OTLP HTTP exporter for logs (push-based) - configurable backend
     - Batch span processor for efficient trace export
     - Periodic metric reader for regular metric export
+    - Logging handler bridge for Python logging to OTLP
     - Parent context attachment for trace continuation
 
     Supports flexible backend configuration:
-    - Send both traces and metrics to OTEL Collector (recommended):
+    - Send all signals to OTEL Collector (recommended):
       traces: "https://otel-collector:4318/v1/traces"
       metrics: "https://otel-collector:4318/v1/metrics"
+      logs: "https://otel-collector:4318/v1/logs"
     - Send directly to specific backends:
       traces: "https://jaeger:4318/v1/traces"
       metrics: "https://prometheus:9090/api/v1/otlp/v1/metrics"
+      logs: "https://loki:3100/loki/api/v1/push"
     - Mix and match as needed for your deployment architecture
 
     Args:
@@ -69,12 +78,15 @@ def setup_telemetry(
         otlp_metrics_endpoint: OTLP endpoint URL for metrics. Can be OTEL Collector,
             Prometheus, or any OTLP-compatible backend (e.g., "https://localhost:4318/v1/metrics").
             If None, metrics won't be exported.
+        otlp_logs_endpoint: OTLP endpoint URL for logs. Can be OTEL Collector,
+            Loki, or any OTLP-compatible backend (e.g., "https://localhost:4318/v1/logs").
+            If None, logs won't be exported.
         traceparent: W3C traceparent header for continuing existing trace
         tracestate: W3C tracestate header for continuing existing trace
 
     Note:
         This function is idempotent - calling it multiple times will only
-        initialize once. Uses OpenTelemetry's global tracer and meter providers.
+        initialize once. Uses OpenTelemetry's global tracer, meter, and logger providers.
         The flexible endpoint configuration allows you to adapt to different
         deployment scenarios: local development, production with OTEL Collector,
         or direct backend integration.
@@ -131,6 +143,24 @@ def setup_telemetry(
             logger.warning("Failed to initialize OTLP metrics exporter: %s", e)
     else:
         logger.info("No OTLP metrics endpoint configured, metrics will not be exported")
+
+    # Setup logs - use explicit endpoint or skip if not provided
+    if otlp_logs_endpoint:
+        try:
+            log_exporter = OTLPLogExporter(endpoint=otlp_logs_endpoint)
+            log_provider = LoggerProvider(resource=resource)
+            log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+            set_logger_provider(log_provider)
+
+            # Attach OTLP handler to root logger to export all Python logs
+            handler = LoggingHandler(level=logging.NOTSET, logger_provider=log_provider)
+            logging.getLogger().addHandler(handler)
+
+            logger.info("Logs telemetry initialized with OTLP endpoint: %s", otlp_logs_endpoint)
+        except Exception as e:  # pylint: disable=broad-except
+            logger.warning("Failed to initialize OTLP logs exporter: %s", e)
+    else:
+        logger.info("No OTLP logs endpoint configured, logs will not be exported")
 
 
 def get_tracer(name: str = "samara") -> trace.Tracer:
