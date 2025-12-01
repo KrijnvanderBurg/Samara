@@ -1,12 +1,12 @@
-"""OpenTelemetry telemetry setup for distributed tracing and metrics.
+"""OpenTelemetry telemetry setup for distributed tracing and logs.
 
 This module provides a simple OpenTelemetry configuration for:
 1. Continuing existing traces via W3C trace context
 2. Exporting traces to any OTLP-compatible backend (OTEL Collector, Jaeger, etc.)
-3. Collecting and exporting metrics to any OTLP-compatible backend (OTEL Collector, Prometheus, etc.)
+3. Exporting logs to any OTLP-compatible backend (OTEL Collector, Loki, etc.)
 
 The design supports flexible backend configuration - use OTEL Collector as a central
-aggregation point, or send directly to specific backends. Each signal (traces, metrics)
+aggregation point, or send directly to specific backends. Each signal (traces, logs)
 can be configured independently for maximum deployment flexibility.
 """
 
@@ -18,16 +18,13 @@ from collections.abc import Callable
 # from os import getpid
 from typing import Any, ParamSpec, TypeVar
 
-from opentelemetry import context, metrics, trace
+from opentelemetry import context, trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.context import Context
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
@@ -48,31 +45,26 @@ T = TypeVar("T")
 def setup_telemetry(
     service_name: str,
     otlp_traces_endpoint: str | None = None,
-    otlp_metrics_endpoint: str | None = None,
     otlp_logs_endpoint: str | None = None,
     traceparent: str | None = None,
     tracestate: str | None = None,
 ) -> None:
-    """Initialize OpenTelemetry with flexible OTLP exporters for traces, metrics, and logs.
+    """Initialize OpenTelemetry with flexible OTLP exporters for traces and logs.
 
     Sets up a basic telemetry configuration with:
     - Service name identification
     - OTLP HTTP exporter for traces (push-based) - configurable backend
-    - OTLP HTTP exporter for metrics (push-based) - configurable backend
     - OTLP HTTP exporter for logs (push-based) - configurable backend
     - Batch span processor for efficient trace export
-    - Periodic metric reader for regular metric export
     - Logging handler bridge for Python logging to OTLP
     - Parent context attachment for trace continuation
 
     Supports flexible backend configuration:
     - Send all signals to OTEL Collector (recommended):
       traces: "https://otel-collector:4318/v1/traces"
-      metrics: "https://otel-collector:4318/v1/metrics"
       logs: "https://otel-collector:4318/v1/logs"
     - Send directly to specific backends:
       traces: "https://jaeger:4318/v1/traces"
-      metrics: "https://prometheus:9090/api/v1/otlp/v1/metrics"
       logs: "https://loki:3100/loki/api/v1/push"
     - Mix and match as needed for your deployment architecture
 
@@ -81,9 +73,6 @@ def setup_telemetry(
         otlp_traces_endpoint: OTLP endpoint URL for traces. Can be OTEL Collector,
             Jaeger, or any OTLP-compatible backend (e.g., "https://localhost:4318/v1/traces").
             If None, telemetry is configured but traces won't be exported.
-        otlp_metrics_endpoint: OTLP endpoint URL for metrics. Can be OTEL Collector,
-            Prometheus, or any OTLP-compatible backend (e.g., "https://localhost:4318/v1/metrics").
-            If None, metrics won't be exported.
         otlp_logs_endpoint: OTLP endpoint URL for logs. Can be OTEL Collector,
             Loki, or any OTLP-compatible backend (e.g., "https://localhost:4318/v1/logs").
             If None, logs won't be exported.
@@ -92,7 +81,7 @@ def setup_telemetry(
 
     Note:
         This function is idempotent - calling it multiple times will only
-        initialize once. Uses OpenTelemetry's global tracer, meter, and logger providers.
+        initialize once. Uses OpenTelemetry's global tracer and logger providers.
         The flexible endpoint configuration allows you to adapt to different
         deployment scenarios: local development, production with OTEL Collector,
         or direct backend integration.
@@ -103,8 +92,7 @@ def setup_telemetry(
         context.attach(parent_context)
         logger.debug("Attached parent context for trace continuation")
 
-    # Create shared resource for both traces and metrics
-    # Add execution ID to prevent metric overwrites on CLI restarts
+    # Create shared resource for traces and logs
     resource = Resource.create(
         {
             "service.name": service_name,
@@ -137,19 +125,6 @@ def setup_telemetry(
     # Set as global tracer provider (OpenTelemetry's design uses this singleton)
     trace.set_tracer_provider(trace_provider)
 
-    # Setup metrics - use explicit endpoint or skip if not provided
-    if otlp_metrics_endpoint:
-        try:
-            metric_exporter = OTLPMetricExporter(endpoint=otlp_metrics_endpoint)
-            metric_reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=2000)
-            meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-            metrics.set_meter_provider(meter_provider)
-            logger.info("Metrics telemetry initialized with OTLP endpoint: %s", otlp_metrics_endpoint)
-        except Exception as e:  # pylint: disable=broad-except
-            logger.warning("Failed to initialize OTLP metrics exporter: %s", e)
-    else:
-        logger.info("No OTLP metrics endpoint configured, metrics will not be exported")
-
     # Setup logs - use explicit endpoint or skip if not provided
     if otlp_logs_endpoint:
         try:
@@ -179,18 +154,6 @@ def get_tracer(name: str = "samara") -> trace.Tracer:
         Tracer instance for creating spans
     """
     return trace.get_tracer(name)
-
-
-def get_meter(name: str = "samara") -> metrics.Meter:
-    """Get a meter instance for creating metrics.
-
-    Args:
-        name: Name of the meter (typically module or component name)
-
-    Returns:
-        Meter instance for creating metrics (counters, histograms, etc.)
-    """
-    return metrics.get_meter(name)
 
 
 def trace_span(span_name: str | None = None) -> Callable[[Callable[P, T]], Callable[P, T]]:

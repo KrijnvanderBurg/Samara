@@ -35,12 +35,6 @@ class AppSettings(BaseSettings):
             - Direct to Jaeger: "https://jaeger:4318/v1/traces"
             - Any OTLP HTTP endpoint
             Loaded from SAMARA_OTLP_TRACES_ENDPOINT environment variable if set.
-        otlp_metrics_endpoint: OTLP endpoint for exporting metrics. Supports any
-            OTLP-compatible backend:
-            - OTEL Collector (recommended): "https://otel-collector:4318/v1/metrics"
-            - Direct to Prometheus: "https://prometheus:9090/api/v1/otlp/v1/metrics"
-            - Any OTLP HTTP endpoint
-            Loaded from SAMARA_OTLP_METRICS_ENDPOINT environment variable if set.
         otlp_logs_endpoint: OTLP endpoint for exporting logs. Supports any
             OTLP-compatible backend:
             - OTEL Collector (recommended): "https://otel-collector:4318/v1/logs"
@@ -64,7 +58,6 @@ class AppSettings(BaseSettings):
     trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
     trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
     otlp_traces_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
-    otlp_metrics_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting metrics")
     otlp_logs_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting logs")
 
 

@@ -12,7 +12,6 @@ CI/CD integration and operational monitoring.
 import json
 import logging
 import os
-import time
 from pathlib import Path
 
 import click
@@ -28,26 +27,12 @@ from samara.exceptions import (
     SamaraWorkflowError,
 )
 from samara.settings import get_settings
-from samara.telemetry import get_meter, get_tracer, setup_telemetry, trace_span
+from samara.telemetry import get_tracer, setup_telemetry, trace_span
 from samara.utils.logger import get_logger, set_logger
 from samara.workflow.controller import WorkflowController
 
 logger: logging.Logger = get_logger(__name__)
 tracer = get_tracer()
-meter = get_meter()
-
-# Single metrics with labels for command and status. Using a single counter and
-# histogram keeps the metrics surface small and lets us filter by labels
-# (e.g. command="run") in dashboards.
-invocations_counter = meter.create_counter(
-    name="cli_invocations_total",
-    description="Number of times CLI commands have been invoked",
-)
-
-duration_histogram = meter.create_histogram(
-    name="cli_duration_seconds",
-    description="Duration of CLI commands in seconds",
-)
 
 
 @click.group()
@@ -76,12 +61,6 @@ duration_histogram = meter.create_histogram(
     help="OTLP endpoint for trace export (e.g., https://otel-collector:4318/v1/traces)",
 )
 @click.option(
-    "--otlp-metrics-endpoint",
-    default=None,
-    type=str,
-    help="OTLP endpoint for metrics export (e.g., https://otel-collector:4318/v1/metrics)",
-)
-@click.option(
     "--otlp-logs-endpoint",
     default=None,
     type=str,
@@ -92,7 +71,6 @@ def cli(
     trace_parent: str | None = None,
     trace_state: str | None = None,
     otlp_traces_endpoint: str | None = None,
-    otlp_metrics_endpoint: str | None = None,
     otlp_logs_endpoint: str | None = None,
 ) -> None:
     """Samara: Configuration-driven workflow framework for Apache Spark and Polars.
@@ -111,9 +89,6 @@ def cli(
         otlp_traces_endpoint: OTLP endpoint URL for exporting traces. Supports:
             - OTEL Collector (recommended): Routes traces through central collector
             - Direct backends: Jaeger, Zipkin, or any OTLP-compatible service
-        otlp_metrics_endpoint: OTLP endpoint URL for exporting metrics. Supports:
-            - OTEL Collector (recommended): Routes metrics through central collector
-            - Direct backends: Prometheus, or any OTLP-compatible service
         otlp_logs_endpoint: OTLP endpoint URL for exporting logs. Supports:
             - OTEL Collector (recommended): Routes logs through central collector
             - Direct backends: Loki, or any OTLP-compatible service
@@ -131,7 +106,6 @@ def cli(
     setup_telemetry(
         service_name="samara",
         otlp_traces_endpoint=otlp_traces_endpoint or settings.otlp_traces_endpoint,
-        otlp_metrics_endpoint=otlp_metrics_endpoint or settings.otlp_metrics_endpoint,
         otlp_logs_endpoint=otlp_logs_endpoint or settings.otlp_logs_endpoint,
         traceparent=trace_parent or settings.trace_parent,
         tracestate=trace_state or settings.trace_state,
@@ -204,8 +178,6 @@ def validate(
         during development and validation cycles. For the actual workflow
         execution with alert integration, use the 'run' command.
     """
-    invocations_counter.add(1, {"command": "validate"})
-    start_time = time.perf_counter()
     try:
         logger.info("Starting validation command")
         logger.info("Workflow config: %s", workflow_filepath)
@@ -269,10 +241,6 @@ def validate(
         logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
         logger.error("Exception details:", exc_info=True)
         raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
-    finally:
-        duration = time.perf_counter() - start_time
-        logger.info("Validate command completed in %.2f seconds", duration)
-        duration_histogram.record(duration, {"command": "validate"})
 
 
 @cli.command()
@@ -318,9 +286,6 @@ def run(
         error type and severity. This enables operational visibility into
         workflow failures and automating incident response workflows.
     """
-    invocations_counter.add(1, {"command": "run"})
-    start_time = time.perf_counter()
-    # Increment the run command counter metric
     try:
         logger.info("Starting workflow execution command")
         logger.info("Workflow config: %s", workflow_filepath)
@@ -380,10 +345,6 @@ def run(
         logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
         logger.error("Exception details:", exc_info=True)
         raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
-    finally:
-        duration = time.perf_counter() - start_time
-        logger.info("Run command completed in %.2f seconds", duration)
-        duration_histogram.record(duration, {"command": "run"})
 
 
 @cli.command("export-schema")
@@ -420,8 +381,6 @@ def export_schema(output_filepath: Path) -> None:
         configurations or integrate with schema validation tooling in your
         development workflow.
     """
-    invocations_counter.add(1, {"command": "export-schema"})
-    start_time = time.perf_counter()
     try:
         logger.info("Running 'export-schema' command...")
         logger.info("Exporting workflow configuration schema to: %s", output_filepath)
@@ -454,6 +413,3 @@ def export_schema(output_filepath: Path) -> None:
         logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
         logger.error("Exception details:", exc_info=True)
         raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
-    finally:
-        duration = time.perf_counter() - start_time
-        duration_histogram.record(duration, {"command": "export-schema"})

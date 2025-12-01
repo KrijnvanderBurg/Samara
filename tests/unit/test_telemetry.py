@@ -6,7 +6,7 @@ from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
 
-from samara.telemetry import get_meter, get_parent_context, get_tracer, setup_telemetry, trace_span
+from samara.telemetry import get_parent_context, get_tracer, setup_telemetry, trace_span
 
 
 class TestTelemetrySetup:
@@ -205,114 +205,6 @@ class TestTracingIntegration:
             span_context = span.get_span_context()
             expected_trace_id = int(example_trace_id, 16)
             assert span_context.trace_id == expected_trace_id
-
-
-class TestGetMeter:
-    """Test cases for get_meter function."""
-
-    def test_get_meter_returns_meter_instance(self) -> None:
-        """Test get_meter returns a valid meter instance."""
-        from opentelemetry import metrics
-
-        setup_telemetry(service_name="test-service")
-        meter = get_meter("test-module")
-
-        assert meter is not None
-        assert isinstance(meter, metrics.Meter)
-
-    def test_get_meter_with_default_name(self) -> None:
-        """Test get_meter with default name."""
-        from opentelemetry import metrics
-
-        setup_telemetry(service_name="test-service")
-        meter = get_meter()
-
-        assert meter is not None
-        assert isinstance(meter, metrics.Meter)
-
-    def test_get_meter_with_custom_name(self) -> None:
-        """Test get_meter with custom name."""
-        from opentelemetry import metrics
-
-        setup_telemetry(service_name="test-service")
-        meter = get_meter("custom-component")
-
-        assert meter is not None
-        assert isinstance(meter, metrics.Meter)
-
-
-class TestMetricsSetup:
-    """Test cases for metrics setup."""
-
-    def test_setup_telemetry_with_metrics_endpoint(self) -> None:
-        """Test telemetry setup with metrics endpoint adds metric exporter."""
-        with patch("samara.telemetry.OTLPMetricExporter") as mock_exporter:
-            setup_telemetry(
-                service_name="test-service",
-                otlp_traces_endpoint=None,
-                otlp_metrics_endpoint="http://localhost:4318/v1/metrics",
-            )
-
-            # Metric exporter should be created with the endpoint
-            mock_exporter.assert_called_once_with(endpoint="http://localhost:4318/v1/metrics")
-
-    def test_setup_telemetry_without_metrics_endpoint(self) -> None:
-        """Test telemetry setup without metrics endpoint skips metric export."""
-        with patch("samara.telemetry.OTLPMetricExporter") as mock_exporter:
-            setup_telemetry(
-                service_name="test-service",
-                otlp_traces_endpoint=None,
-                otlp_metrics_endpoint=None,
-            )
-
-            # Metric exporter should not be created
-            mock_exporter.assert_not_called()
-
-    def test_setup_telemetry_with_invalid_metrics_endpoint_logs_warning(self) -> None:
-        """Test telemetry setup with invalid metrics endpoint logs warning."""
-        with patch("samara.telemetry.OTLPMetricExporter") as mock_exporter:
-            mock_exporter.side_effect = Exception("Connection failed")
-
-            # Should not raise exception, just log warning
-            setup_telemetry(
-                service_name="test-service",
-                otlp_traces_endpoint=None,
-                otlp_metrics_endpoint="http://invalid:9999",
-            )
-
-            # Should still be able to get a meter
-            meter = get_meter("test")
-            assert meter is not None
-
-    def test_create_counter_metric(self) -> None:
-        """Test creating a counter metric."""
-        setup_telemetry(service_name="test-service")
-        meter = get_meter("test")
-
-        counter = meter.create_counter(
-            name="test.counter",
-            description="Test counter metric",
-            unit="1",
-        )
-
-        assert counter is not None
-        # Should be able to add to counter
-        counter.add(1, {"test": "value"})
-
-    def test_create_histogram_metric(self) -> None:
-        """Test creating a histogram metric."""
-        setup_telemetry(service_name="test-service")
-        meter = get_meter("test")
-
-        histogram = meter.create_histogram(
-            name="test.histogram",
-            description="Test histogram metric",
-            unit="ms",
-        )
-
-        assert histogram is not None
-        # Should be able to record values
-        histogram.record(100, {"test": "value"})
 
 
 class TestTraceSpanDecorator:
