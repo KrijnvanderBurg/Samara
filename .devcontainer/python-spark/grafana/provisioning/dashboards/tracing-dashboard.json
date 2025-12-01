@@ -1,23 +1,92 @@
 {
-  "title": "Samara Tracing Dashboard",
-  "uid": "samara-tracing",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 3,
+  "links": [],
   "panels": [
     {
+      "datasource": {
+        "type": "tempo",
+        "uid": "Tempo"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 20,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
-      "type": "traces",
-      "title": "Samara Traces",
-      "gridPos": {"h": 20, "w": 24, "x": 0, "y": 0},
-      "datasource": {"type": "tempo", "uid": "Tempo"},
+      "options": {
+        "spanFilters": {
+          "criticalPathOnly": false,
+          "matchesOnly": false,
+          "serviceNameOperator": "=",
+          "spanNameOperator": "=",
+          "tags": [
+            {
+              "id": "0e91732f-f62",
+              "operator": "="
+            }
+          ]
+        }
+      },
+      "pluginVersion": "12.3.0",
       "targets": [
         {
+          "filters": [
+            {
+              "id": "c8553cbf",
+              "operator": "=",
+              "scope": "span"
+            }
+          ],
+          "limit": 20,
+          "metricsQueryType": "range",
+          "queryType": "traceqlSearch",
           "refId": "A",
-          "queryType": "search",
-          "limit": 20
+          "serviceMapUseNativeHistograms": false,
+          "tableType": "traces"
         }
-      ]
+      ],
+      "title": "Samara Traces",
+      "type": "traces"
     }
   ],
+  "preload": false,
   "refresh": "5s",
-  "time": {"from": "now-6h", "to": "now"},
-  "schemaVersion": 38
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Samara Tracing Dashboard",
+  "uid": "samara-tracing",
+  "version": 3
 }
