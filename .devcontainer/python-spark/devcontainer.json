@@ -38,10 +38,10 @@
 	//
 	// Port forwarding for OTEL Collector and observability backends
 	//
-	"forwardPorts": [16686, 4317, 4318, 9090, 3100, 3000],
+	"forwardPorts": [3200, 4317, 4318, 9090, 3100, 3000],
 	"portsAttributes": {
-		"16686": {
-			"label": "Jaeger UI",
+		"3200": {
+			"label": "Tempo HTTP API",
 			"onAutoForward": "notify"
 		},
 		"4317": {
