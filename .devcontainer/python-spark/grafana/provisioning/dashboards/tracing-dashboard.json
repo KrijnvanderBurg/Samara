@@ -1,92 +1,51 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
+  "id": 1,
+  "type": "traces",
+  "title": "Samara Traces",
+  "gridPos": {
+    "x": 0,
+    "y": 0,
+    "h": 20,
+    "w": 24
   },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 3,
-  "links": [],
-  "panels": [
+  "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+  },
+  "pluginVersion": "12.3.0",
+  "targets": [
     {
-      "datasource": {
-        "type": "tempo",
-        "uid": "Tempo"
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 20,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "options": {
-        "spanFilters": {
-          "criticalPathOnly": false,
-          "matchesOnly": false,
-          "serviceNameOperator": "=",
-          "spanNameOperator": "=",
-          "tags": [
-            {
-              "id": "0e91732f-f62",
-              "operator": "="
-            }
-          ]
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
+      "filters": [
         {
-          "filters": [
-            {
-              "id": "c8553cbf",
-              "operator": "=",
-              "scope": "span"
-            }
-          ],
-          "limit": 20,
-          "metricsQueryType": "range",
-          "queryType": "traceqlSearch",
-          "refId": "A",
-          "serviceMapUseNativeHistograms": false,
-          "tableType": "traces"
+          "id": "c8553cbf",
+          "operator": "=",
+          "scope": "span"
         }
       ],
-      "title": "Samara Traces",
-      "type": "traces"
+      "limit": 20,
+      "metricsQueryType": "range",
+      "queryType": "traceqlSearch",
+      "refId": "A",
+      "serviceMapUseNativeHistograms": false,
+      "tableType": "traces"
     }
   ],
-  "preload": false,
-  "refresh": "5s",
-  "schemaVersion": 42,
-  "tags": [],
-  "templating": {
-    "list": []
+  "datasource": {
+    "type": "tempo",
+    "uid": "Tempo"
   },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Samara Tracing Dashboard",
-  "uid": "samara-tracing",
-  "version": 3
+  "options": {
+    "spanFilters": {
+      "matchesOnly": false,
+      "criticalPathOnly": false,
+      "serviceNameOperator": "=",
+      "spanNameOperator": "=",
+      "tags": [
+        {
+          "id": "0e91732f-f62",
+          "operator": "="
+        }
+      ]
+    }
+  }
 }
