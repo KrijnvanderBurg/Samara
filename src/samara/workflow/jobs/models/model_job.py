@@ -14,6 +14,7 @@ from pydantic import Field, model_validator
 
 from samara import BaseModel
 from samara.exceptions import SamaraWorkflowError
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.hooks import Hooks
 from samara.workflow.jobs.models.model_extract import ExtractModel
@@ -298,6 +299,7 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
 
         return self
 
+    @trace_span("job.execute")
     def execute(self) -> None:
         """Execute the complete ETL pipeline with lifecycle management.
 

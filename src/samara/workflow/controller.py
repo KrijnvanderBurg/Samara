@@ -13,6 +13,7 @@ from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 from samara import BaseModel
 from samara.exceptions import SamaraIOError, SamaraWorkflowConfigurationError
+from samara.telemetry import trace_span
 from samara.utils.file import FileHandlerContext
 from samara.utils.logger import get_logger
 from samara.workflow.jobs import JobUnion
@@ -109,6 +110,7 @@ class WorkflowController(BaseModel):
     jobs: list[JobUnion] = Field(..., description="List of jobs to execute in the ETL pipeline")
 
     @classmethod
+    @trace_span("workflow_controller.from_file")
     def from_file(cls, filepath: Path) -> Self:
         """Load workflow configuration from a file.
 
@@ -187,6 +189,7 @@ class WorkflowController(BaseModel):
         logger.debug("Exporting WorkflowController JSON schema")
         return cls.model_json_schema(schema_generator=PreserveFieldOrderJsonSchema)
 
+    @trace_span("workflow_controller.execute_all")
     def execute_all(self) -> None:
         """Execute all jobs in the ETL pipeline sequentially.
 

@@ -11,6 +11,7 @@ import time
 
 from typing_extensions import override
 
+from samara.telemetry import trace_span
 from samara.types import DataFrameRegistry, StreamingQueryRegistry
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_job import JobEngine, JobModel
@@ -109,6 +110,7 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
     engine_type: JobEngine = JobEngine.SPARK
 
     @override
+    @trace_span("spark_job._execute")
     def _execute(self) -> None:
         """Execute the ETL pipeline through extract, transform, and load phases.
 
@@ -139,6 +141,7 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
         execution_time = time.time() - start_time
         logger.info("Spark job completed in %.2f seconds", execution_time)
 
+    @trace_span("spark_job._extract")
     def _extract(self) -> None:
         """Extract data from all configured sources.
 
@@ -167,6 +170,7 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
         phase_time = time.time() - start_time
         logger.info("Extract phase completed successfully in %.2f seconds", phase_time)
 
+    @trace_span("spark_job._transform")
     def _transform(self) -> None:
         """Apply transformation operations to extracted data.
 
@@ -196,6 +200,7 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
         phase_time = time.time() - start_time
         logger.info("Transform phase completed successfully in %.2f seconds", phase_time)
 
+    @trace_span("spark_job._load")
     def _load(self) -> None:
         """Write transformed data to all configured destinations.
 

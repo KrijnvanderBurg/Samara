@@ -6,7 +6,7 @@ from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
 
-from samara.telemetry import get_meter, get_parent_context, get_tracer, setup_telemetry
+from samara.telemetry import get_meter, get_parent_context, get_tracer, setup_telemetry, trace_span
 
 
 class TestTelemetrySetup:
@@ -313,3 +313,99 @@ class TestMetricsSetup:
         assert histogram is not None
         # Should be able to record values
         histogram.record(100, {"test": "value"})
+
+
+class TestTraceSpanDecorator:
+    """Test cases for trace_span decorator."""
+
+    def test_trace_span_decorator_creates_span(self) -> None:
+        """Test trace_span decorator creates a span around function execution."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def sample_function(value: int) -> int:
+            """Sample function for testing."""
+            return value * 2
+
+        result = sample_function(5)
+        assert result == 10
+
+    def test_trace_span_decorator_with_custom_name(self) -> None:
+        """Test trace_span decorator with custom span name."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span("custom_operation")
+        def sample_function(value: int) -> int:
+            """Sample function for testing."""
+            return value * 2
+
+        result = sample_function(5)
+        assert result == 10
+
+    def test_trace_span_decorator_preserves_function_metadata(self) -> None:
+        """Test trace_span decorator preserves function name and docstring."""
+
+        @trace_span()
+        def sample_function(value: int) -> int:
+            """Sample function docstring."""
+            return value * 2
+
+        assert sample_function.__name__ == "sample_function"
+        assert sample_function.__doc__ == "Sample function docstring."
+
+    def test_trace_span_decorator_handles_exceptions(self) -> None:
+        """Test trace_span decorator records exceptions and re-raises them."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def failing_function() -> None:
+            """Function that raises an exception."""
+            raise ValueError("Test exception")
+
+        try:
+            failing_function()
+            assert False, "Expected ValueError to be raised"
+        except ValueError as e:
+            assert str(e) == "Test exception"
+
+    def test_trace_span_decorator_with_arguments(self) -> None:
+        """Test trace_span decorator works with functions that have arguments."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def function_with_args(a: int, b: int, c: str = "default") -> str:
+            """Function with multiple arguments."""
+            return f"{a + b} {c}"
+
+        result = function_with_args(1, 2, c="test")
+        assert result == "3 test"
+
+    def test_trace_span_decorator_with_return_value(self) -> None:
+        """Test trace_span decorator preserves return values."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def function_with_return() -> dict[str, int]:
+            """Function that returns a dictionary."""
+            return {"value": 42}
+
+        result = function_with_return()
+        assert result == {"value": 42}
+
+    def test_trace_span_decorator_nesting(self) -> None:
+        """Test nested functions with trace_span decorator create child spans."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span("parent_operation")
+        def parent_function() -> int:
+            """Parent function."""
+            return child_function()
+
+        @trace_span("child_operation")
+        def child_function() -> int:
+            """Child function."""
+            return 42
+
+        result = parent_function()
+        assert result == 42
+

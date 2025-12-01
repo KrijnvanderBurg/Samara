@@ -10,11 +10,13 @@ aggregation point, or send directly to specific backends. Each signal (traces, m
 can be configured independently for maximum deployment flexibility.
 """
 
+import functools
 import logging
+from collections.abc import Callable
 
 # import platform
 # from os import getpid
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 from opentelemetry import context, metrics, trace
 from opentelemetry._logs import set_logger_provider
@@ -37,6 +39,10 @@ from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
 settings: AppSettings = get_settings()
+
+# Type variables for generic decorator support
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 def setup_telemetry(
@@ -185,6 +191,81 @@ def get_meter(name: str = "samara") -> metrics.Meter:
         Meter instance for creating metrics (counters, histograms, etc.)
     """
     return metrics.get_meter(name)
+
+
+def trace_span(span_name: str | None = None) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    """Decorate a function to automatically create an OpenTelemetry span.
+
+    This decorator simplifies tracing by automatically creating a span around
+    the decorated function. The span name defaults to the function name but
+    can be overridden with a custom name. Any exceptions raised within the
+    function are automatically recorded in the span.
+
+    Args:
+        span_name: Optional custom name for the span. If None, uses the
+            function's qualified name (module.function).
+
+    Returns:
+        A decorator that wraps the function with automatic span creation.
+
+    Example:
+        >>> @trace_span()
+        ... def process_data(data: list[int]) -> int:
+        ...     return sum(data)
+        >>>
+        >>> @trace_span("custom_operation")
+        ... def complex_operation() -> str:
+        ...     return "done"
+        >>>
+        >>> # Spans are created automatically on function calls
+        >>> result = process_data([1, 2, 3])
+
+    Note:
+        The decorator preserves function metadata (name, docstring, etc.)
+        using functools.wraps. Exceptions are recorded in the span with
+        full stack traces before being re-raised.
+    """
+
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
+        """Wrap function with span creation logic.
+
+        Args:
+            func: The function to wrap with tracing.
+
+        Returns:
+            The wrapped function with automatic span creation.
+        """
+        # Use custom span name or derive from function
+        name = span_name or f"{func.__module__}.{func.__qualname__}"
+
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            """Execute function within a traced span.
+
+            Args:
+                *args: Positional arguments passed to the wrapped function.
+                **kwargs: Keyword arguments passed to the wrapped function.
+
+            Returns:
+                The return value from the wrapped function.
+
+            Raises:
+                Any exception raised by the wrapped function after recording
+                it in the span.
+            """
+            tracer = get_tracer()
+            with tracer.start_as_current_span(name) as span:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    # Record exception in span before re-raising
+                    span.record_exception(e)
+                    span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+                    raise
+
+        return wrapper
+
+    return decorator
 
 
 def get_parent_context(traceparent: str | None = None, tracestate: str | None = None) -> Context | None:
