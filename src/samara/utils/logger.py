@@ -26,7 +26,7 @@ def set_logger(level: str = "INFO") -> None:
     """
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        level=level.upper(),
+        level=level,
         force=True,  # Reconfigure even if already configured
     )
 

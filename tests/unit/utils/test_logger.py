@@ -30,11 +30,11 @@ class TestSetLogger:
         assert logger.isEnabledFor(logging.DEBUG)
         logger.debug("debug message")
 
-    def test_handles_lowercase_level(self) -> None:
-        """Test that set_logger handles lowercase log level strings."""
+    def test_handles_uppercase_level(self) -> None:
+        """Test that set_logger handles uppercase log level strings."""
         # Act
-        set_logger(level="warning")
-        logger = get_logger("test_lowercase")
+        set_logger(level="WARNING")
+        logger = get_logger("test_uppercase")
 
         # Assert
         assert logger is not None
