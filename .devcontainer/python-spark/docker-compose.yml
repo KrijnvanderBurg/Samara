@@ -19,7 +19,6 @@ services:
         ports:
             - "4317:4317"    # OTLP gRPC receiver
             - "4318:4318"    # OTLP HTTP receiver
-            - "8888:8888"    # Prometheus metrics exposed by the collector
         volumes:
             - ../../.devcontainer/python-spark/otel-collector/otel-config.yaml:/etc/otel/config.yaml
         command: ["--config=/etc/otel/config.yaml"]
@@ -36,21 +35,6 @@ services:
             - ../../.devcontainer/python-spark/tempo/tempo.yaml:/etc/tempo.yaml
         command:
             - "-config.file=/etc/tempo.yaml"
-        depends_on:
-            - otel-collector
-        networks:
-            - default
-
-    mimir:
-        image: grafana/mimir:latest
-        platform: linux/amd64
-        ports:
-            - "9090:9009"    # Mimir HTTP API
-        volumes:
-            - mimir-storage:/data
-            - ../../.devcontainer/python-spark/mimir/mimir.yaml:/etc/mimir/mimir.yaml
-        command:
-            - -config.file=/etc/mimir/mimir.yaml
         depends_on:
             - otel-collector
         networks:
@@ -86,7 +70,6 @@ services:
             - ./grafana/provisioning:/etc/grafana/provisioning
         depends_on:
             - tempo
-            - mimir
             - loki
             - otel-collector
         networks:
@@ -96,6 +79,5 @@ volumes:
     devcontainer-bashhistory:
     poetry-cache:
     grafana-storage:
-    mimir-storage:
     loki-storage:
     tempo-storage:

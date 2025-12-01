@@ -91,7 +91,7 @@ The following options can be used with any command:
 ```bash
 --log-level LEVEL                           # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 --otlp-traces-endpoint ENDPOINT             # OpenTelemetry endpoint for traces (e.g., http://localhost:4318/v1/traces)
---otlp-metrics-endpoint ENDPOINT            # OpenTelemetry endpoint for metrics (e.g., http://localhost:4318/v1/metrics)
+--otlp-logs-endpoint ENDPOINT               # OpenTelemetry endpoint for logs (e.g., http://localhost:4318/v1/logs)
 --traceparent TRACEPARENT                   # W3C Trace Context traceparent for distributed tracing
 --tracestate TRACESTATE                     # W3C Trace Context tracestate for distributed tracing
 -v, --version                               # Show version information and exit
@@ -102,7 +102,7 @@ Example with global options:
 python -m samara run \
     --log-level DEBUG \
     --otlp-traces-endpoint "http://localhost:4318/v1/traces" \
-    --otlp-metrics-endpoint "http://localhost:4318/v1/metrics" \
+    --otlp-logs-endpoint "http://localhost:4318/v1/logs" \
     --traceparent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" \
     --alert-filepath ./alerts.jsonc \
     --workflow-filepath ./pipeline.jsonc
@@ -131,19 +131,19 @@ python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipel
 
 ### Telemetry
 
-Configures OpenTelemetry endpoints for sending traces and metrics. Both can be configured independently—send to different backends or the same OTEL Collector.
+Configures OpenTelemetry endpoints for sending traces and logs. Both can be configured independently—send to different backends or the same OTEL Collector.
 
 ```bash
 SAMARA_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces     # OTLP HTTP endpoint for traces
-SAMARA_OTLP_METRICS_ENDPOINT=http://localhost:4318/v1/metrics   # OTLP HTTP endpoint for metrics
+SAMARA_OTLP_LOGS_ENDPOINT=http://localhost:4318/v1/logs         # OTLP HTTP endpoint for logs
 ```
 
-If not set, telemetry is not exported. Both traces and metrics can be configured independently—send traces to one backend and metrics to another, or send both to the same OpenTelemetry Collector.
+If not set, telemetry is not exported. Both traces and logs can be configured independently—send traces to one backend and logs to another, or send both to the same OpenTelemetry Collector.
 
 Example:
 ```bash
 export SAMARA_OTLP_TRACES_ENDPOINT="http://localhost:4318/v1/traces"
-export SAMARA_OTLP_METRICS_ENDPOINT="http://localhost:4318/v1/metrics"
+export SAMARA_OTLP_LOGS_ENDPOINT="http://localhost:4318/v1/logs"
 python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
 ```
 

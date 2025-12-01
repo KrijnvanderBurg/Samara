@@ -28,17 +28,3 @@ storage:
 query_frontend:
   search:
     max_duration: 0s
-
-metrics_generator:
-  registry:
-    external_labels:
-      source: tempo
-  storage:
-    path: /var/tempo/generator/wal
-  traces_storage:
-    path: /var/tempo/generator/traces
-
-overrides:
-  defaults:
-    metrics_generator:
-      processors: [service-graphs, span-metrics]

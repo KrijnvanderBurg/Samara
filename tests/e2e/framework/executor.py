@@ -67,8 +67,6 @@ class JobTestExecutor:
                 "samara",
                 "--otlp-traces-endpoint",
                 "http://otel-collector:4318/v1/traces",
-                "--otlp-metrics-endpoint",
-                "http://otel-collector:4318/v1/metrics",
                 "--otlp-logs-endpoint",
                 "http://otel-collector:4318/v1/logs",
                 "run",

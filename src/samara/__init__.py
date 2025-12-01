@@ -52,7 +52,7 @@ def get_run_id() -> str:
 
     The run id is created on module import and is intended to uniquely
     identify a single execution of the application. This can be used in
-    logs, metrics and traces to correlate data.
+    logs and traces to correlate data.
     """
     return RUN_ID
 
@@ -62,7 +62,7 @@ def get_run_datetime() -> datetime:
 
     The run datetime is created on module import and is intended to
     represent the start time of a single execution of the application.
-    This can be used in logs, metrics and traces to correlate data.
+    This can be used in logs and traces to correlate data.
     """
     return RUN_DATETIME
 

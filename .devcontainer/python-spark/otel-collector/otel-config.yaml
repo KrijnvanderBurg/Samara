@@ -1,5 +1,5 @@
 # OpenTelemetry Collector Configuration
-# Receives OTLP data from Samara and exports to Tempo (traces), Mimir (metrics), and Loki (logs)
+# Receives OTLP data from Samara and exports to Tempo (traces) and Loki (logs)
 
 receivers:
   otlp:
@@ -21,19 +21,6 @@ exporters:
     tls:
       insecure: true
 
-  # Export metrics to Mimir via Remote Write
-  # This pushes metrics directly to Mimir for permanent persistence
-  prometheusremotewrite:
-    endpoint: http://mimir:9009/api/v1/push
-    tls:
-      insecure: true
-    headers:
-      X-Scope-OrgID: anonymous
-    resource_to_telemetry_conversion:
-      enabled: true
-    add_metric_suffixes: true
-    namespace: samara
-
   # Export logs to Loki via OTLP
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
@@ -50,11 +37,6 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [otlp/tempo, debug]
-    
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [prometheusremotewrite, debug]
     
     logs:
       receivers: [otlp]
