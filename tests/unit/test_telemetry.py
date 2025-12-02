@@ -6,7 +6,7 @@ from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
 
-from samara.telemetry import get_parent_context, get_tracer, setup_telemetry
+from samara.telemetry import get_parent_context, get_tracer, setup_telemetry, trace_span
 
 
 class TestTelemetrySetup:
@@ -14,7 +14,7 @@ class TestTelemetrySetup:
 
     def test_setup_telemetry_creates_provider_with_console_exporter(self) -> None:
         """Test telemetry setup creates provider with console exporter."""
-        setup_telemetry(service_name="test-service", otlp_endpoint=None)
+        setup_telemetry(service_name="test-service", otlp_traces_endpoint=None)
 
         provider = trace.get_tracer_provider()
         assert isinstance(provider, TracerProvider)
@@ -22,10 +22,10 @@ class TestTelemetrySetup:
     def test_setup_telemetry_with_otlp_endpoint_adds_exporter(self) -> None:
         """Test telemetry setup with OTLP endpoint adds OTLP exporter."""
         with patch("samara.telemetry.OTLPSpanExporter") as mock_exporter:
-            setup_telemetry(service_name="test-service", otlp_endpoint="http://localhost:4318")
+            setup_telemetry(service_name="test-service", otlp_traces_endpoint="http://localhost:4318/v1/traces")
 
             # OTLP exporter should be created with the endpoint
-            mock_exporter.assert_called_once_with(endpoint="http://localhost:4318")
+            mock_exporter.assert_called_once_with(endpoint="http://localhost:4318/v1/traces")
 
     def test_setup_telemetry_with_invalid_otlp_endpoint_logs_warning(self) -> None:
         """Test telemetry setup with invalid OTLP endpoint logs warning."""
@@ -33,7 +33,7 @@ class TestTelemetrySetup:
             mock_exporter.side_effect = Exception("Connection failed")
 
             # Should not raise exception, just log warning
-            setup_telemetry(service_name="test-service", otlp_endpoint="http://invalid:9999")
+            setup_telemetry(service_name="test-service", otlp_traces_endpoint="http://invalid:9999")
 
             # Should still be able to get a tracer
             tracer = get_tracer("test")
@@ -46,7 +46,7 @@ class TestTelemetrySetup:
         with patch("samara.telemetry.context.attach") as mock_attach:
             setup_telemetry(
                 service_name="test-service",
-                otlp_endpoint=None,
+                otlp_traces_endpoint=None,
                 traceparent=traceparent,
                 tracestate=None,
             )
@@ -59,7 +59,7 @@ class TestTelemetrySetup:
         with patch("samara.telemetry.context.attach") as mock_attach:
             setup_telemetry(
                 service_name="test-service",
-                otlp_endpoint=None,
+                otlp_traces_endpoint=None,
                 traceparent=None,
                 tracestate=None,
             )
@@ -75,7 +75,7 @@ class TestTelemetrySetup:
         with patch("samara.telemetry.context.attach") as mock_attach:
             setup_telemetry(
                 service_name="test-service",
-                otlp_endpoint=None,
+                otlp_traces_endpoint=None,
                 traceparent=traceparent,
                 tracestate=tracestate,
             )
@@ -205,3 +205,98 @@ class TestTracingIntegration:
             span_context = span.get_span_context()
             expected_trace_id = int(example_trace_id, 16)
             assert span_context.trace_id == expected_trace_id
+
+
+class TestTraceSpanDecorator:
+    """Test cases for trace_span decorator."""
+
+    def test_trace_span_decorator_creates_span(self) -> None:
+        """Test trace_span decorator creates a span around function execution."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def sample_function(value: int) -> int:
+            """Sample function for testing."""
+            return value * 2
+
+        result = sample_function(5)
+        assert result == 10
+
+    def test_trace_span_decorator_with_custom_name(self) -> None:
+        """Test trace_span decorator with custom span name."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span("custom_operation")
+        def sample_function(value: int) -> int:
+            """Sample function for testing."""
+            return value * 2
+
+        result = sample_function(5)
+        assert result == 10
+
+    def test_trace_span_decorator_preserves_function_metadata(self) -> None:
+        """Test trace_span decorator preserves function name and docstring."""
+
+        @trace_span()
+        def sample_function(value: int) -> int:
+            """Sample function docstring."""
+            return value * 2
+
+        assert sample_function.__name__ == "sample_function"
+        assert sample_function.__doc__ == "Sample function docstring."
+
+    def test_trace_span_decorator_handles_exceptions(self) -> None:
+        """Test trace_span decorator records exceptions and re-raises them."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def failing_function() -> None:
+            """Function that raises an exception."""
+            raise ValueError("Test exception")
+
+        try:
+            failing_function()
+            assert False, "Expected ValueError to be raised"
+        except ValueError as e:
+            assert str(e) == "Test exception"
+
+    def test_trace_span_decorator_with_arguments(self) -> None:
+        """Test trace_span decorator works with functions that have arguments."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def function_with_args(a: int, b: int, c: str = "default") -> str:
+            """Function with multiple arguments."""
+            return f"{a + b} {c}"
+
+        result = function_with_args(1, 2, c="test")
+        assert result == "3 test"
+
+    def test_trace_span_decorator_with_return_value(self) -> None:
+        """Test trace_span decorator preserves return values."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span()
+        def function_with_return() -> dict[str, int]:
+            """Function that returns a dictionary."""
+            return {"value": 42}
+
+        result = function_with_return()
+        assert result == {"value": 42}
+
+    def test_trace_span_decorator_nesting(self) -> None:
+        """Test nested functions with trace_span decorator create child spans."""
+        setup_telemetry(service_name="test-service")
+
+        @trace_span("parent_operation")
+        def parent_function() -> int:
+            """Parent function."""
+            return child_function()
+
+        @trace_span("child_operation")
+        def child_function() -> int:
+            """Child function."""
+            return 42
+
+        result = parent_function()
+        assert result == 42

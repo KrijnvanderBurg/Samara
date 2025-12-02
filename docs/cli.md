@@ -89,16 +89,20 @@ This provides:
 The following options can be used with any command:
 
 ```bash
---log-level LEVEL           # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
---traceparent TRACEPARENT   # W3C Trace Context traceparent for distributed tracing
---tracestate TRACESTATE     # W3C Trace Context tracestate for distributed tracing
--v, --version               # Show version information and exit
+--log-level LEVEL                           # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+--otlp-traces-endpoint ENDPOINT             # OpenTelemetry endpoint for traces (e.g., http://localhost:4318/v1/traces)
+--otlp-logs-endpoint ENDPOINT               # OpenTelemetry endpoint for logs (e.g., http://localhost:4318/v1/logs)
+--traceparent TRACEPARENT                   # W3C Trace Context traceparent for distributed tracing
+--tracestate TRACESTATE                     # W3C Trace Context tracestate for distributed tracing
+-v, --version                               # Show version information and exit
 ```
 
 Example with global options:
 ```bash
 python -m samara run \
     --log-level DEBUG \
+    --otlp-traces-endpoint "http://localhost:4318/v1/traces" \
+    --otlp-logs-endpoint "http://localhost:4318/v1/logs" \
     --traceparent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" \
     --alert-filepath ./alerts.jsonc \
     --workflow-filepath ./pipeline.jsonc
@@ -106,42 +110,61 @@ python -m samara run \
 
 ## Environment Variables
 
-Samara respects the following environment variables (CLI arguments take priority over environment variables):
+Samara optionally uses the following environment variables. CLI arguments always take priority over environment variables.
 
 ### Logging
 
-- `SAMARA_LOG_LEVEL`: Sets the logging level for the application
-- `LOG_LEVEL`: Used as fallback if `SAMARA_LOG_LEVEL` is not set
+Controls the verbosity of application output across all Samara components.
 
-Both variables accept standard Python logging levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`. If neither is set, Samara defaults to `INFO` level.
+```bash
+SAMARA_LOG_LEVEL=DEBUG                      # Logging level for the application (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOG_LEVEL=DEBUG                             # Fallback if SAMARA_LOG_LEVEL is not set
+```
+
+Standard Python logging levels are supported: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`. If neither variable is set, Samara defaults to `INFO` level. The `SAMARA_LOG_LEVEL` variable takes precedence over `LOG_LEVEL`.
 
 Example:
 ```bash
-# Set logging level via environment variable
 export SAMARA_LOG_LEVEL=DEBUG
+python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
+```
+
+### Telemetry
+
+Configures OpenTelemetry endpoints for sending traces and logs. Both can be configured independently—send to different backends or the same OTEL Collector.
+
+```bash
+SAMARA_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces     # OTLP HTTP endpoint for traces
+SAMARA_OTLP_LOGS_ENDPOINT=http://localhost:4318/v1/logs         # OTLP HTTP endpoint for logs
+```
+
+If not set, telemetry is not exported. Both traces and logs can be configured independently—send traces to one backend and logs to another, or send both to the same OpenTelemetry Collector.
+
+Example:
+```bash
+export SAMARA_OTLP_TRACES_ENDPOINT="http://localhost:4318/v1/traces"
+export SAMARA_OTLP_LOGS_ENDPOINT="http://localhost:4318/v1/logs"
 python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
 ```
 
 ### Distributed Tracing
 
-- `SAMARA_TRACEPARENT`: W3C Trace Context traceparent header for distributed tracing
-- `SAMARA_TRACESTATE`: W3C Trace Context tracestate header for distributed tracing
+Enables Samara to participate in distributed tracing by continuing an existing trace from an upstream system.
 
-These variables enable Samara to participate in distributed tracing by continuing an existing trace. The format follows the [W3C Trace Context](https://www.w3.org/TR/trace-context/) specification.
+```bash
+SAMARA_TRACEPARENT=00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01           # W3C Trace Context traceparent
+SAMARA_TRACESTATE=vendorname=opaquevalue                                             # W3C Trace Context tracestate
+```
 
-**Traceparent Format:** `version-trace_id-parent_span_id-trace_flags`
-- `version`: 2-digit hex (currently `00`)
-- `trace_id`: 32-digit hex representing the trace
-- `parent_span_id`: 16-digit hex representing the parent span
-- `trace_flags`: 2-digit hex for trace flags
+Both variables follow the [W3C Trace Context](https://www.w3.org/TR/trace-context/) specification.
 
 Example:
 ```bash
-# Continue an existing trace via environment variable
+# Continue an existing trace from upstream system
 export SAMARA_TRACEPARENT="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
 
-# CLI arguments take priority over environment variables
+# CLI arguments override environment variables
 export SAMARA_TRACEPARENT="00-OLD_TRACE_ID-b7ad6b7169203331-01"
 python -m samara run \
     --traceparent="00-NEW_TRACE_ID-b7ad6b7169203331-01" \
@@ -157,7 +180,7 @@ python -m samara run \
 - `20`: IO_ERROR - Input/output error (file access issues)
 - `30`: CONFIGURATION_ERROR - General configuration error
 - `31`: ALERT_CONFIGURATION_ERROR - Alert configuration specific error
-- `32`: RUNTIME_CONFIGURATION_ERROR - Workflow configuration specific error
+- `32`: WORKFLOW_CONFIGURATION_ERROR - Workflow configuration specific error
 - `40`: VALIDATION_ERROR - Configuration validation failed
 - `41`: ALERT_TEST_ERROR - Alert testing functionality failed
 - `50`: JOB_ERROR - Error during pipeline execution

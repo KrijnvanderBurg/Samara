@@ -86,7 +86,30 @@ This implementation uses Docker Compose for maximum flexibility:
 - Check the Problems panel for real-time feedback on open files
 - Generated reports (`coverage.xml`, `JUNIT-TEST.xml`) provide detailed analysis
 
-## 🛠️ List of Code Quality Tools
+## 📊 Observability & Tracing
+
+This DevContainer includes pre-configured **Grafana**, **Tempo**, **Mimir**, and **Loki** for distributed tracing, metrics, and logs.
+
+### Services
+
+- **Grafana** <sup>[Docs](https://grafana.com/docs/) | [Github](https://github.com/grafana/grafana)</sup> - Visualization platform. Access at [http://localhost:3000](http://localhost:3000)
+
+- **Tempo** <sup>[Docs](https://grafana.com/docs/tempo/) | [Github](https://github.com/grafana/tempo)</sup> - Distributed tracing backend
+
+- **Mimir** <sup>[Docs](https://grafana.com/docs/mimir/) | [Github](https://github.com/grafana/mimir)</sup> - Metrics storage (Prometheus-compatible)
+
+- **Loki** <sup>[Docs](https://grafana.com/docs/loki/) | [Github](https://github.com/grafana/loki)</sup> - Log aggregation system
+
+### Features
+
+- **Automatic Configuration**: Grafana pre-configured with all datasources
+- **Custom Dashboards**: Tracing, metrics, and logs dashboards
+- **Real-time Updates**: Dashboards auto-refresh every 5 seconds
+- **Zero Setup**: Samara telemetry automatically sent via OTLP
+
+📖 **[Full Observability Documentation](./grafana/README.md)**
+
+## �🛠️ List of Code Quality Tools
 
 ### Formatters
 

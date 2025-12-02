@@ -15,12 +15,12 @@ from samara.types import DataFrameRegistry
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_transform import TransformModel
 from samara.workflow.jobs.spark.session import SparkHandler
-from samara.workflow.jobs.spark.transforms import transform_function_spark_union
+from samara.workflow.jobs.spark.transforms import TransformFunctionSparkUnion
 
 logger: logging.Logger = get_logger(__name__)
 
 
-class TransformSpark(TransformModel[transform_function_spark_union]):
+class TransformSpark(TransformModel[TransformFunctionSparkUnion]):
     """Apply PySpark-based transformations to dataframes in the pipeline.
 
     This class executes a sequence of transformation functions configured in the pipeline

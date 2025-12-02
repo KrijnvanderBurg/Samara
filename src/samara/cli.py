@@ -27,7 +27,7 @@ from samara.exceptions import (
     SamaraWorkflowError,
 )
 from samara.settings import get_settings
-from samara.telemetry import get_tracer, setup_telemetry
+from samara.telemetry import get_tracer, setup_telemetry, trace_span
 from samara.utils.logger import get_logger, set_logger
 from samara.workflow.controller import WorkflowController
 
@@ -55,16 +55,23 @@ tracer = get_tracer()
     help="W3C trace state header for distributed tracing",
 )
 @click.option(
-    "--otlp-endpoint",
+    "--otlp-traces-endpoint",
     default=None,
     type=str,
-    help="OTLP endpoint for trace export (e.g., http://localhost:4318/v1/traces)",
+    help="OTLP endpoint for trace export (e.g., https://otel-collector:4318/v1/traces)",
+)
+@click.option(
+    "--otlp-logs-endpoint",
+    default=None,
+    type=str,
+    help="OTLP endpoint for logs export (e.g., https://otel-collector:4318/v1/logs)",
 )
 def cli(
     log_level: str | None = None,
     trace_parent: str | None = None,
     trace_state: str | None = None,
-    otlp_endpoint: str | None = None,
+    otlp_traces_endpoint: str | None = None,
+    otlp_logs_endpoint: str | None = None,
 ) -> None:
     """Samara: Configuration-driven workflow framework for Apache Spark and Polars.
 
@@ -79,7 +86,12 @@ def cli(
             or defaults to INFO level.
         trace_parent: W3C trace parent header for distributed tracing continuation
         trace_state: W3C trace state header for distributed tracing
-        otlp_endpoint: OTLP endpoint URL for exporting traces
+        otlp_traces_endpoint: OTLP endpoint URL for exporting traces. Supports:
+            - OTEL Collector (recommended): Routes traces through central collector
+            - Direct backends: Jaeger, Zipkin, or any OTLP-compatible service
+        otlp_logs_endpoint: OTLP endpoint URL for exporting logs. Supports:
+            - OTEL Collector (recommended): Routes logs through central collector
+            - Direct backends: Loki, or any OTLP-compatible service
 
     Commands:
         validate: Validate workflow configurations without execution
@@ -93,7 +105,8 @@ def cli(
     # Initialize telemetry once at startup with trace continuation support
     setup_telemetry(
         service_name="samara",
-        otlp_endpoint=otlp_endpoint or settings.otlp_endpoint,
+        otlp_traces_endpoint=otlp_traces_endpoint or settings.otlp_traces_endpoint,
+        otlp_logs_endpoint=otlp_logs_endpoint or settings.otlp_logs_endpoint,
         traceparent=trace_parent or settings.trace_parent,
         tracestate=trace_state or settings.trace_state,
     )
@@ -124,6 +137,7 @@ def cli(
     type=str,
     help="Test env vars (KEY=VALUE)",
 )
+@trace_span("validate_workflow")
 def validate(
     alert_filepath: Path,
     workflow_filepath: Path,
@@ -165,7 +179,9 @@ def validate(
         execution with alert integration, use the 'run' command.
     """
     try:
-        logger.info("Running 'validate' command...")
+        logger.info("Starting validation command")
+        logger.info("Workflow config: %s", workflow_filepath)
+        logger.info("Alert config: %s", alert_filepath)
 
         # Parse test env vars
         test_env_vars = None
@@ -240,6 +256,7 @@ def validate(
     type=click.Path(exists=False, path_type=Path),
     help="Path to workflow configuration file",
 )
+@trace_span("run_pipeline")
 def run(
     alert_filepath: Path,
     workflow_filepath: Path,
@@ -269,64 +286,65 @@ def run(
         error type and severity. This enables operational visibility into
         workflow failures and automating incident response workflows.
     """
-    with tracer.start_as_current_span("run_pipeline"):
+    try:
+        logger.info("Starting workflow execution command")
+        logger.info("Workflow config: %s", workflow_filepath)
+        logger.info("Alert config: %s", alert_filepath)
+
         try:
-            logger.info("Running 'run' command...")
-            logger.info("Running workflow with config: %s", workflow_filepath)
+            alert = AlertController.from_file(filepath=alert_filepath)
+        except SamaraIOError as e:
+            logger.error("Cannot access alert configuration file: %s", e)
+            raise click.exceptions.Exit(e.exit_code)
+        except SamaraAlertConfigurationError as e:
+            logger.error("Alert configuration is invalid: %s", e)
+            raise click.exceptions.Exit(e.exit_code)
 
-            try:
-                alert = AlertController.from_file(filepath=alert_filepath)
-            except SamaraIOError as e:
-                logger.error("Cannot access alert configuration file: %s", e)
-                raise click.exceptions.Exit(e.exit_code)
-            except SamaraAlertConfigurationError as e:
-                logger.error("Alert configuration is invalid: %s", e)
-                raise click.exceptions.Exit(e.exit_code)
+        try:
+            workflow = WorkflowController.from_file(filepath=workflow_filepath)
+            logger.info("Executing workflow jobs...")
+            workflow.execute_all()
+            logger.info("Workflow completed successfully")
+            logger.info(
+                "Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name
+            )
+        except SamaraIOError as e:
+            logger.error("Cannot access workflow configuration file: %s", e)
+            alert.evaluate_trigger_and_alert(
+                title="Workflow Configuration File Error",
+                body="Failed to read workflow configuration file",
+                exception=e,
+            )
+            raise click.exceptions.Exit(e.exit_code)
+        except SamaraWorkflowConfigurationError as e:
+            logger.error("Workflow configuration is invalid: %s", e)
+            alert.evaluate_trigger_and_alert(
+                title="Workflow Configuration Error", body="Invalid workflow configuration", exception=e
+            )
+            raise click.exceptions.Exit(e.exit_code)
+        except SamaraValidationError as e:
+            logger.error("Configuration validation failed: %s", e)
+            alert.evaluate_trigger_and_alert(
+                title="Workflow Validation Error", body="Configuration validation failed", exception=e
+            )
+            raise click.exceptions.Exit(e.exit_code)
+        except SamaraWorkflowError as e:
+            logger.error("Workflow job failed: %s", e)
+            alert.evaluate_trigger_and_alert(
+                title="Workflow Execution Error", body="Workflow error during execution", exception=e
+            )
+            raise click.exceptions.Exit(e.exit_code)
 
-            try:
-                workflow = WorkflowController.from_file(filepath=workflow_filepath)
-                workflow.execute_all()
-                logger.info("Workflow completed successfully")
-                logger.info(
-                    "Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name
-                )
-            except SamaraIOError as e:
-                logger.error("Cannot access workflow configuration file: %s", e)
-                alert.evaluate_trigger_and_alert(
-                    title="Workflow Configuration File Error",
-                    body="Failed to read workflow configuration file",
-                    exception=e,
-                )
-                raise click.exceptions.Exit(e.exit_code)
-            except SamaraWorkflowConfigurationError as e:
-                logger.error("Workflow configuration is invalid: %s", e)
-                alert.evaluate_trigger_and_alert(
-                    title="Workflow Configuration Error", body="Invalid workflow configuration", exception=e
-                )
-                raise click.exceptions.Exit(e.exit_code)
-            except SamaraValidationError as e:
-                logger.error("Configuration validation failed: %s", e)
-                alert.evaluate_trigger_and_alert(
-                    title="Workflow Validation Error", body="Configuration validation failed", exception=e
-                )
-                raise click.exceptions.Exit(e.exit_code)
-            except SamaraWorkflowError as e:
-                logger.error("Workflow job failed: %s", e)
-                alert.evaluate_trigger_and_alert(
-                    title="Workflow Execution Error", body="Workflow error during execution", exception=e
-                )
-                raise click.exceptions.Exit(e.exit_code)
-
-        except click.exceptions.Exit:
-            # Re-raise Click's Exit exceptions (these are our controlled exits with proper codes)
-            raise
-        except KeyboardInterrupt as e:
-            logger.warning("Process interrupted by user")
-            raise click.exceptions.Exit(ExitCode.KEYBOARD_INTERRUPT) from e
-        except Exception as e:  # pylint: disable=broad-except
-            logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
-            logger.error("Exception details:", exc_info=True)
-            raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
+    except click.exceptions.Exit:
+        # Re-raise Click's Exit exceptions (these are our controlled exits with proper codes)
+        raise
+    except KeyboardInterrupt as e:
+        logger.warning("Process interrupted by user")
+        raise click.exceptions.Exit(ExitCode.KEYBOARD_INTERRUPT) from e
+    except Exception as e:  # pylint: disable=broad-except
+        logger.error("Unexpected exception %s: %s", type(e).__name__, str(e))
+        logger.error("Exception details:", exc_info=True)
+        raise click.exceptions.Exit(ExitCode.UNEXPECTED_ERROR) from e
 
 
 @cli.command("export-schema")
@@ -336,6 +354,7 @@ def run(
     type=click.Path(path_type=Path),
     help="Path where the JSON schema file will be saved",
 )
+@trace_span("export_workflow_schema")
 def export_schema(output_filepath: Path) -> None:
     """Generate and save the workflow configuration JSON schema.
 

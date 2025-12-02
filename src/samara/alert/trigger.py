@@ -13,7 +13,7 @@ from samara import BaseModel
 from samara.alert.template import AlertTemplate
 from samara.utils.logger import get_logger
 
-from .rules import alert_rule_union
+from .rules import AlertRuleUnion
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -110,7 +110,7 @@ class AlertTrigger(BaseModel):
         ..., description="List of channel identifiers that should receive alerts matching this rule"
     )
     template: AlertTemplate = Field(..., description="Template configuration for formatting alert messages")
-    rules: list[alert_rule_union] = Field(
+    rules: list[AlertRuleUnion] = Field(
         ..., description="List of rules that must all evaluate to True for the trigger to fire"
     )
 

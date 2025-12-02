@@ -29,23 +29,34 @@
 		"PYTHONUNBUFFERED": "1",
 		"PYTHONHASHSEED": "42",
 		"PIP_DISABLE_PIP_VERSION_CHECK": "1",
-		"POETRY_VIRTUALENVS_CREATE": "false"
+		"POETRY_VIRTUALENVS_CREATE": "false",
+		"SAMARA_ENVIRONMENT": "dev"
+		// "SAMARA_OTLP_TRACES_ENDPOINT": "http://otel-collector:4318/v1/traces",
+		// "SAMARA_OTLP_LOGS_ENDPOINT": "http://otel-collector:4318/v1/logs"
 	},
 	//
-	// Port forwarding for Jaeger UI and OTLP endpoints
+	// Port forwarding for OTEL Collector and observability backends
 	//
-	"forwardPorts": [16686, 4317, 4318],
+	"forwardPorts": [3200, 4317, 4318, 3100, 3000],
 	"portsAttributes": {
-		"16686": {
-			"label": "Jaeger UI",
+		"3200": {
+			"label": "Tempo HTTP API",
 			"onAutoForward": "notify"
 		},
 		"4317": {
-			"label": "OTLP gRPC",
+			"label": "OTEL Collector gRPC",
 			"onAutoForward": "silent"
 		},
 		"4318": {
-			"label": "OTLP HTTP",
+			"label": "OTEL Collector HTTP",
+			"onAutoForward": "silent"
+		},
+		"3100": {
+			"label": "Loki HTTP API",
+			"onAutoForward": "silent"
+		},
+		"3000": {
+			"label": "Grafana UI",
 			"onAutoForward": "silent"
 		}
 	},

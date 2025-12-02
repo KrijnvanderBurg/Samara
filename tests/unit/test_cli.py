@@ -445,7 +445,7 @@ class TestCliGroup:
         assert result.exit_code == 0
 
     def test_cli__when_invalid_log_level_specified__exits_with_error(self) -> None:
-        """Test CLI accepts invalid log level (validation happens at logger level)."""
+        """Test CLI rejects invalid log level with error."""
         # Arrange
         runner = CliRunner()
 
@@ -464,8 +464,8 @@ class TestCliGroup:
         )
 
         # Assert
-        # Invalid log level is accepted by CLI but causes IO error when files don't exist
-        assert result.exit_code == ExitCode.IO_ERROR
+        # Invalid log level causes ValueError which Click catches and returns exit code 1
+        assert result.exit_code == 1
 
     def test_cli__when_no_command_provided__displays_help_text(self) -> None:
         """Test CLI displays help text when invoked without any command."""

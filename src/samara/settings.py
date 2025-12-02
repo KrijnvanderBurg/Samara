@@ -22,12 +22,25 @@ class AppSettings(BaseSettings):
         log_level: Logging level for the application (DEBUG, INFO, WARNING,
             ERROR, CRITICAL). Defaults to INFO if not specified via
             SAMARA_LOG_LEVEL environment variable.
+        environment: Deployment environment identifier (dev, staging, prod).
+            Defaults to "unknown" if not specified via SAMARA_ENVIRONMENT
+            environment variable. Used for telemetry and resource attribution.
         trace_parent: W3C Trace Context traceparent for distributed tracing.
             Loaded from SAMARA_TRACE_PARENT environment variable if set.
         trace_state: W3C Trace Context tracestate for distributed tracing.
             Loaded from SAMARA_TRACE_STATE environment variable if set.
-        otlp_endpoint: OTLP endpoint for exporting traces, e.g., "localhost:4317".
-            Loaded from SAMARA_OTLP_ENDPOINT environment variable if set.
+        otlp_traces_endpoint: OTLP endpoint for exporting traces. Supports any
+            OTLP-compatible backend:
+            - OTEL Collector (recommended): "https://otel-collector:4318/v1/traces"
+            - Direct to Jaeger: "https://jaeger:4318/v1/traces"
+            - Any OTLP HTTP endpoint
+            Loaded from SAMARA_OTLP_TRACES_ENDPOINT environment variable if set.
+        otlp_logs_endpoint: OTLP endpoint for exporting logs. Supports any
+            OTLP-compatible backend:
+            - OTEL Collector (recommended): "https://otel-collector:4318/v1/logs"
+            - Direct to Loki: "https://loki:3100/loki/api/v1/push"
+            - Any OTLP HTTP endpoint
+            Loaded from SAMARA_OTLP_LOGS_ENDPOINT environment variable if set.
 
     Note:
         Settings are cached using lru_cache, so the singleton instance is
@@ -36,14 +49,16 @@ class AppSettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        case_sensitive=False,
         env_prefix="SAMARA_",
+        case_sensitive=False,
     )
 
-    log_level: str | None = Field(default=None, description="Logging level for the application")
+    log_level: str | None = Field(default=None, description="Logging level of the system")
+    environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
     trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
     trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
-    otlp_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
+    otlp_traces_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
+    otlp_logs_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting logs")
 
 
 @lru_cache
