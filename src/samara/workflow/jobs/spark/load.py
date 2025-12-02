@@ -13,6 +13,7 @@ from typing import Any, Literal
 from pydantic import Field
 from pyspark.sql.streaming.query import StreamingQuery
 
+from samara.telemetry import trace_span
 from samara.types import DataFrameRegistry, StreamingQueryRegistry
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_load import LoadMethod, LoadModel, LoadModelFile
@@ -135,6 +136,7 @@ class LoadSpark(LoadModel, ABC):
                 query.status property or terminate with query.stop() method.
         """
 
+    @trace_span("load_spark._export_schema")
     def _export_schema(self, schema_json: str, schema_path: str) -> None:
         """Export the DataFrame schema to a JSON file.
 
@@ -156,6 +158,7 @@ class LoadSpark(LoadModel, ABC):
 
         logger.info("Schema exported successfully for %s to: %s", self.id_, schema_path)
 
+    @trace_span("load_spark.load")
     def load(self) -> None:
         """Execute the load operation on the DataFrame.
 
@@ -272,6 +275,7 @@ class LoadFileSpark(LoadSpark, LoadModelFile):
 
     load_type: Literal["file"]
 
+    @trace_span("load_file_spark._load_batch")
     def _load_batch(self) -> None:
         """Write the DataFrame to file in batch mode.
 
@@ -298,6 +302,7 @@ class LoadFileSpark(LoadSpark, LoadModelFile):
 
         logger.info("Batch write successful - wrote %d rows to %s", row_count, self.location)
 
+    @trace_span("load_file_spark._load_streaming")
     def _load_streaming(self) -> StreamingQuery:
         """Write the DataFrame to file in streaming mode.
 

@@ -13,6 +13,7 @@ from pydantic import Field
 from typing_extensions import override
 
 from samara.alert.channels.base import ChannelModel
+from samara.telemetry import trace_span
 from samara.utils.http import HttpBase
 from samara.utils.logger import get_logger
 
@@ -114,6 +115,7 @@ class HttpChannel(HttpBase, ChannelModel):
     channel_type: Literal["http"] = Field(..., description="Channel type discriminator")
 
     @override
+    @trace_span("http_channel._alert")
     def _alert(self, title: str, body: str) -> None:
         """Send an alert message via HTTP request to the configured endpoint.
 

@@ -11,6 +11,7 @@ from pydantic import Field
 
 from samara import BaseModel
 from samara.alert.template import AlertTemplate
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 
 from .rules import AlertRuleUnion
@@ -114,6 +115,7 @@ class AlertTrigger(BaseModel):
         ..., description="List of rules that must all evaluate to True for the trigger to fire"
     )
 
+    @trace_span("alert_trigger.should_fire")
     def should_fire(self, exception: Exception) -> bool:
         """Evaluate whether trigger conditions are met.
 

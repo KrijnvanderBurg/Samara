@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from pydantic import Field
 
 from samara import BaseModel
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
@@ -75,6 +76,7 @@ class ChannelModel(BaseModel, ABC):
     description: str = Field(..., description="Description of the alert channel")
     enabled: bool = Field(..., description="Whether this channel is enabled")
 
+    @trace_span("channel.alert")
     def alert(self, title: str, body: str) -> None:
         """Send alert message through this channel.
 

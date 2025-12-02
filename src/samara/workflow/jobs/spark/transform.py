@@ -12,6 +12,7 @@ from typing import Any
 from pydantic import Field
 
 from samara.types import DataFrameRegistry
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_transform import TransformModel
 from samara.workflow.jobs.spark.session import SparkHandler
@@ -112,6 +113,7 @@ class TransformSpark(TransformModel[TransformFunctionSparkUnion]):
         self.data_registry: DataFrameRegistry = DataFrameRegistry()
         self.spark: SparkHandler = SparkHandler()
 
+    @trace_span("transform_spark.transform")
     def transform(self) -> None:
         """Execute the complete transformation chain on the upstream dataframe.
 

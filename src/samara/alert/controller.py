@@ -17,6 +17,7 @@ from samara import BaseModel
 from samara.alert.channels import ChannelUnion
 from samara.alert.trigger import AlertTrigger
 from samara.exceptions import SamaraAlertConfigurationError, SamaraIOError
+from samara.telemetry import trace_span
 from samara.utils.file import FileHandlerContext
 from samara.utils.logger import get_logger
 
@@ -113,6 +114,7 @@ class AlertController(BaseModel):
     triggers: list[AlertTrigger] = Field(..., description="List of alert trigger rules")
 
     @classmethod
+    @trace_span("alert_controller.from_file")
     def from_file(cls, filepath: Path) -> Self:
         """Load alert configuration from a JSON or YAML file.
 
@@ -163,6 +165,7 @@ class AlertController(BaseModel):
         except ValidationError as e:
             raise SamaraAlertConfigurationError(f"Invalid alert configuration in file '{filepath}': {e}") from e
 
+    @trace_span("alert_controller.evaluate_trigger_and_alert")
     def evaluate_trigger_and_alert(self, title: str, body: str, exception: Exception) -> None:
         """Evaluate trigger conditions and deliver alerts through matched channels.
 

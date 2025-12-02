@@ -14,6 +14,7 @@ from pydantic import EmailStr, Field, SecretStr, StrictInt, StrictStr
 from typing_extensions import override
 
 from samara.alert.channels.base import ChannelModel
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
@@ -90,6 +91,7 @@ class EmailChannel(ChannelModel):
     to_emails: list[EmailStr] = Field(..., description="List of recipient email addresses", min_length=1)
 
     @override
+    @trace_span("email_channel._alert")
     def _alert(self, title: str, body: str) -> None:
         """Send alert notification via email to configured recipients.
 
