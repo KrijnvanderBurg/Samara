@@ -121,7 +121,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" && name=~\"validate_workflow|run_pipeline|export_workflow_schema\" } | rate() by (name)",
+          "query": "{ resource.service.name=\"samara\" && name=~\"validate_workflow|run_pipeline|export_workflow_schema\" } | rate() by (name) | sum_over_time($__range)",
           "queryType": "traceql",
           "refId": "A",
           "tableType": "spans"
@@ -238,7 +238,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" && name=\"validate_workflow\" } | count() > 0",
+          "query": "{ resource.service.name=\"samara\" && name=\"validate_workflow\" }",
           "queryType": "traceql",
           "refId": "A",
           "tableType": "spans"
@@ -249,7 +249,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" && name=\"run_pipeline\" } | count() > 0",
+          "query": "{ resource.service.name=\"samara\" && name=\"run_pipeline\" }",
           "queryType": "traceql",
           "refId": "B",
           "tableType": "spans"
@@ -260,7 +260,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" && name=\"export_workflow_schema\" } | count() > 0",
+          "query": "{ resource.service.name=\"samara\" && name=\"export_workflow_schema\" }",
           "queryType": "traceql",
           "refId": "C",
           "tableType": "spans"
@@ -650,7 +650,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" } | avg(duration) by (name) > 0",
+          "query": "{ resource.service.name=\"samara\" } | avg(duration) by (name)",
           "queryType": "traceql",
           "refId": "A",
           "tableType": "spans"
@@ -1152,7 +1152,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" && status=error } | rate()",
+          "query": "{ resource.service.name=\"samara\" && status=error } | rate() | sum_over_time($__range)",
           "queryType": "traceql",
           "refId": "A",
           "tableType": "spans"
@@ -1223,7 +1223,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" && status=error } | count() > 0",
+          "query": "{ resource.service.name=\"samara\" && status=error }",
           "queryType": "traceql",
           "refId": "A",
           "tableType": "spans"
@@ -1313,7 +1313,7 @@
             "uid": "P214B5B846CF3925F"
           },
           "limit": 20,
-          "query": "{ resource.service.name=\"samara\" && status=error } | count() by (name) > 0",
+          "query": "{ resource.service.name=\"samara\" && status=error } | count() by (name)",
           "queryType": "traceql",
           "refId": "A",
           "tableType": "spans"

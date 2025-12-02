@@ -41,7 +41,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (command) (count_over_time({service_name=\"samara\"} |~ \"Starting (validation|workflow execution|export-schema) command\" | pattern `<_> <command> command` [$__auto]))",
+          "expr": "sum by (command) (rate({service_name=\"samara\"} |~ \"Starting (validation|workflow execution|export-schema) command\" | pattern `<_> <command> command` [$__auto]))",
           "queryType": "range",
           "legendFormat": "{{command}}",
           "editorMode": "code"
@@ -104,22 +104,22 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting validation command\" [$__range])",
-          "queryType": "range",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting validation command\" [$__range]))",
+          "queryType": "instant",
           "legendFormat": "Validate",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range])",
-          "queryType": "range",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range]))",
+          "queryType": "instant",
           "legendFormat": "Run Pipeline",
           "editorMode": "code"
         },
         {
           "refId": "C",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting export-schema command\" [$__range])",
-          "queryType": "range",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting export-schema command\" [$__range]))",
+          "queryType": "instant",
           "legendFormat": "Export Schema",
           "editorMode": "code"
         }

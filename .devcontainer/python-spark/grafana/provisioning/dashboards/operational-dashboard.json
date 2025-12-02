@@ -41,15 +41,15 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__range])",
-          "queryType": "range",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__range]))",
+          "queryType": "instant",
           "legendFormat": "Success",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range])",
-          "queryType": "range",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range]))",
+          "queryType": "instant",
           "legendFormat": "Total",
           "editorMode": "code"
         }
@@ -137,8 +137,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range])",
-          "queryType": "range",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range]))",
+          "queryType": "instant",
           "editorMode": "code"
         }
       ],
