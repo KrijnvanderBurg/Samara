@@ -324,11 +324,7 @@ def set_span_attributes(attributes: dict[str, Any], span: Span | None = None) ->
 
     for key, value in attributes.items():
         if value is not None:
-            # Convert to OTEL-compatible types
-            if value is True or value is False:
-                target_span.set_attribute(key, value)
-            else:
-                target_span.set_attribute(key, _convert_attribute_value(value))
+            target_span.set_attribute(key, _convert_attribute_value(value))
 
 
 def add_span_event(
@@ -445,13 +441,11 @@ def _convert_attribute_value(value: Any) -> str | int | float | bool:
     This function converts other types to strings.
 
     Args:
-        value: Value to convert.
+        value: Value to convert. Must not be None (callers filter None values).
 
     Returns:
         Converted value safe for OTEL attributes.
     """
-    if value is None:
-        return ""
     if value is True:
         return True
     if value is False:
