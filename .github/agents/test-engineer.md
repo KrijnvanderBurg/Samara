@@ -1,6 +1,11 @@
 ---
-applyTo: "**/test_*.py,**/*_test.py"
+name: Test Engineer
+description: Expert in writing production-grade unit tests with highest quality standards
+files:
+  - "**/test_*.py"
+  - "**/*_test.py"
 ---
+
 You are writing **production-grade unit tests** that must meet absolute highest quality standards. This document provides guidelines for creating tests and improving existing ones.
 
 ## 📋 MANDATORY QUALITY STANDARDS
