@@ -15,6 +15,18 @@ from pydantic import Field, model_validator
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
+from samara.telemetry import (
+    ATTR_COLUMN_COUNT,
+    ATTR_COMPONENT_ID,
+    ATTR_COMPONENT_TYPE,
+    ATTR_DATA_FORMAT,
+    ATTR_DATA_LOCATION,
+    ATTR_DATA_METHOD,
+    ATTR_ROW_COUNT,
+    add_span_event,
+    get_current_span,
+    set_span_attributes,
+)
 from samara.types import DataFrameRegistry
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_extract import ExtractFileModel, ExtractMethod, ExtractModel
@@ -137,16 +149,49 @@ class ExtractSpark(ExtractModel, ABC):
         """
         logger.info("Starting extraction for source: %s using method: %s", self.id_, self.method.value)
 
+        # Add span attributes for extract observability
+        span = get_current_span()
+        if span.is_recording():
+            set_span_attributes({
+                ATTR_COMPONENT_ID: self.id_,
+                ATTR_COMPONENT_TYPE: "extract",
+                ATTR_DATA_FORMAT: self.data_format,
+                ATTR_DATA_METHOD: self.method.value,
+            })
+
+        add_span_event("extract.config.applied", {
+            ATTR_COMPONENT_ID: self.id_,
+            "samara.extract.options_count": len(self.options),
+        })
+
         logger.debug("Adding Spark configurations: %s", self.options)
         self.spark.add_configs(options=self.options)
 
         if self.method == ExtractMethod.BATCH:
             logger.debug("Performing batch extraction for: %s", self.id_)
-            self.data_registry[self.id_] = self._extract_batch()
-            logger.info("Batch extraction completed successfully for: %s", self.id_)
+            add_span_event("extract.batch.started", {ATTR_COMPONENT_ID: self.id_})
+            dataframe = self._extract_batch()
+            self.data_registry[self.id_] = dataframe
+
+            # Record extracted data metrics
+            row_count = dataframe.count()
+            column_count = len(dataframe.columns)
+            add_span_event("extract.batch.completed", {
+                ATTR_COMPONENT_ID: self.id_,
+                ATTR_ROW_COUNT: row_count,
+                ATTR_COLUMN_COUNT: column_count,
+            })
+            set_span_attributes({
+                ATTR_ROW_COUNT: row_count,
+                ATTR_COLUMN_COUNT: column_count,
+            })
+            logger.info("Batch extraction completed successfully for: %s (rows: %d, columns: %d)",
+                       self.id_, row_count, column_count)
         elif self.method == ExtractMethod.STREAMING:
             logger.debug("Performing streaming extraction for: %s", self.id_)
+            add_span_event("extract.streaming.started", {ATTR_COMPONENT_ID: self.id_})
             self.data_registry[self.id_] = self._extract_streaming()
+            add_span_event("extract.streaming.configured", {ATTR_COMPONENT_ID: self.id_})
             logger.info("Streaming extraction completed successfully for: %s", self.id_)
         else:
             raise ValueError(f"Extraction method {self.method} is not supported for PySpark")
@@ -241,6 +286,14 @@ class ExtractFileSpark(ExtractSpark, ExtractFileModel):
             Row count is logged for monitoring and debugging purposes.
         """
         logger.debug("Reading files in batch mode - path: %s, format: %s", self.location, self.data_format)
+
+        # Add location-specific span attributes
+        add_span_event("extract.file.reading", {
+            ATTR_COMPONENT_ID: self.id_,
+            ATTR_DATA_LOCATION: self.location,
+            ATTR_DATA_FORMAT: self.data_format,
+        })
+        set_span_attributes({ATTR_DATA_LOCATION: self.location})
 
         dataframe = self.spark.session.read.load(
             path=self.location,

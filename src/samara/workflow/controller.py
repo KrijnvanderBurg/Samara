@@ -13,7 +13,15 @@ from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 from samara import BaseModel
 from samara.exceptions import SamaraIOError, SamaraWorkflowConfigurationError
-from samara.telemetry import trace_span
+from samara.telemetry import (
+    ATTR_WORKFLOW_ENABLED,
+    ATTR_WORKFLOW_ID,
+    add_span_event,
+    set_span_attributes,
+    set_span_error,
+    set_span_ok,
+    trace_span,
+)
 from samara.utils.file import FileHandlerContext
 from samara.utils.logger import get_logger
 from samara.workflow.jobs import JobUnion
@@ -142,23 +150,37 @@ class WorkflowController(BaseModel):
             enabled, jobs).
         """
         logger.info("Creating WorkflowManager from file: %s", filepath)
+        add_span_event("workflow.config.loading", {"config.filepath": str(filepath)})
 
         try:
             handler = FileHandlerContext.from_filepath(filepath=filepath)
             dict_: dict[str, Any] = handler.read()
         except (OSError, ValueError) as e:
             logger.error("Failed to read workflow configuration file: %s", e)
+            set_span_error(e, f"Cannot load workflow configuration from '{filepath}'")
             raise SamaraIOError(f"Cannot load workflow configuration from '{filepath}': {e}") from e
 
         try:
             workflow = cls(**dict_[WORKFLOW])
+            set_span_attributes({
+                ATTR_WORKFLOW_ID: workflow.id_,
+                ATTR_WORKFLOW_ENABLED: workflow.enabled,
+                "samara.workflow.job_count": len(workflow.jobs),
+            })
+            add_span_event("workflow.config.loaded", {
+                ATTR_WORKFLOW_ID: workflow.id_,
+                "samara.workflow.job_count": len(workflow.jobs),
+            })
             logger.info("Successfully created WorkflowManager from configuration file: %s", filepath)
+            set_span_ok()
             return workflow
         except KeyError as e:
+            set_span_error(e, f"Missing 'workflow' section in configuration file '{filepath}'")
             raise SamaraWorkflowConfigurationError(
                 f"Missing 'workflow' section in configuration file '{filepath}'"
             ) from e
         except ValidationError as e:
+            set_span_error(e, f"Invalid workflow configuration in file '{filepath}'")
             raise SamaraWorkflowConfigurationError(f"Invalid workflow configuration in file '{filepath}': {e}") from e
 
     @classmethod
@@ -212,14 +234,41 @@ class WorkflowController(BaseModel):
             >>> workflow = WorkflowController.from_file(Path("config.json"))
             >>> workflow.execute_all()
         """
+        set_span_attributes({
+            ATTR_WORKFLOW_ID: self.id_,
+            ATTR_WORKFLOW_ENABLED: self.enabled,
+            "samara.workflow.job_count": len(self.jobs),
+        })
+
         if not self.enabled:
             logger.info("Workflow is disabled")
+            add_span_event("workflow.skipped", {"reason": "workflow_disabled"})
+            set_span_ok()
             return
 
         logger.info("Executing all %d jobs in ETL pipeline", len(self.jobs))
+        add_span_event("workflow.execution.started", {
+            ATTR_WORKFLOW_ID: self.id_,
+            "samara.workflow.job_count": len(self.jobs),
+        })
 
         for i, job in enumerate(self.jobs):
-            logger.info("Executing job %d/%d: %s", i + 1, len(self.jobs), job.id_)
+            job_index = i + 1
+            logger.info("Executing job %d/%d: %s", job_index, len(self.jobs), job.id_)
+            add_span_event("workflow.job.starting", {
+                "samara.job.index": job_index,
+                "samara.job.total": len(self.jobs),
+                "samara.job.id": job.id_,
+            })
             job.execute()
+            add_span_event("workflow.job.completed", {
+                "samara.job.index": job_index,
+                "samara.job.id": job.id_,
+            })
 
         logger.info("All jobs in ETL pipeline executed successfully")
+        add_span_event("workflow.execution.completed", {
+            ATTR_WORKFLOW_ID: self.id_,
+            "samara.workflow.jobs_executed": len(self.jobs),
+        })
+        set_span_ok()

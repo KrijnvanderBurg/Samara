@@ -1,12 +1,31 @@
 """Unit tests for OpenTelemetry telemetry setup."""
 
+import time
 from unittest.mock import patch
 
 from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.trace import StatusCode
 
-from samara.telemetry import get_parent_context, get_tracer, setup_telemetry, trace_span
+from samara.telemetry import (
+    ATTR_COMPONENT_ID,
+    ATTR_DURATION_MS,
+    ATTR_ERROR_MESSAGE,
+    ATTR_ERROR_TYPE,
+    ATTR_ROW_COUNT,
+    SpanTimer,
+    add_span_event,
+    create_span,
+    get_current_span,
+    get_parent_context,
+    get_tracer,
+    set_span_attributes,
+    set_span_error,
+    set_span_ok,
+    setup_telemetry,
+    trace_span,
+)
 
 
 class TestTelemetrySetup:
@@ -300,3 +319,222 @@ class TestTraceSpanDecorator:
 
         result = parent_function()
         assert result == 42
+
+
+class TestSpanHelpers:
+    """Test cases for span helper functions."""
+
+    def test_get_current_span__returns_span(self) -> None:
+        """Test get_current_span returns a span object."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span"):
+            span = get_current_span()
+            assert span is not None
+            assert span.is_recording()
+
+    def test_set_span_attributes__sets_string_attribute(self) -> None:
+        """Test set_span_attributes sets string attributes correctly."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            set_span_attributes({ATTR_COMPONENT_ID: "test-component"})
+
+            # Span should have the attribute set
+            assert span.is_recording()
+
+    def test_set_span_attributes__sets_numeric_attribute(self) -> None:
+        """Test set_span_attributes sets numeric attributes correctly."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            set_span_attributes({ATTR_ROW_COUNT: 1000})
+            assert span.is_recording()
+
+    def test_set_span_attributes__ignores_none_values(self) -> None:
+        """Test set_span_attributes ignores None values."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            # Should not raise when None values are provided
+            set_span_attributes({ATTR_COMPONENT_ID: None, ATTR_ROW_COUNT: 100})
+            assert span.is_recording()
+
+    def test_set_span_attributes__with_specific_span(self) -> None:
+        """Test set_span_attributes can target a specific span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            set_span_attributes({ATTR_COMPONENT_ID: "specific"}, span=span)
+            assert span.is_recording()
+
+    def test_add_span_event__adds_event(self) -> None:
+        """Test add_span_event adds an event to the span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            add_span_event("test.event.started")
+            assert span.is_recording()
+
+    def test_add_span_event__with_attributes(self) -> None:
+        """Test add_span_event adds event with attributes."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            add_span_event("test.event", {ATTR_COMPONENT_ID: "test", ATTR_ROW_COUNT: 50})
+            assert span.is_recording()
+
+    def test_add_span_event__with_specific_span(self) -> None:
+        """Test add_span_event can target a specific span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            add_span_event("test.event", span=span)
+            assert span.is_recording()
+
+
+class TestSpanErrorHandling:
+    """Test cases for span error handling functions."""
+
+    def test_set_span_error__records_exception(self) -> None:
+        """Test set_span_error records exception on span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            exception = ValueError("Test error")
+            set_span_error(exception)
+
+            # Span should be marked as error
+            assert span.is_recording()
+            # Status should be set to ERROR
+            assert span.status.status_code == StatusCode.ERROR
+
+    def test_set_span_error__with_custom_message(self) -> None:
+        """Test set_span_error with custom error message."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            exception = ValueError("Original error")
+            set_span_error(exception, message="Custom error message")
+
+            assert span.status.status_code == StatusCode.ERROR
+            assert span.status.description == "Custom error message"
+
+    def test_set_span_error__with_specific_span(self) -> None:
+        """Test set_span_error can target a specific span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            exception = RuntimeError("Test runtime error")
+            set_span_error(exception, span=span)
+
+            assert span.status.status_code == StatusCode.ERROR
+
+    def test_set_span_ok__sets_ok_status(self) -> None:
+        """Test set_span_ok sets OK status on span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            set_span_ok()
+            assert span.status.status_code == StatusCode.OK
+
+    def test_set_span_ok__with_specific_span(self) -> None:
+        """Test set_span_ok can target a specific span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            set_span_ok(span=span)
+            assert span.status.status_code == StatusCode.OK
+
+
+class TestCreateSpan:
+    """Test cases for create_span function."""
+
+    def test_create_span__returns_span(self) -> None:
+        """Test create_span returns a started span."""
+        setup_telemetry(service_name="test-service")
+
+        span = create_span("test-operation")
+        try:
+            assert span is not None
+            assert span.is_recording()
+        finally:
+            span.end()
+
+    def test_create_span__with_attributes(self) -> None:
+        """Test create_span with initial attributes."""
+        setup_telemetry(service_name="test-service")
+
+        span = create_span("test-operation", {ATTR_COMPONENT_ID: "test", ATTR_ROW_COUNT: 100})
+        try:
+            assert span.is_recording()
+        finally:
+            span.end()
+
+    def test_create_span__with_use_span_context(self) -> None:
+        """Test create_span can be used with trace.use_span."""
+        setup_telemetry(service_name="test-service")
+
+        span = create_span("test-operation")
+        with trace.use_span(span, end_on_exit=True):
+            assert span.is_recording()
+
+
+class TestSpanTimer:
+    """Test cases for SpanTimer context manager."""
+
+    def test_span_timer__records_duration(self) -> None:
+        """Test SpanTimer records duration as span attribute."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            with SpanTimer():
+                time.sleep(0.01)  # Sleep 10ms
+
+            # Duration should have been recorded
+            assert span.is_recording()
+
+    def test_span_timer__with_custom_attribute_name(self) -> None:
+        """Test SpanTimer with custom attribute name."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            with SpanTimer("custom.duration_ms"):
+                time.sleep(0.01)
+
+            assert span.is_recording()
+
+    def test_span_timer__with_specific_span(self) -> None:
+        """Test SpanTimer can target a specific span."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span") as span:
+            with SpanTimer(span=span):
+                time.sleep(0.01)
+
+            assert span.is_recording()
+
+    def test_span_timer__returns_self(self) -> None:
+        """Test SpanTimer __enter__ returns self."""
+        setup_telemetry(service_name="test-service")
+        tracer = get_tracer()
+
+        with tracer.start_as_current_span("test-span"):
+            with SpanTimer() as timer:
+                assert timer is not None

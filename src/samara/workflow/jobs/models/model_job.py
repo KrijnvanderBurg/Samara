@@ -14,7 +14,19 @@ from pydantic import Field, model_validator
 
 from samara import BaseModel
 from samara.exceptions import SamaraWorkflowError
-from samara.telemetry import trace_span
+from samara.telemetry import (
+    ATTR_JOB_ENABLED,
+    ATTR_JOB_ENGINE,
+    ATTR_JOB_EXTRACT_COUNT,
+    ATTR_JOB_ID,
+    ATTR_JOB_LOAD_COUNT,
+    ATTR_JOB_TRANSFORM_COUNT,
+    add_span_event,
+    set_span_attributes,
+    set_span_error,
+    set_span_ok,
+    trace_span,
+)
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.hooks import Hooks
 from samara.workflow.jobs.models.model_extract import ExtractModel
@@ -325,24 +337,57 @@ class JobModel(BaseModel, ABC, Generic[ExtractT, TransformT, LoadT]):
                 with context about the job, preserving the original exception
                 as the cause for debugging.
         """
+        # Set job-level span attributes for observability
+        set_span_attributes({
+            ATTR_JOB_ID: self.id_,
+            ATTR_JOB_ENGINE: self.engine_type.value,
+            ATTR_JOB_ENABLED: self.enabled,
+            ATTR_JOB_EXTRACT_COUNT: len(self.extracts),
+            ATTR_JOB_TRANSFORM_COUNT: len(self.transforms),
+            ATTR_JOB_LOAD_COUNT: len(self.loads),
+        })
+
         if not self.enabled:
             logger.info("Job '%s' is disabled. Skipping execution.", self.id_)
+            add_span_event("job.skipped", {"reason": "job_disabled", ATTR_JOB_ID: self.id_})
+            set_span_ok()
             return
 
+        add_span_event("job.hooks.on_start", {ATTR_JOB_ID: self.id_})
         self.hooks.on_start()
 
         try:
             logger.info("Starting job execution: %s", self.id_)
+            add_span_event("job.execution.started", {
+                ATTR_JOB_ID: self.id_,
+                ATTR_JOB_ENGINE: self.engine_type.value,
+                ATTR_JOB_EXTRACT_COUNT: len(self.extracts),
+                ATTR_JOB_TRANSFORM_COUNT: len(self.transforms),
+                ATTR_JOB_LOAD_COUNT: len(self.loads),
+            })
             self._execute()
             logger.info("Job completed successfully: %s", self.id_)
+            add_span_event("job.execution.completed", {ATTR_JOB_ID: self.id_})
+            add_span_event("job.hooks.on_success", {ATTR_JOB_ID: self.id_})
             self.hooks.on_success()
+            set_span_ok()
         except (ValueError, KeyError, OSError) as e:
             logger.error("Job '%s' failed: %s", self.id_, e)
+            add_span_event("job.execution.failed", {
+                ATTR_JOB_ID: self.id_,
+                "error.type": type(e).__name__,
+                "error.message": str(e),
+            })
+            set_span_error(e, f"Job '{self.id_}' execution failed")
+            add_span_event("job.hooks.on_error", {ATTR_JOB_ID: self.id_})
             self.hooks.on_error()
             raise SamaraWorkflowError(f"Error occurred during job '{self.id_}' execution") from e
         finally:
+            add_span_event("job.hooks.on_finally", {ATTR_JOB_ID: self.id_})
             self.hooks.on_finally()
+            add_span_event("job.cleanup.started", {ATTR_JOB_ID: self.id_})
             self._clear()
+            add_span_event("job.cleanup.completed", {ATTR_JOB_ID: self.id_})
 
     @abstractmethod
     def _execute(self) -> None:

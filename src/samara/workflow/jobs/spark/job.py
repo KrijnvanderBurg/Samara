@@ -11,7 +11,22 @@ import time
 
 from typing_extensions import override
 
-from samara.telemetry import trace_span
+from samara.telemetry import (
+    ATTR_COMPONENT_ID,
+    ATTR_DURATION_MS,
+    ATTR_JOB_ENGINE,
+    ATTR_JOB_EXTRACT_COUNT,
+    ATTR_JOB_ID,
+    ATTR_JOB_LOAD_COUNT,
+    ATTR_JOB_TRANSFORM_COUNT,
+    ATTR_PHASE_COMPONENT_INDEX,
+    ATTR_PHASE_COMPONENT_TOTAL,
+    ATTR_PHASE_NAME,
+    add_span_event,
+    set_span_attributes,
+    set_span_ok,
+    trace_span,
+)
 from samara.types import DataFrameRegistry, StreamingQueryRegistry
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_job import JobEngine, JobModel
@@ -127,19 +142,41 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
             Use logger with level DEBUG to see detailed timing per component.
         """
         start_time = time.time()
+
+        # Set span attributes for job-level observability
+        set_span_attributes({
+            ATTR_JOB_ID: self.id_,
+            ATTR_JOB_ENGINE: self.engine_type.value,
+            ATTR_JOB_EXTRACT_COUNT: len(self.extracts),
+            ATTR_JOB_TRANSFORM_COUNT: len(self.transforms),
+            ATTR_JOB_LOAD_COUNT: len(self.loads),
+        })
+
         logger.info(
             "Starting Spark job execution with %d extracts, %d transforms, %d loads",
             len(self.extracts),
             len(self.transforms),
             len(self.loads),
         )
+        add_span_event("spark_job.pipeline.started", {
+            ATTR_JOB_ID: self.id_,
+            ATTR_JOB_EXTRACT_COUNT: len(self.extracts),
+            ATTR_JOB_TRANSFORM_COUNT: len(self.transforms),
+            ATTR_JOB_LOAD_COUNT: len(self.loads),
+        })
 
         self._extract()
         self._transform()
         self._load()
 
-        execution_time = time.time() - start_time
-        logger.info("Spark job completed in %.2f seconds", execution_time)
+        execution_time_ms = (time.time() - start_time) * 1000
+        set_span_attributes({ATTR_DURATION_MS: execution_time_ms})
+        add_span_event("spark_job.pipeline.completed", {
+            ATTR_JOB_ID: self.id_,
+            ATTR_DURATION_MS: execution_time_ms,
+        })
+        logger.info("Spark job completed in %.2f seconds", execution_time_ms / 1000)
+        set_span_ok()
 
     @trace_span("spark_job._extract")
     def _extract(self) -> None:
@@ -157,18 +194,46 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
             Extraction is always the first phase and must succeed before transforms
             can execute. Enable DEBUG logging to see individual extractor timing.
         """
+        set_span_attributes({
+            ATTR_PHASE_NAME: "extract",
+            ATTR_PHASE_COMPONENT_TOTAL: len(self.extracts),
+        })
+
         logger.info("Starting extract phase with %d extractors", len(self.extracts))
+        add_span_event("phase.extract.started", {
+            ATTR_PHASE_NAME: "extract",
+            ATTR_PHASE_COMPONENT_TOTAL: len(self.extracts),
+        })
         start_time = time.time()
 
         for i, extract in enumerate(self.extracts):
+            component_index = i + 1
             extract_start_time = time.time()
-            logger.debug("Running extractor %d/%d: %s", i, len(self.extracts), extract.id_)
-            extract.extract()
-            extract_time = time.time() - extract_start_time
-            logger.debug("Extractor %s completed in %.2f seconds", extract.id_, extract_time)
+            logger.debug("Running extractor %d/%d: %s", component_index, len(self.extracts), extract.id_)
+            add_span_event("component.extract.started", {
+                ATTR_COMPONENT_ID: extract.id_,
+                ATTR_PHASE_COMPONENT_INDEX: component_index,
+                ATTR_PHASE_COMPONENT_TOTAL: len(self.extracts),
+            })
 
-        phase_time = time.time() - start_time
-        logger.info("Extract phase completed successfully in %.2f seconds", phase_time)
+            extract.extract()
+
+            extract_time_ms = (time.time() - extract_start_time) * 1000
+            add_span_event("component.extract.completed", {
+                ATTR_COMPONENT_ID: extract.id_,
+                ATTR_PHASE_COMPONENT_INDEX: component_index,
+                ATTR_DURATION_MS: extract_time_ms,
+            })
+            logger.debug("Extractor %s completed in %.2f seconds", extract.id_, extract_time_ms / 1000)
+
+        phase_time_ms = (time.time() - start_time) * 1000
+        add_span_event("phase.extract.completed", {
+            ATTR_PHASE_NAME: "extract",
+            ATTR_DURATION_MS: phase_time_ms,
+            "samara.phase.components_processed": len(self.extracts),
+        })
+        logger.info("Extract phase completed successfully in %.2f seconds", phase_time_ms / 1000)
+        set_span_ok()
 
     @trace_span("spark_job._transform")
     def _transform(self) -> None:
@@ -187,18 +252,46 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
             Transform dependencies are resolved by component ordering in the
             configuration. Enable DEBUG logging to see individual transformer timing.
         """
+        set_span_attributes({
+            ATTR_PHASE_NAME: "transform",
+            ATTR_PHASE_COMPONENT_TOTAL: len(self.transforms),
+        })
+
         logger.info("Starting transform phase with %d transformers", len(self.transforms))
+        add_span_event("phase.transform.started", {
+            ATTR_PHASE_NAME: "transform",
+            ATTR_PHASE_COMPONENT_TOTAL: len(self.transforms),
+        })
         start_time = time.time()
 
         for i, transform in enumerate(self.transforms):
+            component_index = i + 1
             transform_start_time = time.time()
-            logger.debug("Running transformer %d/%d: %s", i, len(self.transforms), transform.id_)
-            transform.transform()
-            transform_time = time.time() - transform_start_time
-            logger.debug("Transformer %s completed in %.2f seconds", transform.id_, transform_time)
+            logger.debug("Running transformer %d/%d: %s", component_index, len(self.transforms), transform.id_)
+            add_span_event("component.transform.started", {
+                ATTR_COMPONENT_ID: transform.id_,
+                ATTR_PHASE_COMPONENT_INDEX: component_index,
+                ATTR_PHASE_COMPONENT_TOTAL: len(self.transforms),
+            })
 
-        phase_time = time.time() - start_time
-        logger.info("Transform phase completed successfully in %.2f seconds", phase_time)
+            transform.transform()
+
+            transform_time_ms = (time.time() - transform_start_time) * 1000
+            add_span_event("component.transform.completed", {
+                ATTR_COMPONENT_ID: transform.id_,
+                ATTR_PHASE_COMPONENT_INDEX: component_index,
+                ATTR_DURATION_MS: transform_time_ms,
+            })
+            logger.debug("Transformer %s completed in %.2f seconds", transform.id_, transform_time_ms / 1000)
+
+        phase_time_ms = (time.time() - start_time) * 1000
+        add_span_event("phase.transform.completed", {
+            ATTR_PHASE_NAME: "transform",
+            ATTR_DURATION_MS: phase_time_ms,
+            "samara.phase.components_processed": len(self.transforms),
+        })
+        logger.info("Transform phase completed successfully in %.2f seconds", phase_time_ms / 1000)
+        set_span_ok()
 
     @trace_span("spark_job._load")
     def _load(self) -> None:
@@ -218,18 +311,46 @@ class JobSpark(JobModel[ExtractSparkUnion, TransformSparkUnion, LoadSparkUnion])
             successfully before data is written. Enable DEBUG logging to see
             individual loader timing.
         """
+        set_span_attributes({
+            ATTR_PHASE_NAME: "load",
+            ATTR_PHASE_COMPONENT_TOTAL: len(self.loads),
+        })
+
         logger.info("Starting load phase with %d loaders", len(self.loads))
+        add_span_event("phase.load.started", {
+            ATTR_PHASE_NAME: "load",
+            ATTR_PHASE_COMPONENT_TOTAL: len(self.loads),
+        })
         start_time = time.time()
 
         for i, load in enumerate(self.loads):
+            component_index = i + 1
             load_start_time = time.time()
-            logger.debug("Running loader %d/%d: %s", i, len(self.loads), load.id_)
-            load.load()
-            load_time = time.time() - load_start_time
-            logger.debug("Loader %s completed in %.2f seconds", load.id_, load_time)
+            logger.debug("Running loader %d/%d: %s", component_index, len(self.loads), load.id_)
+            add_span_event("component.load.started", {
+                ATTR_COMPONENT_ID: load.id_,
+                ATTR_PHASE_COMPONENT_INDEX: component_index,
+                ATTR_PHASE_COMPONENT_TOTAL: len(self.loads),
+            })
 
-        phase_time = time.time() - start_time
-        logger.info("Load phase completed successfully in %.2f seconds", phase_time)
+            load.load()
+
+            load_time_ms = (time.time() - load_start_time) * 1000
+            add_span_event("component.load.completed", {
+                ATTR_COMPONENT_ID: load.id_,
+                ATTR_PHASE_COMPONENT_INDEX: component_index,
+                ATTR_DURATION_MS: load_time_ms,
+            })
+            logger.debug("Loader %s completed in %.2f seconds", load.id_, load_time_ms / 1000)
+
+        phase_time_ms = (time.time() - start_time) * 1000
+        add_span_event("phase.load.completed", {
+            ATTR_PHASE_NAME: "load",
+            ATTR_DURATION_MS: phase_time_ms,
+            "samara.phase.components_processed": len(self.loads),
+        })
+        logger.info("Load phase completed successfully in %.2f seconds", phase_time_ms / 1000)
+        set_span_ok()
 
     @override
     def _clear(self) -> None:

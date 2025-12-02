@@ -13,6 +13,18 @@ from typing import Any, Literal
 from pydantic import Field
 from pyspark.sql.streaming.query import StreamingQuery
 
+from samara.telemetry import (
+    ATTR_COLUMN_COUNT,
+    ATTR_COMPONENT_ID,
+    ATTR_COMPONENT_TYPE,
+    ATTR_DATA_FORMAT,
+    ATTR_DATA_LOCATION,
+    ATTR_DATA_METHOD,
+    ATTR_ROW_COUNT,
+    add_span_event,
+    get_current_span,
+    set_span_attributes,
+)
 from samara.types import DataFrameRegistry, StreamingQueryRegistry
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_load import LoadMethod, LoadModel, LoadModelFile
@@ -179,28 +191,81 @@ class LoadSpark(LoadModel, ABC):
             self.method.value,
         )
 
+        # Add span attributes for load observability
+        span = get_current_span()
+        if span.is_recording():
+            set_span_attributes({
+                ATTR_COMPONENT_ID: self.id_,
+                ATTR_COMPONENT_TYPE: "load",
+                ATTR_DATA_METHOD: self.method.value,
+                ATTR_DATA_LOCATION: self.location,
+                "samara.load.upstream_id": self.upstream_id,
+            })
+
+        add_span_event("load.config.applied", {
+            ATTR_COMPONENT_ID: self.id_,
+            "samara.load.options_count": len(self.options),
+        })
+
         logger.debug("Adding Spark configurations: %s", self.options)
         self.spark.add_configs(options=self.options)
 
         logger.debug("Copying dataframe from %s to %s", self.upstream_id, self.id_)
         self.data_registry[self.id_] = self.data_registry[self.upstream_id]
 
+        # Record data stats before load
+        row_count = self.data_registry[self.id_].count()
+        column_count = len(self.data_registry[self.id_].columns)
+        add_span_event("load.data.received", {
+            ATTR_COMPONENT_ID: self.id_,
+            ATTR_ROW_COUNT: row_count,
+            ATTR_COLUMN_COUNT: column_count,
+            "samara.load.upstream_id": self.upstream_id,
+        })
+        set_span_attributes({
+            ATTR_ROW_COUNT: row_count,
+            ATTR_COLUMN_COUNT: column_count,
+        })
+
         if self.method == LoadMethod.BATCH:
             logger.debug("Performing batch load for: %s", self.id_)
+            add_span_event("load.batch.started", {
+                ATTR_COMPONENT_ID: self.id_,
+                ATTR_DATA_LOCATION: self.location,
+            })
             self._load_batch()
+            add_span_event("load.batch.completed", {
+                ATTR_COMPONENT_ID: self.id_,
+                ATTR_ROW_COUNT: row_count,
+                ATTR_DATA_LOCATION: self.location,
+            })
             logger.info("Batch load completed successfully for: %s", self.id_)
         elif self.method == LoadMethod.STREAMING:
             logger.debug("Performing streaming load for: %s", self.id_)
+            add_span_event("load.streaming.started", {ATTR_COMPONENT_ID: self.id_})
             self.streaming_query_registry[self.id_] = self._load_streaming()
+            add_span_event("load.streaming.configured", {ATTR_COMPONENT_ID: self.id_})
             logger.info("Streaming load started successfully for: %s", self.id_)
         else:
             raise ValueError(f"Loading method {self.method} is not supported for PySpark")
 
         # Export schema if location is specified
         if self.schema_export:
+            add_span_event("load.schema.exporting", {
+                ATTR_COMPONENT_ID: self.id_,
+                "samara.load.schema_export_path": self.schema_export,
+            })
             schema_json = json.dumps(self.data_registry[self.id_].schema.jsonValue())
             self._export_schema(schema_json, self.schema_export)
+            add_span_event("load.schema.exported", {
+                ATTR_COMPONENT_ID: self.id_,
+                "samara.load.schema_export_path": self.schema_export,
+            })
 
+        add_span_event("load.completed", {
+            ATTR_COMPONENT_ID: self.id_,
+            ATTR_ROW_COUNT: row_count,
+        })
         logger.info("Load operation completed successfully for: %s", self.id_)
 
 
@@ -286,6 +351,18 @@ class LoadFileSpark(LoadSpark, LoadModelFile):
             self.mode,
         )
 
+        # Add file-specific span attributes
+        set_span_attributes({
+            ATTR_DATA_FORMAT: self.data_format,
+            "samara.load.mode": self.mode,
+        })
+        add_span_event("load.file.writing", {
+            ATTR_COMPONENT_ID: self.id_,
+            ATTR_DATA_LOCATION: self.location,
+            ATTR_DATA_FORMAT: self.data_format,
+            "samara.load.mode": self.mode,
+        })
+
         row_count = self.data_registry[self.id_].count()
         logger.debug("Writing %d rows to %s", row_count, self.location)
 
@@ -296,6 +373,11 @@ class LoadFileSpark(LoadSpark, LoadModelFile):
             **self.options,
         )
 
+        add_span_event("load.file.written", {
+            ATTR_COMPONENT_ID: self.id_,
+            ATTR_ROW_COUNT: row_count,
+            ATTR_DATA_LOCATION: self.location,
+        })
         logger.info("Batch write successful - wrote %d rows to %s", row_count, self.location)
 
     def _load_streaming(self) -> StreamingQuery:
@@ -323,6 +405,11 @@ class LoadFileSpark(LoadSpark, LoadModelFile):
             **self.options,
         )
 
+        add_span_event("load.streaming.query_started", {
+            ATTR_COMPONENT_ID: self.id_,
+            "samara.streaming.query_id": str(streaming_query.id),
+            ATTR_DATA_LOCATION: self.location,
+        })
         logger.info("Streaming write started successfully for %s, query ID: %s", self.location, streaming_query.id)
         return streaming_query
 

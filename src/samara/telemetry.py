@@ -1,9 +1,10 @@
 """OpenTelemetry telemetry setup for distributed tracing and logs.
 
-This module provides a simple OpenTelemetry configuration for:
+This module provides comprehensive OpenTelemetry instrumentation for:
 1. Continuing existing traces via W3C trace context
 2. Exporting traces to any OTLP-compatible backend (OTEL Collector, Jaeger, etc.)
 3. Exporting logs to any OTLP-compatible backend (OTEL Collector, Loki, etc.)
+4. Rich span attributes and events for deep observability into pipeline execution
 
 The design supports flexible backend configuration - use OTEL Collector as a central
 aggregation point, or send directly to specific backends. Each signal (traces, logs)
@@ -12,10 +13,8 @@ can be configured independently for maximum deployment flexibility.
 
 import functools
 import logging
+import time
 from collections.abc import Callable
-
-# import platform
-# from os import getpid
 from typing import Any, ParamSpec, TypeVar
 
 from opentelemetry import context, trace
@@ -28,6 +27,7 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.trace import Span, SpanKind, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from samara import get_run_id
@@ -40,6 +40,35 @@ settings: AppSettings = get_settings()
 # Type variables for generic decorator support
 P = ParamSpec("P")
 T = TypeVar("T")
+
+# Semantic attribute names for workflow telemetry
+# Following OpenTelemetry semantic conventions where applicable
+ATTR_WORKFLOW_ID = "samara.workflow.id"
+ATTR_WORKFLOW_ENABLED = "samara.workflow.enabled"
+ATTR_JOB_ID = "samara.job.id"
+ATTR_JOB_ENGINE = "samara.job.engine"
+ATTR_JOB_ENABLED = "samara.job.enabled"
+ATTR_JOB_EXTRACT_COUNT = "samara.job.extract_count"
+ATTR_JOB_TRANSFORM_COUNT = "samara.job.transform_count"
+ATTR_JOB_LOAD_COUNT = "samara.job.load_count"
+ATTR_PHASE_NAME = "samara.phase.name"
+ATTR_PHASE_COMPONENT_INDEX = "samara.phase.component_index"
+ATTR_PHASE_COMPONENT_TOTAL = "samara.phase.component_total"
+ATTR_COMPONENT_ID = "samara.component.id"
+ATTR_COMPONENT_TYPE = "samara.component.type"
+ATTR_DATA_FORMAT = "samara.data.format"
+ATTR_DATA_LOCATION = "samara.data.location"
+ATTR_DATA_METHOD = "samara.data.method"
+ATTR_ROW_COUNT = "samara.data.row_count"
+ATTR_ROW_COUNT_BEFORE = "samara.data.row_count_before"
+ATTR_ROW_COUNT_AFTER = "samara.data.row_count_after"
+ATTR_COLUMN_COUNT = "samara.data.column_count"
+ATTR_TRANSFORM_FUNCTION_TYPE = "samara.transform.function_type"
+ATTR_TRANSFORM_FUNCTION_INDEX = "samara.transform.function_index"
+ATTR_TRANSFORM_FUNCTION_TOTAL = "samara.transform.function_total"
+ATTR_DURATION_MS = "samara.duration_ms"
+ATTR_ERROR_TYPE = "samara.error.type"
+ATTR_ERROR_MESSAGE = "samara.error.message"
 
 
 def setup_telemetry(
@@ -259,3 +288,218 @@ def get_parent_context(traceparent: str | None = None, tracestate: str | None = 
 
     logger.debug("Extracted parent context from traceparent: %s", traceparent)
     return parent_context
+
+
+def get_current_span() -> Span:
+    """Get the current active span from the trace context.
+
+    Returns:
+        The currently active Span from OpenTelemetry context.
+    """
+    return trace.get_current_span()
+
+
+def set_span_attributes(attributes: dict[str, Any], span: Span | None = None) -> None:
+    """Set multiple attributes on a span.
+
+    Convenience function for setting multiple attributes at once on the
+    current span or a specific span. Handles type conversion for common
+    Python types and filters out None values.
+
+    Args:
+        attributes: Dictionary of attribute key-value pairs. Keys should use
+            the semantic attribute constants defined in this module.
+        span: Optional span to set attributes on. If None, uses current span.
+
+    Example:
+        >>> set_span_attributes({
+        ...     ATTR_JOB_ID: "customer_etl",
+        ...     ATTR_ROW_COUNT: 1500,
+        ...     ATTR_DURATION_MS: 234.5
+        ... })
+    """
+    target_span = span or get_current_span()
+    if not target_span.is_recording():
+        return
+
+    for key, value in attributes.items():
+        if value is not None:
+            # Convert to OTEL-compatible types
+            if value is True or value is False:
+                target_span.set_attribute(key, value)
+            else:
+                target_span.set_attribute(key, _convert_attribute_value(value))
+
+
+def add_span_event(
+    name: str,
+    attributes: dict[str, Any] | None = None,
+    span: Span | None = None,
+) -> None:
+    """Add a timestamped event to a span.
+
+    Events mark significant points in a span's lifecycle, such as starting
+    a new phase, completing a step, or noting important state changes.
+
+    Args:
+        name: Human-readable name for the event.
+        attributes: Optional dictionary of event attributes providing
+            additional context about the event.
+        span: Optional span to add event to. If None, uses current span.
+
+    Example:
+        >>> add_span_event("extract.started", {
+        ...     ATTR_COMPONENT_ID: "customers_extract",
+        ...     ATTR_DATA_FORMAT: "parquet"
+        ... })
+    """
+    target_span = span or get_current_span()
+    if not target_span.is_recording():
+        return
+
+    event_attrs: dict[str, Any] = {}
+    if attributes:
+        for key, value in attributes.items():
+            if value is not None:
+                event_attrs[key] = _convert_attribute_value(value)
+
+    target_span.add_event(name, attributes=event_attrs if event_attrs else None)
+
+
+def set_span_error(
+    exception: Exception,
+    message: str | None = None,
+    span: Span | None = None,
+) -> None:
+    """Mark a span as errored with exception details.
+
+    Records the exception on the span and sets the span status to ERROR.
+    This provides comprehensive error tracking in traces.
+
+    Args:
+        exception: The exception that occurred.
+        message: Optional custom error message. If not provided, uses
+            the exception's string representation.
+        span: Optional span to set error on. If None, uses current span.
+    """
+    target_span = span or get_current_span()
+    if not target_span.is_recording():
+        return
+
+    target_span.record_exception(exception)
+    error_message = message or str(exception)
+    target_span.set_status(trace.Status(StatusCode.ERROR, error_message))
+    target_span.set_attribute(ATTR_ERROR_TYPE, type(exception).__name__)
+    target_span.set_attribute(ATTR_ERROR_MESSAGE, error_message)
+
+
+def set_span_ok(span: Span | None = None) -> None:
+    """Mark a span as successfully completed.
+
+    Args:
+        span: Optional span to set status on. If None, uses current span.
+    """
+    target_span = span or get_current_span()
+    if target_span.is_recording():
+        target_span.set_status(trace.Status(StatusCode.OK))
+
+
+def create_span(
+    name: str,
+    attributes: dict[str, Any] | None = None,
+    kind: SpanKind = SpanKind.INTERNAL,
+) -> Span:
+    """Create and start a new span with optional attributes.
+
+    Provides a convenient way to create spans with initial attributes
+    for use with context managers or manual span management.
+
+    Args:
+        name: Name of the span identifying the operation.
+        attributes: Optional initial attributes to set on the span.
+        kind: SpanKind indicating the type of span (default: INTERNAL).
+
+    Returns:
+        A started Span that should be ended when the operation completes.
+
+    Example:
+        >>> span = create_span("process_batch", {ATTR_ROW_COUNT: 100})
+        >>> with trace.use_span(span, end_on_exit=True):
+        ...     process_data()
+    """
+    tracer = get_tracer()
+    span = tracer.start_span(name, kind=kind)
+
+    if attributes:
+        for key, value in attributes.items():
+            if value is not None:
+                span.set_attribute(key, _convert_attribute_value(value))
+
+    return span
+
+
+def _convert_attribute_value(value: Any) -> str | int | float | bool:
+    """Convert a value to an OTEL-compatible attribute type.
+
+    OpenTelemetry accepts str, int, float, bool for attribute values.
+    This function converts other types to strings.
+
+    Args:
+        value: Value to convert.
+
+    Returns:
+        Converted value safe for OTEL attributes.
+    """
+    if value is None:
+        return ""
+    if value is True:
+        return True
+    if value is False:
+        return False
+    if type(value) in (int, float, str):
+        return value
+    return str(value)
+
+
+class SpanTimer:
+    """Context manager for timing operations and recording duration.
+
+    Measures elapsed time for a code block and records it as a span
+    attribute. Useful for capturing detailed timing information within
+    a parent span.
+
+    Attributes:
+        attribute_name: The attribute key for storing duration.
+        span: The span to record duration on.
+
+    Example:
+        >>> with SpanTimer(ATTR_DURATION_MS):
+        ...     perform_expensive_operation()
+    """
+
+    def __init__(
+        self,
+        attribute_name: str = ATTR_DURATION_MS,
+        span: Span | None = None,
+    ) -> None:
+        """Initialize the timer.
+
+        Args:
+            attribute_name: Attribute key for storing duration in milliseconds.
+            span: Optional span to record on. If None, uses current span.
+        """
+        self.attribute_name = attribute_name
+        self.span = span
+        self._start_time: float = 0.0
+
+    def __enter__(self) -> "SpanTimer":
+        """Start timing."""
+        self._start_time = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Stop timing and record duration."""
+        duration_ms = (time.perf_counter() - self._start_time) * 1000
+        target_span = self.span or get_current_span()
+        if target_span.is_recording():
+            target_span.set_attribute(self.attribute_name, duration_ms)
