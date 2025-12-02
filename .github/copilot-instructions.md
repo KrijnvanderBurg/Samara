@@ -1,36 +1,65 @@
-# Samara: Configuration-Driven Data Processing Framework
+# Samara
+Samara is a Python framework for building ETL data pipelines through JSON/YAML configuration files instead of code. Users define data sources, transformations, outputs, and alerts in config files. Samara parses and validates these configs using Pydantic models, then executes the pipeline on Apache Spark (with Polars support in development).
 
-Samara is a framework that lets you **define entire data pipelines through configuration files rather than code**. This declarative approach is the core approach - transforming data engineering from a programming task to a configuration exercise.
+## Project structure
+- `src/samara/` - Application source code
+  - `workflow/` - ETL pipeline components (extracts, transforms, loads)
+  - `alert/` - Notification system (email, HTTP webhooks, file channels)
+  - `cli.py` - CLI commands (validate, run, export-schema)
+- `tests/` - Unit, integration, and end-to-end tests
+  - `unit/` - Component tests
+  - `e2e/` - Full pipeline tests with real configs
+  - `conftest.py` - Shared pytest fixtures
+- `docs/` - User documentation (Markdown)
+- `examples/` - Sample pipeline configurations
 
-## Core Concept
+## Development environment
+All dependencies and tool configurations are defined in `pyproject.toml`. Poetry virtualenv is disabled - dependencies are installed directly:
 
-**Configuration over code**: Define complete data pipelines in JSON with:
-- Data sources and connection details
-- Transformation chains and their parameters
-- Output destinations and formats
-- Event-triggered actions and alerts
+```bash
+.github/scripts/poetry-install.sh    # Install dependencies
+```
 
-## Key Components
+## Running tests
+```bash
+.github/scripts/run-pytest.sh        # Run all tests with coverage
+```
 
-### Data Pipeline Definition
-- **Extracts**: Configure data sources (CSV, JSON, databases) with all connection parameters
-- **Transforms**: Chain operations (`select`, `filter`, `join`, `cast`) through simple JSON configuration
-- **Loads**: Define outputs with formats, paths, and write modes
+## Code quality checks
+Run these before committing:
 
-### Engine Flexibility
-- **Multi-engine architecture**: Support for different ETL engines implementations like Pandas, Polars and more.
-- **Engine-agnostic configurations**: Same pipeline definition works across different processing backends
+```bash
+.github/scripts/run-ruff-formatter.sh    # Format code
+.github/scripts/run-ruff-linter.sh       # Lint with ruff
+.github/scripts/run-mypy.sh              # Type check with mypy
+.github/scripts/run-pyright.sh           # Type check with pyright
+.github/scripts/run-pylint.sh            # Lint with pylint
+.github/scripts/run-flake8.sh            # Lint with flake8
+.github/scripts/run-bandit.sh            # Security checks
+.github/scripts/run-semgrep.sh           # Security pattern matching
+.github/scripts/run-vulture.sh           # Dead code detection
+.github/scripts/run-trufflehog.sh        # Secret scanning
+```
 
-### Auxiliary Systems
-- **Alert System**: Configurable notifications via email, HTTP webhooks, and files based on rule-based triggers. Extendable to any communication platform.
-- **Event Hooks**: Execute custom actions at key pipeline stages (`onStart`, `onFailure`, `onSuccess`, `onFinally`). Extendable to any custom logic.
+## Building package and documentation
+```bash
+.github/scripts/run-build-package.sh     # Build Python package
+.github/scripts/run-sphinx.sh docs/      # Build Sphinx documentation
+```
 
-## Benefits
+## Running pipelines
+Execute a pipeline with configuration files:
 
-- **Standardization**: Consistent pipeline patterns across projects and teams
-- **Maintainability**: Changes require updating JSON, not refactoring code
-- **Accessibility**: Pipeline logic becomes readable to non-developers
-- **Version Control**: Pipeline definitions evolve with clear diffs in version control
-- **Reduced Development Time**: Eliminate boilerplate code for common operations
+```bash
+python -m samara run \
+  --alert-filepath examples/yaml_products_cleanup/alert.yaml \
+  --workflow-filepath examples/yaml_products_cleanup/job.yaml
+```
 
-By moving pipeline definition from code to configuration, Samara makes data processing more accessible, consistent, and maintainable while providing the flexibility to extend with custom transforms when needed.
+Validate configurations without running:
+
+```bash
+python -m samara validate \
+  --alert-filepath <path> \
+  --workflow-filepath <path>
+```
