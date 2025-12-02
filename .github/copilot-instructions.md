@@ -44,7 +44,7 @@ Run these before committing:
 ## Building package and documentation
 ```bash
 .github/scripts/run-build-package.sh     # Build Python package
-.github/scripts/run-sphinx.sh docs/      # Build Sphinx documentation
+.github/scripts/run-sphinx.sh            # Build Sphinx documentation
 ```
 
 ## Running pipelines

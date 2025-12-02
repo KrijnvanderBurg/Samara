@@ -356,9 +356,6 @@
 							"label": "sphinx build docs",
 							"type": "shell",
 							"command": "${workspaceFolder}/.github/scripts/run-sphinx.sh",
-							"args": [
-								"${workspaceFolder}/docs/" // docs dirpath
-							],
 							"presentation": {
 								"panel": "dedicated",
 								"clear": true
