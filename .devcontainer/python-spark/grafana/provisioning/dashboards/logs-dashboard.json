@@ -1,10 +1,10 @@
 {
   "title": "Samara Logs Dashboard",
   "uid": "samara-logs",
-  "tags": ["samara", "logs"],
+  "tags": ["samara", "logs", "metrics"],
   "timezone": "browser",
   "schemaVersion": 38,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": {
     "from": "now-6h",
@@ -12,47 +12,27 @@
   },
   "panels": [
     {
-      "id": 1,
-      "type": "logs",
-      "title": "Samara Application Logs",
+      "collapsed": false,
       "gridPos": {
-        "h": 12,
+        "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
       },
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "{service_name=\"samara\"}",
-          "queryType": "range",
-          "editorMode": "code"
-        }
-      ],
-      "options": {
-        "showTime": true,
-        "showLabels": true,
-        "showCommonLabels": false,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      }
+      "id": 200,
+      "panels": [],
+      "title": "Command Execution Metrics",
+      "type": "row"
     },
     {
-      "id": 2,
-      "type": "logs",
-      "title": "Error Logs",
+      "id": 20,
+      "type": "timeseries",
+      "title": "Command Executions Over Time",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 1
       },
       "datasource": {
         "type": "loki",
@@ -61,58 +41,28 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"samara\"} |~ \"(?i)(error|exception|failed)\"",
+          "expr": "sum by (command) (count_over_time({service_name=\"samara\"} |~ \"Starting (validation|workflow execution|export-schema) command\" | pattern `<_> <command> command` [$__auto]))",
           "queryType": "range",
+          "legendFormat": "{{command}}",
           "editorMode": "code"
         }
       ],
-      "options": {
-        "showTime": true,
-        "showLabels": true,
-        "wrapLogMessage": true,
-        "enableLogDetails": true,
-        "sortOrder": "Descending"
-      }
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "Log Volume by Level",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 12
-      },
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (severity) (count_over_time({service_name=\"samara\"} [$__interval]))",
-          "queryType": "range",
-          "legendFormat": "{{severity}}",
-          "editorMode": "code"
-        }
-      ],
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "orientation": "auto",
-        "textMode": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        }
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
-          "mappings": [],
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "auto",
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -123,17 +73,29 @@
             ]
           }
         }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["sum", "mean"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
-      "id": 4,
-      "type": "table",
-      "title": "Recent Log Entries",
+      "id": 21,
+      "type": "stat",
+      "title": "Commands Executed (Total)",
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 20
+        "w": 12,
+        "x": 12,
+        "y": 1
       },
       "datasource": {
         "type": "loki",
@@ -142,31 +104,1281 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"samara\"}",
-          "queryType": "instant",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting validation command\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Validate",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Run Pipeline",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting export-schema command\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Export Schema",
           "editorMode": "code"
         }
       ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Job Success vs Failure Rate",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Success",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(error|failed|exception)\" | severity=\"ERROR\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Failure",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "showPoints": "auto",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failure"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["sum"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "gauge",
+      "title": "Overall Success Rate",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__range]))",
+          "queryType": "range",
+          "legendFormat": "Success",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range]))",
+          "queryType": "range",
+          "legendFormat": "Total",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
       "transformations": [
         {
-          "id": "organize",
+          "id": "calculateField",
           "options": {
-            "excludeByName": {},
-            "indexByName": {},
-            "renameByName": {
-              "Time": "Timestamp",
-              "Line": "Message",
-              "severity": "Level"
+            "mode": "binary",
+            "binary": {
+              "left": "Success",
+              "operator": "/",
+              "right": "Total"
+            },
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "Success / Total",
+              "operator": "*",
+              "right": "100"
+            },
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 201,
+      "panels": [],
+      "title": "Pipeline Phase Performance",
+      "type": "row"
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Phase Execution Times (Extracted from Logs)",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "queryType": "range",
+          "legendFormat": "Extract Phase",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "queryType": "range",
+          "legendFormat": "Transform Phase",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "queryType": "range",
+          "legendFormat": "Load Phase",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "auto",
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Extract Phase"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Transform Phase"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Load Phase"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["mean", "max", "min"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Phase Execution Counts",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting extract phase\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Extract",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting transform phase\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Transform",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting load phase\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Load",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "Average Phase Duration",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 26
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Extract",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Transform",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Load",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 8
+              }
+            ]
+          },
+          "unit": "s",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 27,
+      "type": "bargauge",
+      "title": "Max Phase Duration",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 26
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Extract",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Transform",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "max_over_time({service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Load",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 20,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 202,
+      "panels": [],
+      "title": "Alert System Monitoring",
+      "type": "row"
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Alert Sending Activity",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Alert sent successfully\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Alerts Sent",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Failed to send alert\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Failed Alerts",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "showPoints": "auto"
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Alerts Sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed Alerts"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["sum"]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "piechart",
+      "title": "Alert Channel Distribution",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (channel) (count_over_time({service_name=\"samara\"} |~ \"Sending alert via (email|http|file)\" | pattern `via <channel>` [$__range]))",
+          "queryType": "range",
+          "legendFormat": "{{channel}}",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "pie",
+        "displayLabels": ["percent"]
+      }
+    },
+    {
+      "id": 30,
+      "type": "stat",
+      "title": "Alert Delivery Success Rate",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Alert sent successfully\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Success",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)(alert sent|failed to send alert)\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Total",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 98
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "Success",
+              "operator": "/",
+              "right": "Total"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "Success / Total",
+              "operator": "*",
+              "right": "100"
+            },
+            "replaceFields": true
+          }
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "Trigger Evaluations",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Evaluating alert trigger\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Total Evaluations",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Alert trigger condition met\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Triggered",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 203,
+      "panels": [],
+      "title": "Error Analysis",
+      "type": "row"
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Error Rate Over Time",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\", severity=\"ERROR\"} [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Errors",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(count_over_time({service_name=\"samara\", severity=\"WARNING\"} [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Warnings",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "showPoints": "auto"
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Errors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Warnings"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["sum", "mean"]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 33,
+      "type": "barchart",
+      "title": "Error Categories",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)configuration error\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Configuration Errors",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)validation error\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Validation Errors",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)io error|file.*error\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "I/O Errors",
+          "editorMode": "code"
+        },
+        {
+          "refId": "D",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)job.*error|execution.*error\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Job Errors",
+          "editorMode": "code"
+        },
+        {
+          "refId": "E",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)http.*error|request.*failed\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "HTTP Errors",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom",
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "id": 204,
+      "panels": [
+        {
+          "id": 1,
+          "type": "logs",
+          "title": "Samara Application Logs",
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 57
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=\"samara\"} | severity=~\"$log_level\"",
+              "queryType": "range",
+              "editorMode": "code"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": true,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": false,
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "sortOrder": "Descending"
+          }
+        },
+        {
+          "id": 2,
+          "type": "logs",
+          "title": "Error Logs",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 69
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=\"samara\"} |~ \"(?i)(error|exception|failed)\"",
+              "queryType": "range",
+              "editorMode": "code"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": true,
+            "wrapLogMessage": true,
+            "enableLogDetails": true,
+            "sortOrder": "Descending"
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Log Volume by Level",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 69
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (severity) (count_over_time({service_name=\"samara\"} [$__interval]))",
+              "queryType": "range",
+              "legendFormat": "{{severity}}",
+              "editorMode": "code"
+            }
+          ],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value",
+            "orientation": "auto",
+            "textMode": "auto",
+            "reduceOptions": {
+              "values": false,
+              "calcs": ["lastNotNull"]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "table",
+          "title": "Recent Log Entries",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 77
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=\"samara\"}",
+              "queryType": "instant",
+              "editorMode": "code"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {},
+                "renameByName": {
+                  "Time": "Timestamp",
+                  "Line": "Message",
+                  "severity": "Level"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": false
             }
           }
         }
       ],
-      "options": {
-        "showHeader": true,
-        "footer": {
-          "show": false
-        }
-      }
+      "title": "Raw Logs (Collapsed)",
+      "type": "row"
     }
   ],
   "templating": {

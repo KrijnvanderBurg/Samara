@@ -1,0 +1,1277 @@
+{
+  "title": "Samara Operational Dashboard",
+  "uid": "samara-operational",
+  "tags": ["samara", "operations", "health"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 300,
+      "panels": [],
+      "title": "Executive Summary",
+      "type": "row"
+    },
+    {
+      "id": 301,
+      "type": "stat",
+      "title": "System Health Score",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Success",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Total",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 85
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "value_and_name"
+      },
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "Success",
+              "operator": "/",
+              "right": "Total"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "Success {slash} Total",
+              "operator": "*",
+              "right": "100"
+            },
+            "replaceFields": true
+          }
+        }
+      ]
+    },
+    {
+      "id": 302,
+      "type": "stat",
+      "title": "Total Pipelines Run",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range])",
+          "queryType": "range",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 303,
+      "type": "stat",
+      "title": "Avg Pipeline Duration",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "P214B5B846CF3925F"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "P214B5B846CF3925F"
+          },
+          "limit": 20,
+          "query": "{ resource.service.name=\"samara\" && name=\"run_pipeline\" } | avg(duration)",
+          "queryType": "traceql",
+          "refId": "A",
+          "tableType": "spans"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5000
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          },
+          "unit": "ms",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["mean"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 304,
+      "type": "stat",
+      "title": "Current Error Rate",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate({service_name=\"samara\", severity=\"ERROR\"} [$__range]))",
+          "queryType": "range",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "cps",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 305,
+      "panels": [],
+      "title": "Pipeline Performance Insights",
+      "type": "row"
+    },
+    {
+      "id": 306,
+      "type": "timeseries",
+      "title": "Pipeline Throughput (Jobs/Time)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Executing job [0-9]+/[0-9]+\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Jobs Executed",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "fillOpacity": 80,
+            "gradientMode": "hue",
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["sum", "mean"]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 307,
+      "type": "barchart",
+      "title": "Top 10 Slowest Operations",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "P214B5B846CF3925F"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "P214B5B846CF3925F"
+          },
+          "limit": 20,
+          "query": "{ resource.service.name=\"samara\" } | max(duration) by (name) > 0",
+          "queryType": "traceql",
+          "refId": "A",
+          "tableType": "spans"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom",
+          "showLegend": false
+        }
+      },
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 10
+          }
+        }
+      ]
+    },
+    {
+      "id": 308,
+      "type": "timeseries",
+      "title": "ETL Phase Duration Comparison",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "queryType": "range",
+          "legendFormat": "Extract p95",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "queryType": "range",
+          "legendFormat": "Transform p95",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "queryType": "range",
+          "legendFormat": "Load p95",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          },
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Extract.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Transform.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Load.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["mean", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 309,
+      "type": "piechart",
+      "title": "Operation Type Distribution",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "P214B5B846CF3925F"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "P214B5B846CF3925F"
+          },
+          "limit": 20,
+          "query": "{ resource.service.name=\"samara\" && (name=~\".*extractor\" || name=~\".*transformer\" || name=~\".*loader\") } | count() by (name)",
+          "queryType": "traceql",
+          "refId": "A",
+          "tableType": "spans"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "donut",
+        "displayLabels": ["percent"],
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 310,
+      "type": "stat",
+      "title": "Total Data Operations",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting extraction\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Extracts",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting transformation\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Transforms",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting load operation\" [$__range])",
+          "queryType": "range",
+          "legendFormat": "Loads",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 311,
+      "type": "timeseries",
+      "title": "Job Execution Trend",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Executing job\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Jobs",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "showPoints": "auto",
+            "gradientMode": "opacity"
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 312,
+      "panels": [],
+      "title": "System Health & Reliability",
+      "type": "row"
+    },
+    {
+      "id": 313,
+      "type": "timeseries",
+      "title": "Success vs Failure Trend",
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 33
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"completed successfully\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Successful",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(count_over_time({service_name=\"samara\", severity=\"ERROR\"} [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Failed",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "auto",
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Successful"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["sum", "mean"]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 314,
+      "type": "gauge",
+      "title": "SLA Compliance (95% < 10s)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 33
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "P214B5B846CF3925F"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "P214B5B846CF3925F"
+          },
+          "limit": 20,
+          "query": "{ resource.service.name=\"samara\" && name=\"run_pipeline\" } | quantile_over_time(duration, 0.95)",
+          "queryType": "traceql",
+          "refId": "A",
+          "tableType": "spans"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 20000,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10000
+              },
+              {
+                "color": "red",
+                "value": 15000
+              }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 315,
+      "type": "stat",
+      "title": "Log Volume by Severity",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count_over_time({service_name=\"samara\", severity=\"DEBUG\"} [$__range])",
+          "queryType": "range",
+          "legendFormat": "DEBUG",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "count_over_time({service_name=\"samara\", severity=\"INFO\"} [$__range])",
+          "queryType": "range",
+          "legendFormat": "INFO",
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "expr": "count_over_time({service_name=\"samara\", severity=\"WARNING\"} [$__range])",
+          "queryType": "range",
+          "legendFormat": "WARNING",
+          "editorMode": "code"
+        },
+        {
+          "refId": "D",
+          "expr": "count_over_time({service_name=\"samara\", severity=\"ERROR\"} [$__range])",
+          "queryType": "range",
+          "legendFormat": "ERROR",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WARNING"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "INFO"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["sum"]
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 316,
+      "type": "timeseries",
+      "title": "Telemetry Export Health",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Telemetry initialized\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Initialized",
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Failed to initialize.*telemetry\" [$__auto]))",
+          "queryType": "range",
+          "legendFormat": "Failed",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "showPoints": "auto"
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Initialized"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 317,
+      "panels": [
+        {
+          "id": 318,
+          "type": "table",
+          "title": "Recent Errors with Trace Links",
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 48
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=\"samara\", severity=\"ERROR\"} | json | line_format \"{{.body}}\"",
+              "queryType": "range",
+              "editorMode": "code"
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Time"
+              }
+            ]
+          },
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {},
+                "renameByName": {
+                  "Time": "Timestamp",
+                  "Line": "Error Message",
+                  "trace_id": "Trace ID"
+                }
+              }
+            },
+            {
+              "id": "limit",
+              "options": {
+                "limitField": 50
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left",
+                "cellOptions": {
+                  "type": "auto"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Trace ID"
+                },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "View Trace",
+                        "url": "/explore?left=%7B%22datasource%22:%22P214B5B846CF3925F%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22datasource%22:%7B%22type%22:%22tempo%22,%22uid%22:%22P214B5B846CF3925F%22%7D,%22queryType%22:%22traceId%22,%22query%22:%22${__data.fields[\\\"Trace ID\\\"]%7D%22%7D%5D%7D"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 319,
+          "type": "barchart",
+          "title": "Most Common Error Messages",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 58
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, sum by (msg) (count_over_time({service_name=\"samara\", severity=\"ERROR\"} | json | __error__=\"\" [$__range])))",
+              "queryType": "range",
+              "editorMode": "code"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "legend": {
+              "displayMode": "hidden"
+            }
+          }
+        }
+      ],
+      "title": "Detailed Error Analysis (Collapsed)",
+      "type": "row"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "time_range",
+        "label": "Time Range",
+        "type": "interval",
+        "query": "1m,5m,15m,30m,1h,3h,6h,12h,24h",
+        "current": {
+          "selected": false,
+          "text": "5m",
+          "value": "5m"
+        },
+        "hide": 0
+      }
+    ]
+  }
+}
