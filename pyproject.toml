@@ -21,9 +21,9 @@ email-validator = "^2.2.0"
 pyjson5 = "^1.6.9"
 click = "^8.1.0"
 # OpenTelemetry core packages - using compatible versions
-opentelemetry-api = "^1.38.0"
-opentelemetry-sdk = "^1.38.0"
-opentelemetry-exporter-otlp = "^1.38.0"
+opentelemetry-api = "^1.37.0"
+opentelemetry-sdk = "^1.37.0"
+opentelemetry-exporter-otlp = "^1.37.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.3.0"
