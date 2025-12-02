@@ -41,7 +41,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (command) (rate({service_name=\"samara\"} |~ \"Starting (validation|workflow execution|export-schema) command\" | pattern `<_> <command> command` [$__auto]))",
+          "expr": "sum by (command) (rate({service_name=\"samara\"} |~ \"(?i)start.*(validation|workflow|execution|export).*(command|schema)\" | regexp `(?i)start.*(?P<command>validation|workflow|execution|export)` [$__auto]))",
           "queryType": "range",
           "legendFormat": "{{command}}",
           "editorMode": "code"
@@ -104,7 +104,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting validation command\" [$__range]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)start.*validat\" [$__range]))",
           "queryType": "instant",
           "legendFormat": "Validate",
           "editorMode": "code"
@@ -118,7 +118,7 @@
         },
         {
           "refId": "C",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting export-schema command\" [$__range]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)start.*export.*schema\" [$__range]))",
           "queryType": "instant",
           "legendFormat": "Export Schema",
           "editorMode": "code"
@@ -172,7 +172,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__auto]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(workflow|pipeline).*(complet|finish).*success\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "Success",
           "editorMode": "code"
@@ -274,14 +274,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__range]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(workflow|pipeline).*(complet|finish).*success\" [$__range]))",
           "queryType": "range",
           "legendFormat": "Success",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Starting workflow execution command\" [$__range]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)start.*(workflow|execution)\" [$__range]))",
           "queryType": "range",
           "legendFormat": "Total",
           "editorMode": "code"
@@ -386,21 +386,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"(?i)extract.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__auto])",
           "queryType": "range",
           "legendFormat": "Extract Phase",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"(?i)transform.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__auto])",
           "queryType": "range",
           "legendFormat": "Transform Phase",
           "editorMode": "code"
         },
         {
           "refId": "C",
-          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"(?i)load.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__auto])",
           "queryType": "range",
           "legendFormat": "Load Phase",
           "editorMode": "code"
@@ -518,21 +518,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting extract phase\" [$__range])",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)start.*extract.*phase\" [$__range])",
           "queryType": "range",
           "legendFormat": "Extract",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting transform phase\" [$__range])",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)start.*transform.*phase\" [$__range])",
           "queryType": "range",
           "legendFormat": "Transform",
           "editorMode": "code"
         },
         {
           "refId": "C",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Starting load phase\" [$__range])",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)start.*load.*phase\" [$__range])",
           "queryType": "range",
           "legendFormat": "Load",
           "editorMode": "code"
@@ -585,21 +585,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"(?i)extract.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__range])",
           "queryType": "range",
           "legendFormat": "Extract",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"(?i)transform.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__range])",
           "queryType": "range",
           "legendFormat": "Transform",
           "editorMode": "code"
         },
         {
           "refId": "C",
-          "expr": "avg_over_time({service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "expr": "avg_over_time({service_name=\"samara\"} |~ \"(?i)load.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__range])",
           "queryType": "range",
           "legendFormat": "Load",
           "editorMode": "code"
@@ -661,21 +661,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max_over_time({service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "expr": "max_over_time({service_name=\"samara\"} |~ \"(?i)extract.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__range])",
           "queryType": "range",
           "legendFormat": "Extract",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "max_over_time({service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "expr": "max_over_time({service_name=\"samara\"} |~ \"(?i)transform.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__range])",
           "queryType": "range",
           "legendFormat": "Transform",
           "editorMode": "code"
         },
         {
           "refId": "C",
-          "expr": "max_over_time({service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__range])",
+          "expr": "max_over_time({service_name=\"samara\"} |~ \"(?i)load.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__range])",
           "queryType": "range",
           "legendFormat": "Load",
           "editorMode": "code"
@@ -752,14 +752,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Alert sent successfully\" [$__auto]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)alert.*(sent|deliver).*success\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "Alerts Sent",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Failed to send alert\" [$__auto]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(fail|error).*alert\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "Failed Alerts",
           "editorMode": "code"
@@ -850,7 +850,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (channel) (count_over_time({service_name=\"samara\"} |~ \"Sending alert via (email|http|file)\" | pattern `via <channel>` [$__range]))",
+          "expr": "sum by (channel) (count_over_time({service_name=\"samara\"} |~ \"(?i)(send|deliver).*alert.*(via|through|using)\" | regexp `(?i)(via|through|using)\\s+(?P<channel>\\w+)` [$__range]))",
           "queryType": "range",
           "legendFormat": "{{channel}}",
           "editorMode": "code"
@@ -892,7 +892,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Alert sent successfully\" [$__range])",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)alert.*(sent|deliver).*success\" [$__range])",
           "queryType": "range",
           "legendFormat": "Success",
           "editorMode": "code"
@@ -986,14 +986,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Evaluating alert trigger\" [$__range])",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)evaluat.*alert.*trigger\" [$__range])",
           "queryType": "range",
           "legendFormat": "Total Evaluations",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "count_over_time({service_name=\"samara\"} |~ \"Alert trigger condition met\" [$__range])",
+          "expr": "count_over_time({service_name=\"samara\"} |~ \"(?i)(trigger|condition).*(met|matched|fired)\" [$__range])",
           "queryType": "range",
           "legendFormat": "Triggered",
           "editorMode": "code"

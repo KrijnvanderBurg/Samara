@@ -41,7 +41,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Workflow completed successfully\" [$__range]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(workflow|pipeline).*(complet|finish).*success\" [$__range]))",
           "queryType": "instant",
           "legendFormat": "Success",
           "editorMode": "code"
@@ -329,7 +329,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Executing job [0-9]+/[0-9]+\" [$__auto]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(execut|run).*job\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "Jobs Executed",
           "editorMode": "code"
@@ -475,21 +475,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"Extract phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"(?i)extract.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__auto])",
           "queryType": "range",
           "legendFormat": "Extract p95",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"Transform phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"(?i)transform.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__auto])",
           "queryType": "range",
           "legendFormat": "Transform p95",
           "editorMode": "code"
         },
         {
           "refId": "C",
-          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"Load phase completed successfully in ([0-9.]+) seconds\" | regexp `in (?P<duration>[0-9.]+) seconds` | unwrap duration | __error__=\"\" [$__auto])",
+          "expr": "quantile_over_time(0.95, {service_name=\"samara\"} |~ \"(?i)load.*phase\" |~ \"[0-9.]+.*second\" | regexp `(?P<duration>[0-9.]+)\\s*second` | unwrap duration | __error__=\"\" [$__auto])",
           "queryType": "range",
           "legendFormat": "Load p95",
           "editorMode": "code"
@@ -775,7 +775,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"completed successfully\" [$__auto]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(complet|finish).*success\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "Successful",
           "editorMode": "code"
@@ -1053,14 +1053,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Telemetry initialized\" [$__auto]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)telemetry.*init\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "Initialized",
           "editorMode": "code"
         },
         {
           "refId": "B",
-          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"Failed to initialize.*telemetry\" [$__auto]))",
+          "expr": "sum(count_over_time({service_name=\"samara\"} |~ \"(?i)(fail|error).*telemetry\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "Failed",
           "editorMode": "code"
