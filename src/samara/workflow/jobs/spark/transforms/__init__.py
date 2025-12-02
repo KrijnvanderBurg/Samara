@@ -40,7 +40,7 @@ __all__ = [
     "WithColumnFunction",
 ]
 
-transform_function_spark_union = Annotated[
+TransformFunctionSparkUnion = Annotated[
     AggregateFunction
     | CastFunction
     | DistinctFunction

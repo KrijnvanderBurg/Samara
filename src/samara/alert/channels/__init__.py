@@ -23,9 +23,9 @@ from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
 
-__all__ = ["ChannelModel", "channel_union"]
+__all__ = ["ChannelModel", "ChannelUnion"]
 
-channel_union = Annotated[
+ChannelUnion = Annotated[
     EmailChannel | HttpChannel | FileChannel,
     Discriminator("channel_type"),
 ]

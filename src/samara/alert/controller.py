@@ -14,7 +14,7 @@ from typing import Any, Final, Self
 from pydantic import Field, ValidationError
 
 from samara import BaseModel
-from samara.alert.channels import channel_union
+from samara.alert.channels import ChannelUnion
 from samara.alert.trigger import AlertTrigger
 from samara.exceptions import SamaraAlertConfigurationError, SamaraIOError
 from samara.utils.file import FileHandlerContext
@@ -109,7 +109,7 @@ class AlertController(BaseModel):
         channels list, otherwise validation will fail.
     """
 
-    channels: list[channel_union] = Field(..., description="List of configured channels")
+    channels: list[ChannelUnion] = Field(..., description="List of configured channels")
     triggers: list[AlertTrigger] = Field(..., description="List of alert trigger rules")
 
     @classmethod
