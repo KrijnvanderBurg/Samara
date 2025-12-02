@@ -10,6 +10,7 @@ from abc import abstractmethod
 from pydantic import Field
 
 from samara import BaseModel
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -65,6 +66,7 @@ class ActionBase(BaseModel):
     description: str = Field(..., description="A description of the action.")
     enabled: bool = Field(..., description="Whether the action is enabled.")
 
+    @trace_span("action_base.execute")
     def execute(self) -> None:
         """Execute the action if enabled, delegating to the implementation-specific method.
 

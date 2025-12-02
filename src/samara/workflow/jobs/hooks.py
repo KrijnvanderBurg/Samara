@@ -7,6 +7,7 @@ that execute at job lifecycle events (start, error, success, completion).
 from pydantic import Field
 
 from samara import BaseModel
+from samara.telemetry import trace_span
 from samara.workflow.actions import HooksActionsUnion
 
 
@@ -94,6 +95,7 @@ class Hooks(BaseModel):
         default_factory=list, description="Actions to perform on Job end, regardless of success or error."
     )
 
+    @trace_span("hooks.on_start")
     def on_start(self) -> None:
         """Execute all actions defined in the onStart hook.
 
@@ -102,6 +104,7 @@ class Hooks(BaseModel):
         for action in self.onStart:
             action.execute()
 
+    @trace_span("hooks.on_error")
     def on_error(self) -> None:
         """Execute all actions defined in the onError hook.
 
@@ -110,6 +113,7 @@ class Hooks(BaseModel):
         for action in self.onError:
             action.execute()
 
+    @trace_span("hooks.on_success")
     def on_success(self) -> None:
         """Execute all actions defined in the onSuccess hook.
 
@@ -118,6 +122,7 @@ class Hooks(BaseModel):
         for action in self.onSuccess:
             action.execute()
 
+    @trace_span("hooks.on_finally")
     def on_finally(self) -> None:
         """Execute all actions defined in the onFinally hook.
 

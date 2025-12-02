@@ -12,6 +12,7 @@ from pydantic import Field
 from typing_extensions import override
 
 from samara.alert.channels.base import ChannelModel
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
@@ -72,6 +73,7 @@ class FileChannel(ChannelModel):
     file_path: Path = Field(..., description="Path to the file where alerts should be written")
 
     @override
+    @trace_span("file_channel._alert")
     def _alert(self, title: str, body: str) -> None:
         """Write an alert message to the configured file.
 

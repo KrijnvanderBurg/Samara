@@ -15,6 +15,7 @@ from pydantic import Field, model_validator
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
+from samara.telemetry import trace_span
 from samara.types import DataFrameRegistry
 from samara.utils.logger import get_logger
 from samara.workflow.jobs.models.model_extract import ExtractFileModel, ExtractMethod, ExtractModel
@@ -89,6 +90,7 @@ class ExtractSpark(ExtractModel, ABC):
         self.spark: SparkHandler = SparkHandler()
 
     @model_validator(mode="after")
+    @trace_span("extract_spark.parse_schema")
     def parse_schema(self) -> Self:
         """Parse schema configuration into a PySpark StructType.
 
@@ -120,6 +122,7 @@ class ExtractSpark(ExtractModel, ABC):
 
         return self
 
+    @trace_span("extract_spark.extract")
     def extract(self) -> None:
         """Execute the extraction process based on configured method.
 
@@ -227,6 +230,7 @@ class ExtractFileSpark(ExtractSpark, ExtractFileModel):
 
     extract_type: Literal["file"]
 
+    @trace_span("extract_file_spark._extract_batch")
     def _extract_batch(self) -> DataFrame:
         """Read data from file in batch mode using PySpark.
 
@@ -252,6 +256,7 @@ class ExtractFileSpark(ExtractSpark, ExtractFileModel):
         logger.info("Batch extraction successful - loaded %d rows from %s", row_count, self.location)
         return dataframe
 
+    @trace_span("extract_file_spark._extract_streaming")
     def _extract_streaming(self) -> DataFrame:
         """Set up streaming read from file using PySpark.
 

@@ -162,6 +162,7 @@ class WorkflowController(BaseModel):
             raise SamaraWorkflowConfigurationError(f"Invalid workflow configuration in file '{filepath}': {e}") from e
 
     @classmethod
+    @trace_span("workflow_controller.export_schema")
     def export_schema(cls) -> dict[str, Any]:
         """Export JSON schema for configuration documentation and validation.
 

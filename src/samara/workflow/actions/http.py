@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import Field
 from typing_extensions import override
 
+from samara.telemetry import trace_span
 from samara.utils.http import HttpBase
 from samara.utils.logger import get_logger
 from samara.workflow.actions.base import ActionBase
@@ -108,6 +109,7 @@ class HttpAction(HttpBase, ActionBase):
     payload: dict[str, Any] = Field(default_factory=dict, description="Optional payload data to send in the request")
 
     @override
+    @trace_span("http_action._execute")
     def _execute(self) -> None:
         """Send the HTTP request with configured parameters and retry logic.
 

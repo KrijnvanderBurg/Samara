@@ -13,6 +13,7 @@ from typing import Any
 import pyjson5 as json
 import yaml
 
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -146,6 +147,7 @@ class FileHandler(ABC):
             logger.error("File encoding error (not valid UTF-8): %s - %s", self.filepath, e)
             raise OSError(f"Invalid file encoding: '{self.filepath}' is not valid UTF-8") from e
 
+    @trace_span("file_handler.read")
     def read(self) -> dict[str, Any]:
         """Read and validate the file, returning its contents as a dictionary.
 
@@ -203,6 +205,7 @@ class FileYamlHandler(FileHandler):
     Complements `FileJsonHandler` for format flexibility in pipeline configurations.
     """
 
+    @trace_span("file_yaml_handler.read")
     def _read(self) -> dict[str, Any]:
         """Parse YAML file content into a dictionary.
 
@@ -236,6 +239,7 @@ class FileJsonHandler(FileHandler):
     flexibility for pipeline configuration definitions.
     """
 
+    @trace_span("file_json_handler.read")
     def _read(self) -> dict[str, Any]:
         """Parse JSON or JSONC file content into a dictionary.
 
@@ -286,6 +290,7 @@ class FileHandlerContext:
     }
 
     @classmethod
+    @trace_span("file_handler_context.from_filepath")
     def from_filepath(cls, filepath: Path) -> FileHandler:
         """Create the appropriate file handler for the given file path.
 

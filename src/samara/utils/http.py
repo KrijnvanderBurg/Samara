@@ -15,6 +15,7 @@ from typing import Any
 import requests
 from pydantic import BaseModel, Field, HttpUrl, PositiveInt
 
+from samara.telemetry import trace_span
 from samara.utils.logger import get_logger
 
 logger: logging.Logger = get_logger(__name__)
@@ -108,6 +109,7 @@ class HttpBase(BaseModel):
     timeout: PositiveInt = Field(..., description="Request timeout in seconds", ge=1, le=30)
     retry: Retry = Field(..., description="Configuration for handling failures and retries")
 
+    @trace_span("http_base._make_http_request")
     def _make_http_request(self, payload: dict[str, Any] | None = None) -> None:
         """Execute an HTTP request with configurable retry logic and error handling.
 
