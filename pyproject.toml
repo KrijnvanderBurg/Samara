@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "samara", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.12"
 pyspark = "^4.0.1"
 pandas = "^2.3.0"
 pyarrow = "20.0.0"
