@@ -179,7 +179,7 @@ def validate(
         execution with alert integration, use the 'run' command.
     """
     try:
-        logger.info("Starting validation command")
+        logger.info("Starting `validate` command")
         logger.info("Workflow config: %s", workflow_filepath)
         logger.info("Alert config: %s", alert_filepath)
 
@@ -287,7 +287,7 @@ def run(
         workflow failures and automating incident response workflows.
     """
     try:
-        logger.info("Starting workflow execution command")
+        logger.info("Starting `run` command")
         logger.info("Workflow config: %s", workflow_filepath)
         logger.info("Alert config: %s", alert_filepath)
 
@@ -382,7 +382,7 @@ def export_schema(output_filepath: Path) -> None:
         development workflow.
     """
     try:
-        logger.info("Running 'export-schema' command...")
+        logger.info("Starting `export-schema` command")
         logger.info("Exporting workflow configuration schema to: %s", output_filepath)
 
         try:

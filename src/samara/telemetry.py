@@ -10,12 +10,10 @@ Supports deployment flexibility by allowing each signal (traces, logs) to target
 different backends or route through a central OTEL Collector.
 """
 
+import atexit
 import functools
 import logging
 from collections.abc import Callable
-
-# import platform
-# from os import getpid
 from typing import Any, ParamSpec, TypeVar
 
 from opentelemetry import context, trace
@@ -27,7 +25,7 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from samara.settings import AppSettings, get_settings
@@ -119,40 +117,50 @@ def setup_telemetry(
     # Setup tracing
     trace_provider = TracerProvider(resource=resource)
 
-    # Always add console exporter to see traces
-    trace_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-
     # Add OTLP exporter if endpoint is provided
     if otlp_traces_endpoint:
-        try:
-            otlp_exporter = OTLPSpanExporter(endpoint=otlp_traces_endpoint)
-            trace_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-            logger.info("Trace telemetry initialized with OTLP endpoint: %s", otlp_traces_endpoint)
-        except Exception as e:  # pylint: disable=broad-except
-            logger.warning("Failed to initialize OTLP trace exporter: %s", e)
+        otlp_exporter = OTLPSpanExporter(endpoint=otlp_traces_endpoint)
+        trace_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+        logger.info("Trace telemetry initialized with OTLP endpoint: %s", otlp_traces_endpoint)
     else:
         logger.info("No OTLP traces endpoint configured, traces will not be exported")
 
     # Set as global tracer provider (OpenTelemetry's design uses this singleton)
     trace.set_tracer_provider(trace_provider)
 
-    # Setup logs - use explicit endpoint or skip if not provided
+    # Setup logs
+    log_provider = LoggerProvider(resource=resource)
     if otlp_logs_endpoint:
-        try:
-            log_exporter = OTLPLogExporter(endpoint=otlp_logs_endpoint)
-            log_provider = LoggerProvider(resource=resource)
-            log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
-            set_logger_provider(log_provider)
+        log_exporter = OTLPLogExporter(endpoint=otlp_logs_endpoint)
+        log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+        set_logger_provider(log_provider)
 
-            # Attach OTLP handler to root logger to export all Python logs
-            handler = LoggingHandler(level=logging.NOTSET, logger_provider=log_provider)
-            logging.getLogger().addHandler(handler)
+        # Attach OTLP handler to root logger to export all Python logs
+        handler = LoggingHandler(level=logging.NOTSET, logger_provider=log_provider)
+        logging.getLogger().addHandler(handler)
 
-            logger.info("Logs telemetry initialized with OTLP endpoint: %s", otlp_logs_endpoint)
-        except Exception as e:  # pylint: disable=broad-except
-            logger.warning("Failed to initialize OTLP logs exporter: %s", e)
+        logger.info("Logs telemetry initialized with OTLP endpoint: %s", otlp_logs_endpoint)
     else:
         logger.info("No OTLP logs endpoint configured, logs will not be exported")
+
+    # Register shutdown handler to flush and cleanup before program exits
+    atexit.register(_shutdown_telemetry, trace_provider, log_provider)
+
+
+def _shutdown_telemetry(trace_provider: TracerProvider | None, log_provider: LoggerProvider | None) -> None:
+    """Shutdown telemetry providers and flush pending data.
+
+    Args:
+        trace_provider: The trace provider to shutdown.
+        log_provider: The log provider to shutdown, if configured.
+    """
+    if trace_provider:
+        trace_provider.force_flush(timeout_millis=5000)
+        trace_provider.shutdown()
+
+    if log_provider:
+        log_provider.force_flush(timeout_millis=5000)
+        log_provider.shutdown()
 
 
 def get_tracer(name: str = "samara") -> trace.Tracer:
