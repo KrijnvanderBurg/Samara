@@ -28,7 +28,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"samara\"} | json | severity=~\"$log_level\"",
+          "expr": "{service_name=\"samara\"} | json | severity_text=~\"$log_level\"",
           "queryType": "range",
           "editorMode": "code"
         }
@@ -61,7 +61,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"samara\"} | json | severity=~\"$log_level\" | line_format \"{{.Line}}\" |~ \"(?i)(error|exception|failed)\"",
+          "expr": "{service_name=\"samara\"} | json | severity_text=~\"$log_level\" | line_format \"{{.Line}}\" |~ \"(?i)(error|exception|failed)\"",
           "queryType": "range",
           "editorMode": "code"
         }
@@ -91,7 +91,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (severity) (count_over_time({service_name=\"samara\"} | json | severity=~\"$log_level\" [$__interval]))",
+          "expr": "sum by (severity) (count_over_time({service_name=\"samara\"} | json | severity_text=~\"$log_level\" [$__interval]))",
           "queryType": "range",
           "legendFormat": "{{severity}}",
           "editorMode": "code"
@@ -178,28 +178,28 @@
         "current": {
           "selected": false,
           "text": "INFO",
-          "value": "INFO"
+          "value": "INFO|WARNING|ERROR|CRITICAL"
         },
         "options": [
           {
             "selected": false,
             "text": "DEBUG",
-            "value": "DEBUG"
+            "value": "DEBUG|INFO|WARNING|ERROR|CRITICAL"
           },
           {
             "selected": true,
             "text": "INFO",
-            "value": "INFO"
+            "value": "INFO|WARNING|ERROR|CRITICAL"
           },
           {
             "selected": false,
             "text": "WARNING",
-            "value": "WARNING"
+            "value": "WARNING|ERROR|CRITICAL"
           },
           {
             "selected": false,
             "text": "ERROR",
-            "value": "ERROR"
+            "value": "ERROR|CRITICAL"
           },
           {
             "selected": false,
@@ -207,7 +207,7 @@
             "value": "CRITICAL"
           }
         ],
-        "query": "DEBUG : DEBUG, INFO : INFO, WARNING : WARNING, ERROR : ERROR, CRITICAL : CRITICAL",
+        "query": "DEBUG : DEBUG|INFO|WARNING|ERROR|CRITICAL, INFO : INFO|WARNING|ERROR|CRITICAL, WARNING : WARNING|ERROR|CRITICAL, ERROR : ERROR|CRITICAL, CRITICAL : CRITICAL",
         "hide": 0
       }
     ]
