@@ -5,6 +5,7 @@ for type safety and validation. It enables pipeline authors to define job
 execution sequences through configuration files in JSON or YAML formats.
 """
 
+import time
 from pathlib import Path
 from typing import Any, Final, Self
 
@@ -213,14 +214,20 @@ class WorkflowController(BaseModel):
             >>> workflow = WorkflowController.from_file(Path("config.json"))
             >>> workflow.execute_all()
         """
+
         if not self.enabled:
             logger.info("Workflow is disabled")
             return
 
         logger.info("Executing all %d jobs in ETL pipeline", len(self.jobs))
 
+        start_time = time.time()
         for i, job in enumerate(self.jobs):
+            job_start_time = time.time()
             logger.info("Executing job %d/%d: %s", i + 1, len(self.jobs), job.id_)
             job.execute()
+            job_duration = time.time() - job_start_time
+            logger.info("Job %s completed in %.2f seconds", job.id_, job_duration)
+        total_duration = time.time() - start_time
 
-        logger.info("All jobs in ETL pipeline executed successfully")
+        logger.info("Workflow completed in %.2f seconds", total_duration)

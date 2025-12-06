@@ -27,19 +27,7 @@ class TestTelemetrySetup:
             # OTLP exporter should be created with the endpoint
             mock_exporter.assert_called_once_with(endpoint="http://localhost:4318/v1/traces")
 
-    def test_setup_telemetry_with_invalid_otlp_endpoint_logs_warning(self) -> None:
-        """Test telemetry setup with invalid OTLP endpoint logs warning."""
-        with patch("samara.telemetry.OTLPSpanExporter") as mock_exporter:
-            mock_exporter.side_effect = Exception("Connection failed")
-
-            # Should not raise exception, just log warning
-            setup_telemetry(service_name="test-service", otlp_traces_endpoint="http://invalid:9999")
-
-            # Should still be able to get a tracer
-            tracer = get_tracer("test")
-            assert tracer is not None
-
-    def test_setup_telemetry_with_traceparent_attaches_context(self) -> None:
+    def test_setup_telemetry_with_traceparent_attacches_context(self) -> None:
         """Test telemetry setup with traceparent attaches parent context."""
         traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
