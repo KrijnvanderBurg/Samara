@@ -25,28 +25,6 @@ All dependencies and tool configurations are defined in `pyproject.toml`. Poetry
 .github/scripts/run-pytest.sh        # Run all tests with coverage
 ```
 
-## Code quality checks
-Run these before committing:
-
-```bash
-.github/scripts/run-ruff-formatter.sh    # Format code
-.github/scripts/run-ruff-linter.sh       # Lint with ruff
-.github/scripts/run-mypy.sh              # Type check with mypy
-.github/scripts/run-pyright.sh           # Type check with pyright
-.github/scripts/run-pylint.sh            # Lint with pylint
-.github/scripts/run-flake8.sh            # Lint with flake8
-.github/scripts/run-bandit.sh            # Security checks
-.github/scripts/run-semgrep.sh           # Security pattern matching
-.github/scripts/run-vulture.sh           # Dead code detection
-.github/scripts/run-trufflehog.sh        # Secret scanning
-```
-
-## Building package and documentation
-```bash
-.github/scripts/run-build-package.sh     # Build Python package
-.github/scripts/run-sphinx.sh            # Build Sphinx documentation
-```
-
 ## Running pipelines
 Execute a pipeline with configuration files:
 
