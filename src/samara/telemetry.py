@@ -137,7 +137,7 @@ def setup_telemetry(
 
         # Attach OTLP handler to root logger to export all Python logs
         handler = LoggingHandler(level=logging.NOTSET, logger_provider=log_provider)
-        logging.getLogger().addHandler(handler)
+        logger.addHandler(handler)
 
         logger.info("Logs telemetry initialized with OTLP endpoint: %s", otlp_logs_endpoint)
     else:
