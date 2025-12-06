@@ -28,7 +28,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"samara\"}",
+          "expr": "{service_name=\"samara\"} | json | severity=~\"$log_level\"",
           "queryType": "range",
           "editorMode": "code"
         }
@@ -61,7 +61,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"samara\"} |~ \"(?i)(error|exception|failed)\"",
+          "expr": "{service_name=\"samara\"} | json | severity=~\"$log_level\" | line_format \"{{.Line}}\" |~ \"(?i)(error|exception|failed)\"",
           "queryType": "range",
           "editorMode": "code"
         }
@@ -91,7 +91,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (severity) (count_over_time({service_name=\"samara\"} [$__interval]))",
+          "expr": "sum by (severity) (count_over_time({service_name=\"samara\"} | json | severity=~\"$log_level\" [$__interval]))",
           "queryType": "range",
           "legendFormat": "{{severity}}",
           "editorMode": "code"
@@ -142,7 +142,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"samara\"}",
+          "expr": "{service_name=\"samara\"} | json | severity_text=~\"$log_level\"",
           "queryType": "instant",
           "editorMode": "code"
         }
@@ -177,22 +177,17 @@
         "type": "custom",
         "current": {
           "selected": false,
-          "text": "All",
-          "value": ".*"
+          "text": "INFO",
+          "value": "INFO"
         },
         "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": ".*"
-          },
           {
             "selected": false,
             "text": "DEBUG",
             "value": "DEBUG"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "INFO",
             "value": "INFO"
           },
@@ -212,7 +207,7 @@
             "value": "CRITICAL"
           }
         ],
-        "query": "All : .*, DEBUG : DEBUG, INFO : INFO, WARNING : WARNING, ERROR : ERROR, CRITICAL : CRITICAL",
+        "query": "DEBUG : DEBUG, INFO : INFO, WARNING : WARNING, ERROR : ERROR, CRITICAL : CRITICAL",
         "hide": 0
       }
     ]
