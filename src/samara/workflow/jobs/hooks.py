@@ -16,7 +16,7 @@ class Hooks(BaseModel):
 
     Execute custom actions at key pipeline stages within a job lifecycle.
     Each hook field accepts a list of configurable actions that run when
-    their corresponding event occurs, enabling flexible alerting and
+    their corresponding event occurs, enabling flexible notification and
     post-processing workflows.
 
     Attributes:

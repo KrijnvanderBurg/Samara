@@ -6,7 +6,7 @@ Install Samara, run example pipelines, and learn how to create your own data pip
 
 ## [CLI Reference](./cli.md)
 Complete reference for Samara's command-line interface with commands for:
-- `validate` - Check configuration files and alerting before execution
+- `validate` - Check configuration files before execution
 - `run` - Execute data pipelines
 - `export-schema` - Generate JSON schema for IDE autocompletion and validation
 
@@ -20,7 +20,7 @@ Understand Samara's design principles and how the framework processes pipelines:
 - Extension Mechanisms: How to extend Samara with custom transforms
 
 ## Core Systems
-Samara's architecture consists of two integrated systems that work together through configuration:
+Samara's architecture centers on the workflow system, which is configured through configuration files.
 
 ### [Workflow System](./workflow/README.md)
 The workflow system orchestrates ETL pipelines through configuration files:
@@ -32,16 +32,9 @@ ETL engines and specific configurations:
 - **[Spark Engine](./workflow/spark.md)**: Spark-specific configuration options
 - **Polars Engine**: Under development.
 
-### [Alert System](./alert/README.md)
-Configure notifications when pipeline errors occur:
-- [**Channels**](./alert/channels.md): Configure where alerts are sent (email, HTTP webhooks, file logs)
-- [**Triggers**](./alert/triggers.md): Define when alerts are sent (rule-based conditions)
-- **Templates** (TBD): Format alert messages with custom templates
-
 ## [Example Configurations](../examples/)
 The examples folder includes complete examples of:
 - Workflow pipeline configurations
 - Spark-specific configurations
-- Alert system configurations
 
 These examples demonstrate how to combine Samara's components to build complete data processing solutions without writing code.

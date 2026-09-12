@@ -1,10 +1,9 @@
 """HTTP utilities for Samara's configuration-driven data pipeline framework.
 
-Provides reusable HTTP functionality for alert channels and event hook actions,
-enabling reliable communication through configurable retry logic, timeout handling,
-and standardized request execution. Supports the declarative configuration model
-by allowing HTTP endpoints and behaviors to be specified in configuration files
-rather than code.
+Provides reusable HTTP functionality for event hook actions, enabling reliable
+communication through configurable retry logic, timeout handling, and standardized
+request execution. Supports the declarative configuration model by allowing HTTP
+endpoints and behaviors to be specified in configuration files rather than code.
 """
 
 import json
@@ -53,13 +52,13 @@ class Retry(BaseModel):
 
 
 class HttpBase(BaseModel):
-    """Base HTTP configuration for alerts and event hooks in Samara pipelines.
+    """Base HTTP configuration for event hooks in Samara pipelines.
 
-    Provides shared HTTP request handling for alert notifications and event-triggered
-    actions. Supports the framework's configuration-driven model by allowing HTTP
-    endpoints, methods, headers, and retry behavior to be defined in configuration
-    files. Used by alert channels and actions to communicate with external HTTP
-    endpoints, webhooks, and services.
+    Provides shared HTTP request handling for event-triggered actions. Supports
+    the framework's configuration-driven model by allowing HTTP endpoints,
+    methods, headers, and retry behavior to be defined in configuration files.
+    Used by actions to communicate with external HTTP endpoints, webhooks, and
+    services.
 
     Attributes:
         url: HTTP endpoint URL for sending requests.

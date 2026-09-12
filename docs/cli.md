@@ -8,29 +8,23 @@ Samara provides a command-line interface to validate configurations and execute 
 
 ## Configuration File Formats
 
-Samara accepts both **YAML** (`.yaml`, `.yml`) and **JSON** (`.json`, `.jsonc`) configuration files. Both formats are functionally equivalent, and the framework automatically detects the format based on the file extension. You can mix formats—for example, use YAML for workflow configuration and JSON for alert configuration, or vice versa.
+Samara accepts both **YAML** (`.yaml`, `.yml`) and **JSON** (`.json`, `.jsonc`) configuration files. Both formats are functionally equivalent, and the framework automatically detects the format based on the file extension.
 
 ## Commands
 
 ### validate
 
-Validates configuration files and optionally tests alert routing rules without executing the pipeline. This is useful for checking configuration integrity and alert functionality before deployment.
+Validates configuration files without executing the pipeline. This is useful for checking configuration integrity before deployment.
 
 ```bash
 python -m samara validate \
-    --alert-filepath="path/to/alerts.yaml" \   # Path to alert configuration file (.yaml, .yml, .json, .jsonc)
-    --workflow-filepath="path/to/job.yaml" \    # Path to pipeline workflow configuration (.yaml, .yml, .json, .jsonc)
-    [--test-exception="error message"] \       # Optional: Simulates an error to test alert routing
-    [--test-env-var="KEY=VALUE"]                 # Optional: Set environment variables for testing triggers
+    --workflow-filepath="path/to/job.yaml"      # Path to pipeline workflow configuration (.yaml, .yml, .json, .jsonc)
 ```
 
 Example:
 ```bash
 python -m samara validate \
-    --alert-filepath="examples/json_join_select/alert.jsonc" \
-    --workflow-filepath="examples/json_join_select/job.jsonc" \
-    --test-exception="Failed to connect to database" \
-    --test-env-var="ENVIRONMENT=PROD"
+    --workflow-filepath="examples/json_join_select/job.jsonc"
 ```
 
 ### run
@@ -39,14 +33,12 @@ Executes the configured data pipeline using the provided configuration files.
 
 ```bash
 python -m samara run \
-    --alert-filepath path/to/alerts.yaml \   # Path to alert configuration file (.yaml, .yml, .json, .jsonc)
     --workflow-filepath path/to/job.yaml     # Path to pipeline workflow configuration (.yaml, .yml, .json, .jsonc)
 ```
 
 Example:
 ```bash
 python -m samara run \
-    --alert-filepath="examples/json_join_select/alert.jsonc" \
     --workflow-filepath="examples/json_join_select/job.jsonc"
 ```
 
@@ -104,7 +96,6 @@ python -m samara run \
     --otlp-traces-endpoint "http://localhost:4318/v1/traces" \
     --otlp-logs-endpoint "http://localhost:4318/v1/logs" \
     --trace-parent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" \
-    --alert-filepath ./alerts.jsonc \
     --workflow-filepath ./pipeline.jsonc
 ```
 
@@ -125,7 +116,7 @@ Standard Python logging levels are supported: `DEBUG`, `INFO`, `WARNING`, `ERROR
 Example:
 ```bash
 export SAMARA_LOG_LEVEL=DEBUG
-python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
+python -m samara run --workflow-filepath ./pipeline.jsonc
 ```
 
 ### Telemetry
@@ -143,7 +134,7 @@ Example:
 ```bash
 export SAMARA_OTLP_TRACES_ENDPOINT="http://localhost:4318/v1/traces"
 export SAMARA_OTLP_LOGS_ENDPOINT="http://localhost:4318/v1/logs"
-python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
+python -m samara run --workflow-filepath ./pipeline.jsonc
 ```
 
 ### Distributed Tracing
@@ -161,13 +152,12 @@ Example:
 ```bash
 # Continue an existing trace from upstream system
 export SAMARA_TRACE_PARENT="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
-python -m samara run --alert-filepath ./alerts.jsonc --workflow-filepath ./pipeline.jsonc
+python -m samara run --workflow-filepath ./pipeline.jsonc
 
 # CLI arguments override environment variables
 export SAMARA_TRACE_PARENT="00-OLD_TRACE_ID-b7ad6b7169203331-01"
 python -m samara run \
     --trace-parent="00-NEW_TRACE_ID-b7ad6b7169203331-01" \
-    --alert-filepath ./alerts.jsonc \
     --workflow-filepath ./pipeline.jsonc
 ```
 
@@ -178,10 +168,8 @@ python -m samara run \
 - `10`: INVALID_ARGUMENTS - Invalid command line arguments
 - `20`: IO_ERROR - Input/output error (file access issues)
 - `30`: CONFIGURATION_ERROR - General configuration error
-- `31`: ALERT_CONFIGURATION_ERROR - Alert configuration specific error
 - `32`: WORKFLOW_CONFIGURATION_ERROR - Workflow configuration specific error
 - `40`: VALIDATION_ERROR - Configuration validation failed
-- `41`: ALERT_TEST_ERROR - Alert testing functionality failed
 - `50`: JOB_ERROR - Error during pipeline execution
 - `98`: KEYBOARD_INTERRUPT - User interrupted the operation
 - `99`: UNEXPECTED_ERROR - Unhandled exception or unexpected error

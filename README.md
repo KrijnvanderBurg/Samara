@@ -46,7 +46,6 @@ poetry install
 ### Run an example pipeline
 ```bash
 python -m samara run \
-  --alert-filepath="examples/yaml_products_cleanup/alert.yaml" \
   --workflow-filepath="examples/yaml_products_cleanup/job.yaml"
 ```
 
@@ -58,7 +57,6 @@ Samara's documentation guides you through installation, configuration, and devel
 - **[CLI Reference](./docs/cli.md)** - Command-line interface options and examples
 - **[Configuration Reference](./docs/README.md)** - Complete syntax guide for all configuration options
   - **[Workflow System](./docs/workflow/README.md)** - ETL pipeline configuration (extracts, transforms, loads)
-  - **[Alert System](./docs/alert/README.md)** - Error handling and notification configuration
 - **[Architecture](./docs/architecture.md)** - Design principles and framework structure
 - **[Custom Extensions](./docs/architecture.md#extending-with-custom-transforms)** - Building your own transforms
 

@@ -27,8 +27,7 @@ Execute a pipeline using the Samara CLI:
 
 ```bash
 python -m samara run \
-    --workflow-filepath="examples/json_join_select/job.jsonc" \
-    --alert-filepath="examples/json_join_select/alert.jsonc"
+    --workflow-filepath="examples/json_join_select/job.jsonc"
 ```
 
 ## Configuration Structure

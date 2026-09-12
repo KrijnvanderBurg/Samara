@@ -16,7 +16,6 @@ Start with the included example pipeline:
 
 ```bash
 python -m samara run \
-  --alert-filepath="examples/yaml_products_cleanup/alert.yaml" \
   --workflow-filepath="examples/yaml_products_cleanup/job.yaml"
 ```
 

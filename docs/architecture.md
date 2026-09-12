@@ -27,7 +27,6 @@ Samara adheres to these core design principles:
   - Handling of duplicate data
 - **Extensibility** — Framework can be extended without modifying core functionality
   - Custom transforms via the function framework
-  - Custom alert channels through the notification system
   - Event hooks for custom actions during pipeline execution
 
 ## Pipeline Execution Flow
