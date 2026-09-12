@@ -112,8 +112,8 @@ class HttpBase(BaseModel):
         """Execute an HTTP request with configurable retry logic and error handling.
 
         Sends an HTTP request with the configured method, headers, timeout, and retry
-        behavior. Handles transient failures gracefully through exponential backoff
-        retry logic. On success, logs the request completion; on final failure after
+        behavior. Handles transient failures gracefully through fixed-delay retry
+        logic. On success, logs the request completion; on final failure after
         all retries, logs the error and raises the underlying exception.
 
         Args:
@@ -150,3 +150,4 @@ class HttpBase(BaseModel):
                     time.sleep(self.retry.delay_in_seconds)
                 else:
                     logger.error("HTTP request failed after %d attempts: %s", self.retry.max_attempts + 1, e)
+                    raise

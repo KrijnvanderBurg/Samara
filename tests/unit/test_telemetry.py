@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import pytest
 from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
@@ -244,7 +245,7 @@ class TestTraceSpanDecorator:
 
         try:
             failing_function()
-            assert False, "Expected ValueError to be raised"
+            pytest.fail("Expected ValueError to be raised")
         except ValueError as e:
             assert str(e) == "Test exception"
 

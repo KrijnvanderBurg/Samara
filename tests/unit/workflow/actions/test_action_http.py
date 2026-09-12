@@ -2,9 +2,12 @@
 
 from unittest.mock import patch
 
-from samara.workflow.actions.http import HttpAction
+import pytest
+import requests
 
+from samara.exceptions import SamaraActionError
 from samara.utils.http import Retry
+from samara.workflow.actions.http import HttpAction
 
 
 class TestHttpAction:
@@ -54,3 +57,23 @@ class TestHttpAction:
 
             # Assert
             mock_make_http_request.assert_called_once_with({})
+
+    def test_execute__when_request_fails__wraps_as_samara_action_error(self) -> None:
+        """Test that a RequestException from _make_http_request is wrapped as SamaraActionError."""
+        # Arrange
+        retry = Retry(max_attempts=0, delay_in_seconds=1)
+        action = HttpAction.model_construct(
+            id_="test_http_action",
+            description="Test HTTP action",
+            action_type="http",
+            url="https://example.com/api",
+            method="GET",
+            timeout=30,
+            retry=retry,
+            enabled=True,
+        )
+
+        with patch.object(action, "_make_http_request", side_effect=requests.ConnectionError("network down")):
+            # Act & Assert
+            with pytest.raises(SamaraActionError, match="test_http_action.*network down"):
+                action.execute()

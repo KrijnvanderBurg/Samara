@@ -8,9 +8,11 @@ payloads, timeouts, and retry logic for robust external integrations.
 
 from typing import Any, Literal
 
+import requests
 from pydantic import Field
 from typing_extensions import override
 
+from samara.exceptions import SamaraActionError
 from samara.telemetry import trace_span
 from samara.utils.http import HttpBase
 from samara.utils.logger import get_logger
@@ -118,9 +120,9 @@ class HttpAction(HttpBase, ActionBase):
         successful requests and failures for observability.
 
         Raises:
-            requests.RequestException: If the HTTP request fails after exhausting
-                all configured retry attempts, including connection errors,
-                timeouts, or non-2xx HTTP responses.
+            SamaraActionError: If the HTTP request fails after exhausting all
+                configured retry attempts, including connection errors, timeouts,
+                or non-2xx HTTP responses.
 
         Note:
             Even if this action fails, the pipeline continues execution as
@@ -128,5 +130,8 @@ class HttpAction(HttpBase, ActionBase):
             details if requests fail unexpectedly.
         """
         logger.info("Executing HTTP action: %s", self.id_)
-        self._make_http_request(self.payload)
+        try:
+            self._make_http_request(self.payload)
+        except requests.RequestException as e:
+            raise SamaraActionError(f"Action '{self.id_}' failed: {e}") from e
         logger.info("HTTP action completed: %s", self.id_)

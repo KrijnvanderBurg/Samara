@@ -268,7 +268,7 @@ class TestWorkflowControllerExecuteAll:
         mock_job.execute.side_effect = Exception("Job execution failed")
         workflow_controller.jobs = [mock_job]
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="Job execution failed"):
             workflow_controller.execute_all()
 
 

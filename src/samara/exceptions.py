@@ -31,6 +31,7 @@ class ExitCode(enum.IntEnum):
     WORKFLOW_CONFIGURATION_ERROR = 32
     VALIDATION_ERROR = 40
     JOB_ERROR = 50
+    ACTION_ERROR = 51
     KEYBOARD_INTERRUPT = 98
     UNEXPECTED_ERROR = 99
 
@@ -123,3 +124,20 @@ class SamaraWorkflowError(SamaraError):
             message: Description of the job execution error
         """
         super().__init__(message=message, exit_code=ExitCode.JOB_ERROR)
+
+
+class SamaraActionError(SamaraError):
+    """Raise when a lifecycle hook action fails to execute.
+
+    Wraps any exception raised by an action's implementation (e.g. HTTP,
+    email, file actions) so callers can catch a single, specific type
+    instead of a bare `Exception`.
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialize the exception.
+
+        Args:
+            message: Description of the action execution error
+        """
+        super().__init__(message=message, exit_code=ExitCode.ACTION_ERROR)

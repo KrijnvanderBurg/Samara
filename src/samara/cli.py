@@ -141,13 +141,13 @@ def validate(
             _ = WorkflowController.from_file(filepath=workflow_filepath)
         except SamaraIOError as e:
             logger.error("Cannot access workflow configuration file: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            raise click.exceptions.Exit(e.exit_code) from e
         except SamaraWorkflowConfigurationError as e:
             logger.error("Workflow configuration is invalid: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            raise click.exceptions.Exit(e.exit_code) from e
         except SamaraValidationError as e:
             logger.error("Validation failed: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            raise click.exceptions.Exit(e.exit_code) from e
 
         logger.info("Workflow validation completed successfully")
         logger.info("Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name)
@@ -203,16 +203,16 @@ def run(
             )
         except SamaraIOError as e:
             logger.error("Cannot access workflow configuration file: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            raise click.exceptions.Exit(e.exit_code) from e
         except SamaraWorkflowConfigurationError as e:
             logger.error("Workflow configuration is invalid: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            raise click.exceptions.Exit(e.exit_code) from e
         except SamaraValidationError as e:
             logger.error("Configuration validation failed: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            raise click.exceptions.Exit(e.exit_code) from e
         except SamaraWorkflowError as e:
             logger.error("Workflow job failed: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
+            raise click.exceptions.Exit(e.exit_code) from e
 
     except click.exceptions.Exit:
         # Re-raise Click's Exit exceptions (these are our controlled exits with proper codes)

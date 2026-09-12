@@ -1,10 +1,15 @@
-
+# Custom
+.devcontainer/**/devcontainer-lock.json
 poetry.lock
 *.puml
 JUNIT-TEST.xml
 semgrep.sarif
 semgrep-junit.xml
 requirements.txt
+coverage.xml
+coverage-*.xml
+.coverage
+.coverage.*
 **/output/*
 
 # Byte-compiled / optimized / DLL files

@@ -1,10 +1,2 @@
 # enforce LF for scripts and text files
 * text=auto eol=lf
-*.sh text eol=lf
-*.py text eol=lf
-*.md text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
-
-# allow CRLF for Windows batch files
-*.{cmd,bat} text eol=crlf
