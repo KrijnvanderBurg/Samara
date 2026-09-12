@@ -5,6 +5,7 @@
 	],
 	"workspaceFolder": "/workspace",
 	"service": "devcontainer",
+	"remoteUser": "vscode",
 	//
 	// Features - https://containers.dev/implementors/features.
 	//
@@ -53,9 +54,13 @@
 			"onAutoForward": "silent"
 		}
 	},
-	// "onCreateCommand": {},
+	"onCreateCommand": {
+		"poetry install": "${containerWorkspaceFolder}/.github/scripts/poetry-install.sh"
+	},
+	"postCreateCommand": {
+		"git safe repository": "git config --global --add safe.directory ${containerWorkspaceFolder}"
+	},
 	// "updateContentCommand": {},
-	// "postCreateCommand": {},
 	// "postStartCommand": {},
 	// "postAttachCommand": {},
 	// "waitFor": "", // default updateContentCommand
@@ -240,260 +245,43 @@
 				//
 				// VsCode Tasks
 				//
-				// The DevContainer documentation does not refer support for VsCode tasks at all, but it does work quite well except for below issue.
-				//
-				// Tasks start already before postCreateCommand, if a task has a dependency that is installed after, it will fail.
-				// After building a devcontainer some extensions like Github copilot will show a warning once on the tasks terminal
-				// Because it wants to add environment variables to it, but the tasks launched before the extension was finished installing.
-				// The github issue: https://github.com/microsoft/vscode/issues/153903
 				"tasks": {
-					// https://code.visualstudio.com/docs/editor/tasks#vscode
-					"version": "2.0.0",
-					"options": {
-						"env": {}
-					},
-					"tasks": [
+                    // https://code.visualstudio.com/docs/editor/tasks#vscode
+                    "version": "2.0.0",
+                    "options": {},
+                    "tasks": [
 						{
-							"label": "git clean",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/git_clean.sh",
-							"runOptions": {
-								"runOn": "default"
-							},
-							"presentation": {
-								"clear": true,
-								"showReuseMessage": false
-							},
-							"group": "environment",
-							"problemMatcher": []
-						},
-						{
-                            "label": "coverage-gutters watch",
-                            "presentation": {
-                                "reveal": "never"
-                            },
-                            "command": [
-                                "${command:coverage-gutters.watchCoverageAndVisibleEditors}"
-                            ],
-                            "problemMatcher": []
-                        },
-						//
-						// all task groups
-						//
-						{
-							"label": "all",
+							"label": "All",
 							"dependsOn": [
-								"build",
-								"test"
+								"pre-commit run (all files)",
+								"pytest and coverage"
 							],
 							"dependsOrder": "sequence",
 							"runOptions": {
 								"runOn": "folderOpen"
 							},
+                            "group": "test",
 							"problemMatcher": []
 						},
-						//
-						// build
-						//
-						{
-							"label": "build",
-							"dependsOn": [
-								"poetry install"
-							],
-							"dependsOrder": "sequence",
-							"problemMatcher": []
-						},
-						{
-							"label": "poetry install",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/poetry-install.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-							"problemMatcher": []
-						},
-						{
-							"label": "build package",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/poetry-build.sh",
-							"args": [],
-							"presentation": {
-								"showReuseMessage": false,
-								"panel": "dedicated",
-								"clear": true
-							},
-							"problemMatcher": []
-						},
-						{
-							"label": "install package",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/install-package.sh",
-							"args": [],
-							"dependsOn": [
-								"build package"
-							],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-							"group": {
-								"kind": "build",
-								"isDefault": true
-							},
-							"problemMatcher": []
-						},
-						{
-							"label": "sphinx build docs",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-sphinx.sh",
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-							"group": {
-								"kind": "build",
-								"isDefault": true
-							},
-							"problemMatcher": []
-						},
-						//
-						// test
-						//
-						{
-							"label": "test",
-							"dependsOn": [
-								// test build
-								"build package",
-								"sphinx build docs",
-								// code quality
-								"ruff formatter",
-								"ruff linter",
-								"pylint",
-								"flake8",
-								"mypy",
-								"pyright",
-								//security
-								"trufflehog",
-								"bandit",
-								"vulture",
-								"semgrep",
-								// tests
-								"pytest and coverage"
-							],
-							"problemMatcher": []
-						},
-						{
-							"label": "ruff formatter",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-ruff-formatter.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "ruff linter",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-ruff-linter.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "pylint",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-pylint.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "flake8",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-flake8.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "mypy",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-mypy.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "pyright",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-pyright.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "trufflehog",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-trufflehog.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "bandit",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-bandit.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "semgrep",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-semgrep.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
-						{
-							"label": "vulture",
-							"type": "shell",
-							"command": "${workspaceFolder}/.github/scripts/run-vulture.sh",
-							"args": [],
-							"presentation": {
-								"panel": "dedicated",
-								"clear": true
-							},
-                            "problemMatcher": []
-						},
+                        {
+                            "label": "pre-commit run (all files)",
+                            "type": "shell",
+                            "command": "pre-commit",
+                            "args": [
+                                "run",
+                                "--all-files"
+                            ],
+                            "group": "test",
+                            "presentation": {
+                                "reveal": "always",
+                                "panel": ""
+                            },
+                            "clear": true,
+                            "problemMatcher": [],
+                            "runOptions": {
+                                "runOn": "folderOpen"
+                            }
+                        },
 						{
 							"label": "pytest and coverage",
 							"type": "shell",
@@ -503,10 +291,12 @@
 								"panel": "dedicated",
 								"clear": true
 							},
+                            "group": "test",
                             "problemMatcher": []
 						}
-					]
-				}
+                    ]
+                }
+
 			}
 		}
 	}

@@ -3,8 +3,9 @@
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
-from samara.exceptions import SamaraWorkflowError
+from samara.exceptions import SamaraActionError
 from samara.workflow.actions.base import ActionBase
 from samara.workflow.jobs.hooks import Hooks
 
@@ -24,6 +25,12 @@ def test_hooks_initializes_with_empty_lists() -> None:
     assert hooks.onError == []
     assert hooks.onSuccess == []
     assert hooks.onFinally == []
+
+
+def test_hooks_reject_unknown_fields() -> None:
+    """Test that unknown configuration keys are rejected instead of silently ignored."""
+    with pytest.raises(ValidationError):
+        Hooks(onStrat=[])  # typo of onStart
 
 
 def test_on_start_executes_action() -> None:
@@ -80,12 +87,18 @@ def test_hooks_only_execute_their_own_actions() -> None:
         mock_error.assert_not_called()
 
 
-def test_hooks_propagate_exceptions() -> None:
-    """Test that hooks propagate exceptions from failing actions."""
-    action = MockAction(id="test_action", description="Test action", enabled=True)
+def test_hooks_isolate_action_failures() -> None:
+    """Test that a failing action does not propagate and remaining actions still run."""
+    failing_action = MockAction(id="failing_action", description="Failing action", enabled=True)
+    subsequent_action = MockAction(id="subsequent_action", description="Subsequent action", enabled=True)
 
-    with patch.object(action, "_execute", side_effect=SamaraWorkflowError("Action failed")):
-        hooks = Hooks.model_construct(onStart=[action])
+    with (
+        patch.object(failing_action, "_execute", side_effect=SamaraActionError("Action failed")),
+        patch.object(subsequent_action, "_execute") as mock_subsequent,
+    ):
+        hooks = Hooks.model_construct(onStart=[failing_action, subsequent_action])
 
-        with pytest.raises(SamaraWorkflowError):
-            hooks.on_start()
+        hooks.on_start()  # must not raise
+
+        mock_subsequent.assert_called_once()
+

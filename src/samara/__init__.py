@@ -36,6 +36,7 @@ from abc import ABC
 from datetime import datetime, timezone
 
 from pydantic import BaseModel as PydanticBaseModel
+from pydantic import ConfigDict
 
 # Generate a run identifier as early as possible so the entire application
 # can reference the same run id. This is created at import time and is
@@ -96,3 +97,6 @@ class BaseModel(PydanticBaseModel, ABC):
     See Also:
         pydantic.BaseModel: For configuration validation framework details
     """
+
+    # Reject unknown keys so config typos fail validation instead of being silently ignored.
+    model_config = ConfigDict(extra="forbid")

@@ -7,8 +7,12 @@ that execute at job lifecycle events (start, error, success, completion).
 from pydantic import Field
 
 from samara import BaseModel
+from samara.exceptions import SamaraActionError
 from samara.telemetry import trace_span
+from samara.utils.logger import get_logger
 from samara.workflow.actions import HooksActionsUnion
+
+logger = get_logger(__name__)
 
 
 class Hooks(BaseModel):
@@ -99,28 +103,40 @@ class Hooks(BaseModel):
     def on_start(self) -> None:
         """Execute all actions defined in the onStart hook.
 
-        Runs each action sequentially when the job begins processing.
+        Runs each action sequentially when the job begins processing. A failing
+        action is logged and does not prevent remaining actions from running.
         """
         for action in self.onStart:
-            action.execute()
+            try:
+                action.execute()
+            except SamaraActionError:
+                logger.exception("Action '%s' failed during 'onStart' hook; continuing.", action.id_)
 
     @trace_span("hooks.on_error")
     def on_error(self) -> None:
         """Execute all actions defined in the onError hook.
 
-        Runs each action sequentially when the job encounters an error.
+        Runs each action sequentially when the job encounters an error. A failing
+        action is logged and does not prevent remaining actions from running.
         """
         for action in self.onError:
-            action.execute()
+            try:
+                action.execute()
+            except SamaraActionError:
+                logger.exception("Action '%s' failed during 'onError' hook; continuing.", action.id_)
 
     @trace_span("hooks.on_success")
     def on_success(self) -> None:
         """Execute all actions defined in the onSuccess hook.
 
-        Runs each action sequentially when the job completes successfully.
+        Runs each action sequentially when the job completes successfully. A failing
+        action is logged and does not prevent remaining actions from running.
         """
         for action in self.onSuccess:
-            action.execute()
+            try:
+                action.execute()
+            except SamaraActionError:
+                logger.exception("Action '%s' failed during 'onSuccess' hook; continuing.", action.id_)
 
     @trace_span("hooks.on_finally")
     def on_finally(self) -> None:
@@ -128,6 +144,10 @@ class Hooks(BaseModel):
 
         Runs each action sequentially after job completion, regardless of
         success or error outcome. Use for cleanup or finalization operations.
+        A failing action is logged and does not prevent remaining actions from running.
         """
         for action in self.onFinally:
-            action.execute()
+            try:
+                action.execute()
+            except SamaraActionError:
+                logger.exception("Action '%s' failed during 'onFinally' hook; continuing.", action.id_)

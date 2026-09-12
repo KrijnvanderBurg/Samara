@@ -8,7 +8,7 @@ services:
                 VARIANT: ubuntu-24.04
             target: base
         volumes:
-            - ../../:/workspace:cached
+            - ../../:/workspace:cached,uid=1000,gid=1000
             - devcontainer-bashhistory:/commandhistory
             - poetry-cache:/home/vscode/.cache/pypoetry
         command: sleep infinity

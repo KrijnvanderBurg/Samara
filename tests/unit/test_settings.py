@@ -7,6 +7,9 @@ variable loading, caching mechanism, and settings access patterns.
 import os
 from unittest.mock import patch
 
+import pytest
+from pydantic import ValidationError
+
 from samara.settings import AppSettings, get_settings
 
 
@@ -26,10 +29,10 @@ class TestAppSettingsValidation:
             assert settings.log_level == "DEBUG"
 
     def test_log_level_from_env_lowercase(self) -> None:
-        """Verify log level is loaded from environment as-is."""
+        """Verify lowercase log level values are normalized to uppercase."""
         with patch.dict(os.environ, {"SAMARA_LOG_LEVEL": "debug"}, clear=True):
             settings = AppSettings()
-            assert settings.log_level == "debug"
+            assert settings.log_level == "DEBUG"
 
     def test_log_level_all_valid_values(self) -> None:
         """Verify all valid log levels are accepted."""
@@ -39,11 +42,31 @@ class TestAppSettingsValidation:
                 settings = AppSettings()
                 assert settings.log_level == level
 
-    def test_invalid_log_level_accepted(self) -> None:
-        """Verify settings accepts any log level string (validation happens in logger)."""
+    def test_invalid_log_level_rejected(self) -> None:
+        """Verify settings rejects log levels outside the allowed set."""
         with patch.dict(os.environ, {"SAMARA_LOG_LEVEL": "INVALID"}, clear=True):
+            with pytest.raises(ValidationError):
+                AppSettings()
+
+    def test_valid_otlp_endpoints_accepted(self) -> None:
+        """Verify valid HTTP(S) OTLP endpoint URLs are accepted."""
+        with patch.dict(
+            os.environ,
+            {
+                "SAMARA_OTLP_TRACES_ENDPOINT": "https://collector:4318/v1/traces",
+                "SAMARA_OTLP_LOGS_ENDPOINT": "http://collector:4318/v1/logs",
+            },
+            clear=True,
+        ):
             settings = AppSettings()
-            assert settings.log_level == "INVALID"
+            assert settings.otlp_traces_endpoint == "https://collector:4318/v1/traces"
+            assert settings.otlp_logs_endpoint == "http://collector:4318/v1/logs"
+
+    def test_invalid_otlp_endpoint_rejected(self) -> None:
+        """Verify non-URL OTLP endpoint values are rejected."""
+        with patch.dict(os.environ, {"SAMARA_OTLP_TRACES_ENDPOINT": "not-a-url"}, clear=True):
+            with pytest.raises(ValidationError):
+                AppSettings()
 
     def test_extra_env_vars_ignored(self) -> None:
         """Verify extra environment variables with SAMARA_ prefix are ignored."""

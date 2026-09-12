@@ -21,9 +21,6 @@ default_stages: [pre-commit]
 fail_fast: false
 minimum_pre_commit_version: '3.0.0'
 
-# Global exclude patterns
-exclude: &json-exclude ^(tests/|.devcontainer/|examples/json_join_select/orders/)
-
 repos:
   # Local hooks that use existing shell scripts
   - repo: local
@@ -35,7 +32,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
 
       - id: ruff-lint
         name: Ruff Linter
@@ -43,7 +39,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
 
       # Type checking
       - id: mypy
@@ -52,7 +47,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
 
       - id: pyright
         name: Pyright Type Checker
@@ -60,7 +54,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
 
       # Linters
       - id: flake8
@@ -69,7 +62,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
 
       - id: pylint
         name: Pylint
@@ -77,7 +69,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
 
       # Security scanning
       - id: bandit
@@ -86,7 +77,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
 
       - id: semgrep
         name: Semgrep Security Scanner
@@ -94,16 +84,12 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
-        stages: [manual]  # Only run when explicitly called
 
       - id: trufflehog
         name: TruffleHog Secret Scanner
         entry: .github/scripts/run-trufflehog.sh
         language: system
         pass_filenames: false
-        warn_on_failure: true
-        stages: [manual]  # Only run when explicitly called
 
       # Dead code detection
       - id: vulture
@@ -112,8 +98,6 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        warn_on_failure: true
-        stages: [manual]  # Only run when explicitly called
 
   # Standard pre-commit hooks (optional - comment out if not desired)
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -130,7 +114,7 @@ repos:
       - id: check-toml
 
       - id: check-json
-        exclude: *json-exclude
+        exclude: &json-exclude ^(tests/|.devcontainer/|examples/json_join_select/orders/)
 
       - id: check-added-large-files
         args: ['--maxkb=1000']

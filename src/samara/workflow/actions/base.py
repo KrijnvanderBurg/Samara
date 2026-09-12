@@ -81,6 +81,10 @@ class ActionBase(BaseModel):
             ...     recipients=["user@example.com"]
             ... )
             >>> action.execute()  # Executes the email action
+
+        Raises:
+            SamaraActionError: If the action's implementation fails. Implementations
+                must catch their own specific exception types and raise this.
         """
         if not self.enabled:
             logger.debug("Action '%s' is disabled; skipping execution.", self.id_)
@@ -96,11 +100,10 @@ class ActionBase(BaseModel):
         writing to files).
 
         Raises:
-            NotImplementedError: When called on ActionBase directly or if subclass
-                does not provide an implementation.
+            SamaraActionError: Implementations must catch their own known failure
+                modes (e.g. `requests.RequestException`, `OSError`) and raise this
+                so callers can rely on a single, specific exception type.
 
         Note:
             This method is only called by execute() if the action is enabled.
-            Implementation should handle any failures appropriately, using logging
-            for debugging and raising exceptions for unexpected errors.
         """

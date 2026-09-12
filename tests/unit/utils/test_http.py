@@ -326,10 +326,10 @@ class TestHttpBaseRetry:
             assert mock_request.call_count == 2
             mock_sleep.assert_called_once_with(1)
 
-    def test_make_http_request__with_all_retries_exhausted__returns_silently(
+    def test_make_http_request__with_all_retries_exhausted__raises_exception(
         self, valid_http_config: dict[str, Any]
     ) -> None:
-        """Test request returns silently when all retries exhausted"""
+        """Test request raises the underlying exception when all retries are exhausted."""
         # Arrange
         valid_http_config["retry"] = {"max_attempts": 1, "delay_in_seconds": 1}
         http_base = HttpBase(**valid_http_config)
@@ -341,14 +341,14 @@ class TestHttpBaseRetry:
         ):
             mock_request.side_effect = requests.ConnectionError("Persistent network error")
 
-            # Act - should not raise exception
-            http_base._make_http_request({"test": "data"})
+            # Act & Assert
+            with pytest.raises(requests.ConnectionError):
+                http_base._make_http_request({"test": "data"})
 
-            # Assert
             assert mock_request.call_count == 2
 
-    def test_make_http_request__with_no_retries__returns_silently(self, valid_http_config: dict[str, Any]) -> None:
-        """Test request returns silently when max_attempts is 0."""
+    def test_make_http_request__with_no_retries__raises_exception(self, valid_http_config: dict[str, Any]) -> None:
+        """Test request raises immediately when max_attempts is 0 and the request fails."""
         # Arrange
         valid_http_config["retry"] = {"max_attempts": 0, "delay_in_seconds": 1}
         http_base = HttpBase(**valid_http_config)
@@ -357,10 +357,11 @@ class TestHttpBaseRetry:
         with patch("samara.utils.http.requests.request") as mock_request:
             mock_request.side_effect = requests.ConnectionError("Network error")
 
-            # Act - should not raise despite failure
-            http_base._make_http_request({"test": "data"})
+            # Act & Assert
+            with pytest.raises(requests.ConnectionError):
+                http_base._make_http_request({"test": "data"})
 
-            # Verify only one attempt was made and no exception propagated
+            # Verify only one attempt was made
             assert mock_request.call_count == 1
 
     def test_make_http_request__with_delay_between_retries__sleeps_correct_duration(
@@ -378,8 +379,9 @@ class TestHttpBaseRetry:
         ):
             mock_request.side_effect = requests.ConnectionError("Network error")
 
-            # Act
-            http_base._make_http_request({"test": "data"})
+            # Act & Assert
+            with pytest.raises(requests.ConnectionError):
+                http_base._make_http_request({"test": "data"})
 
             # Assert correct sleep duration called between retries
             assert mock_sleep.call_count == 2
@@ -400,8 +402,9 @@ class TestHttpBaseRetry:
         ):
             mock_request.side_effect = requests.ConnectionError("Network error")
 
-            # Act - should not raise exception due to raise_on_error=False
-            http_base._make_http_request({"test": "data"})
+            # Act & Assert - exception raised only after all attempts exhausted
+            with pytest.raises(requests.ConnectionError):
+                http_base._make_http_request({"test": "data"})
 
             # Assert all attempts made (initial + 3 retries = 4 total)
             assert mock_request.call_count == 4

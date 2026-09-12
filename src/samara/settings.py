@@ -27,8 +27,9 @@ Typical Usage:
 """
 
 from functools import lru_cache
+from typing import Literal
 
-from pydantic import Field
+from pydantic import AnyHttpUrl, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -142,12 +143,30 @@ class AppSettings(BaseSettings):
         case_sensitive=False,
     )
 
-    log_level: str | None = Field(default=None, description="Logging level of the system")
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = Field(
+        default=None, description="Logging level of the system"
+    )
     environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
     trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
     trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
     otlp_traces_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
     otlp_logs_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting logs")
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def _normalize_log_level(cls, value: str | None) -> str | None:
+        """Uppercase the log level so env values like 'debug' validate."""
+        if isinstance(value, str):
+            return value.upper()
+        return value
+
+    @field_validator("otlp_traces_endpoint", "otlp_logs_endpoint")
+    @classmethod
+    def _validate_url(cls, value: str | None) -> str | None:
+        """Reject OTLP endpoints that are not valid HTTP(S) URLs."""
+        if value is not None:
+            AnyHttpUrl(value)  # raises pydantic.ValidationError on invalid URL
+        return value
 
 
 @lru_cache

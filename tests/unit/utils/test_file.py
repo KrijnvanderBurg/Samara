@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 import pyjson5 as json
 import pytest
+
 from samara.utils.file import FileHandlerContext, FileJsonHandler, FileYamlHandler
 
 
