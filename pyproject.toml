@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Samara"
-version = "0.3"
+version = "0.4"
 description = "Config Driven ETL Framework"
 authors = ["Krijn van der Burg"]
 readme = "README.md"
