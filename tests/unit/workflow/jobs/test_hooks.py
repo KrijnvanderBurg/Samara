@@ -101,4 +101,3 @@ def test_hooks_isolate_action_failures() -> None:
         hooks.on_start()  # must not raise
 
         mock_subsequent.assert_called_once()
-
