@@ -98,5 +98,5 @@ class BaseModel(PydanticBaseModel, ABC):
         pydantic.BaseModel: For configuration validation framework details
     """
 
-    # Reject unknown keys so config typos fail validation instead of being silently ignored.
+    # Consider enabling extra="forbid"
     model_config = ConfigDict()
