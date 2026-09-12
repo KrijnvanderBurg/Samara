@@ -99,4 +99,4 @@ class BaseModel(PydanticBaseModel, ABC):
     """
 
     # Reject unknown keys so config typos fail validation instead of being silently ignored.
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict()
