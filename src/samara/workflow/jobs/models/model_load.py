@@ -67,7 +67,7 @@ class LoadModel(BaseModel, ABC):
 
     Attributes:
         id_: Unique identifier for this load operation within the pipeline.
-            Used to reference this load in transforms and alerts.
+            Used to reference this load in transforms.
         upstream_id: Identifier of the upstream component providing data to load.
             Must reference an extract or transform operation in the pipeline.
         method: Loading method controlling how data is written (batch or streaming).

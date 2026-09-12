@@ -1,8 +1,4 @@
 {
-    "alert": {
-        "channels": [],
-        "triggers": []
-    },
     "workflow": {
         "id": "test-workflow-orderby",
         "description": "E2E test workflow for orderby transform",

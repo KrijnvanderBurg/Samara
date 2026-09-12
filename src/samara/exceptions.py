@@ -28,10 +28,8 @@ class ExitCode(enum.IntEnum):
     INVALID_ARGUMENTS = 10
     IO_ERROR = 20
     CONFIGURATION_ERROR = 30
-    ALERT_CONFIGURATION_ERROR = 31
     WORKFLOW_CONFIGURATION_ERROR = 32
     VALIDATION_ERROR = 40
-    ALERT_TEST_ERROR = 41
     JOB_ERROR = 50
     KEYBOARD_INTERRUPT = 98
     UNEXPECTED_ERROR = 99
@@ -79,22 +77,6 @@ class SamaraIOError(SamaraError):
         super().__init__(message=message, exit_code=ExitCode.IO_ERROR)
 
 
-class SamaraAlertConfigurationError(SamaraError):
-    """Raise when alert configuration is invalid.
-
-    Indicates issues with alert definition JSON/YAML including invalid
-    channels, triggers, or template configuration.
-    """
-
-    def __init__(self, message: str) -> None:
-        """Initialize the exception.
-
-        Args:
-            message: Description of the configuration error
-        """
-        super().__init__(message=message, exit_code=ExitCode.CONFIGURATION_ERROR)
-
-
 class SamaraWorkflowConfigurationError(SamaraError):
     """Raise when workflow configuration is invalid.
 
@@ -125,22 +107,6 @@ class SamaraValidationError(SamaraError):
             message: Description of the validation error
         """
         super().__init__(message=message, exit_code=ExitCode.VALIDATION_ERROR)
-
-
-class SamaraAlertTestError(SamaraError):
-    """Raise when alert system testing fails.
-
-    Indicates failure during alert channel validation or test execution,
-    including delivery failures or notification errors.
-    """
-
-    def __init__(self, message: str) -> None:
-        """Initialize the exception.
-
-        Args:
-            message: Description of the alert test error
-        """
-        super().__init__(message=message, exit_code=ExitCode.ALERT_TEST_ERROR)
 
 
 class SamaraWorkflowError(SamaraError):

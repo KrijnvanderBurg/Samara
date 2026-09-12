@@ -2,24 +2,20 @@
 
 This module provides command-line interface commands for managing ETL pipelines
 through configuration files. It focuses on three core operations: validating
-pipeline configurations with optional alert testing, executing pipelines with
-integrated alerting, and exporting JSON schemas for configuration documentation.
+pipeline configurations, executing pipelines, and exporting JSON schemas for
+configuration documentation.
 
 All commands support detailed error handling and proper exit codes to facilitate
 CI/CD integration and operational monitoring.
 """
 
 import json
-import os
 from pathlib import Path
 
 import click
 
-from samara.alert import AlertController
 from samara.exceptions import (
     ExitCode,
-    SamaraAlertConfigurationError,
-    SamaraAlertTestError,
     SamaraIOError,
     SamaraValidationError,
     SamaraWorkflowConfigurationError,
@@ -76,7 +72,7 @@ def cli(
 
     Build and execute data workflows through declarative JSON/YAML configuration
     instead of writing code. Define extracts, transforms, and loads with built-in
-    support for alerts, validation, and schema management.
+    support for validation and schema management.
 
     Args:
         log_level: The logging level as a string. Must be one of DEBUG, INFO,
@@ -94,7 +90,7 @@ def cli(
 
     Commands:
         validate: Validate workflow configurations without execution
-        run: Execute workflow with integrated alerting
+        run: Execute workflow
         export-schema: Generate JSON schema for workflow configs
     """
     settings = get_settings()
@@ -113,101 +109,36 @@ def cli(
 
 @cli.command()
 @click.option(
-    "--alert-filepath",
-    required=True,
-    type=click.Path(exists=False, path_type=Path),
-    help="Path to alert configuration file",
-)
-@click.option(
     "--workflow-filepath",
     required=True,
     type=click.Path(exists=False, path_type=Path),
     help="Path to workflow configuration file",
 )
-@click.option(
-    "--test-exception",
-    type=str,
-    default=None,
-    help="Test exception message to trigger alert testing",
-)
-@click.option(
-    "--test-env-var",
-    multiple=True,
-    type=str,
-    help="Test env vars (KEY=VALUE)",
-)
 @trace_span("validate_workflow")
 def validate(
-    alert_filepath: Path,
     workflow_filepath: Path,
-    test_exception: str | None,
-    test_env_var: tuple[str, ...],
 ) -> None:
-    """Validate workflow configuration files with optional alert testing.
+    """Validate workflow configuration files.
 
-    Load and validate both alert and workflow configuration files to ensure they
-    conform to expected schemas and contain valid settings. This command performs
-    fail-fast validation without alerting on configuration errors (unlike the run
-    command), making it suitable for local development and CI/CD workflows where
-    validation failures should not trigger alerts.
-
-    Optionally trigger a test alert to verify alert system functionality using
-    a test exception message or environment variables.
+    Load and validate the workflow configuration file to ensure it conforms
+    to the expected schema and contains valid settings. This command performs
+    fail-fast validation, making it suitable for local development and CI/CD
+    workflows.
 
     Args:
-        alert_filepath: Path to the alert configuration file in JSON or YAML
-            format. The file must exist and contain valid alert configuration
-            with triggers and channels.
         workflow_filepath: Path to the workflow configuration file in JSON
             or YAML format. The file must exist and define valid workflow
             extracts, transforms, and loads.
-        test_exception: Optional test exception message string. When provided,
-            triggers a test alert to verify alert system functionality. If
-            provided with test_env_var, this takes precedence for the message.
-        test_env_var: Optional environment variables to set before validation
-            in KEY=VALUE format. Useful for testing environment-dependent
-            configurations without affecting system environment permanently.
 
     Raises:
         click.exceptions.Exit: Exits with appropriate exit code on error.
-
-    Note:
-        This command does NOT send alerts on configuration errors, only on
-        test alerts if explicitly requested. This prevents alert fatigue
-        during development and validation cycles. For the actual workflow
-        execution with alert integration, use the 'run' command.
     """
     try:
         logger.info("Starting `validate` command")
         logger.info("Workflow config: %s", str(workflow_filepath))
-        logger.info("Alert config: %s", str(alert_filepath))
-
-        # Parse test env vars
-        test_env_vars = None
-        if test_env_var:
-            test_env_vars = {}
-            for env_var_str in test_env_var:
-                key, value = env_var_str.split("=", 1)
-                test_env_vars[key] = value
-
-        # Set test env vars if provided
-        if test_env_vars:
-            for key, value in test_env_vars.items():
-                os.environ[key] = value
-
-        try:
-            alert = AlertController.from_file(filepath=alert_filepath)
-        except SamaraIOError as e:
-            logger.error("Cannot access alert configuration file: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
-        except SamaraAlertConfigurationError as e:
-            logger.error("Alert configuration is invalid: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
 
         try:
             _ = WorkflowController.from_file(filepath=workflow_filepath)
-            # Not alerting on exceptions as a validate command is often run locally or from CICD
-            # and thus an alert would be drowning out real alerts
         except SamaraIOError as e:
             logger.error("Cannot access workflow configuration file: %s", e)
             raise click.exceptions.Exit(e.exit_code)
@@ -217,15 +148,6 @@ def validate(
         except SamaraValidationError as e:
             logger.error("Validation failed: %s", e)
             raise click.exceptions.Exit(e.exit_code)
-
-        # Trigger test exception if specified (either message or env vars)
-        if test_exception or test_env_vars:
-            try:
-                message = test_exception or "Test alert triggered"
-                raise SamaraAlertTestError(message)
-            except SamaraAlertTestError as e:
-                alert.evaluate_trigger_and_alert(title="Test Alert", body="Test alert", exception=e)
-                raise click.exceptions.Exit(e.exit_code)
 
         logger.info("Workflow validation completed successfully")
         logger.info("Command executed successfully with exit code %d (%s).", ExitCode.SUCCESS, ExitCode.SUCCESS.name)
@@ -244,12 +166,6 @@ def validate(
 
 @cli.command()
 @click.option(
-    "--alert-filepath",
-    required=True,
-    type=click.Path(exists=False, path_type=Path),
-    help="Path to alert configuration file",
-)
-@click.option(
     "--workflow-filepath",
     required=True,
     type=click.Path(exists=False, path_type=Path),
@@ -257,47 +173,25 @@ def validate(
 )
 @trace_span("run_pipeline")
 def run(
-    alert_filepath: Path,
     workflow_filepath: Path,
 ) -> None:
-    """Execute the workflow with integrated alert monitoring.
+    """Execute the workflow.
 
-    Load workflow and alert configurations, then execute the complete workflow.
+    Load the workflow configuration, then execute the complete workflow.
     The workflow processes all defined jobs in sequence, applying configured
     transforms to ingest, transform, and load data according to specifications.
-    Errors during workflow execution are captured and alerts are sent based on
-    configured alert rules and triggers.
 
     Args:
-        alert_filepath: Path to the alert configuration file in JSON or YAML
-            format. Defines alert channels (email, HTTP, file) and trigger rules
-            that determine when and how alerts are sent during execution.
         workflow_filepath: Path to the workflow configuration file in JSON or YAML
             format. Defines the complete workflow including data sources,
             transformation chains, and output destinations.
 
     Raises:
         click.exceptions.Exit: Exits with appropriate exit code on error.
-
-    Note:
-        All exceptions during workflow execution trigger alert evaluation,
-        allowing configured alert rules to send notifications based on
-        error type and severity. This enables operational visibility into
-        workflow failures and automating incident response workflows.
     """
     try:
         logger.info("Starting `run` command")
         logger.info("Workflow config: %s", str(workflow_filepath))
-        logger.info("Alert config: %s", str(alert_filepath))
-
-        try:
-            alert = AlertController.from_file(filepath=alert_filepath)
-        except SamaraIOError as e:
-            logger.error("Cannot access alert configuration file: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
-        except SamaraAlertConfigurationError as e:
-            logger.error("Alert configuration is invalid: %s", e)
-            raise click.exceptions.Exit(e.exit_code)
 
         try:
             workflow = WorkflowController.from_file(filepath=workflow_filepath)
@@ -309,29 +203,15 @@ def run(
             )
         except SamaraIOError as e:
             logger.error("Cannot access workflow configuration file: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="Workflow Configuration File Error",
-                body="Failed to read workflow configuration file",
-                exception=e,
-            )
             raise click.exceptions.Exit(e.exit_code)
         except SamaraWorkflowConfigurationError as e:
             logger.error("Workflow configuration is invalid: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="Workflow Configuration Error", body="Invalid workflow configuration", exception=e
-            )
             raise click.exceptions.Exit(e.exit_code)
         except SamaraValidationError as e:
             logger.error("Configuration validation failed: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="Workflow Validation Error", body="Configuration validation failed", exception=e
-            )
             raise click.exceptions.Exit(e.exit_code)
         except SamaraWorkflowError as e:
             logger.error("Workflow job failed: %s", e)
-            alert.evaluate_trigger_and_alert(
-                title="Workflow Execution Error", body="Workflow error during execution", exception=e
-            )
             raise click.exceptions.Exit(e.exit_code)
 
     except click.exceptions.Exit:

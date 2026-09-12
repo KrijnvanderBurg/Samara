@@ -1,8 +1,4 @@
 {
-    "alert": {
-        "channels": [],
-        "triggers": []
-    },
     "workflow": {
         "id": "test-workflow-aggregate",
         "description": "Test aggregate transform",

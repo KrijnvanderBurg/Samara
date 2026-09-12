@@ -57,8 +57,6 @@ def test_job_command__execute_and_verify__matches_expected_output(
             "run",
             "--workflow-filepath",
             str(isolated_config_path),
-            "--alert-filepath",
-            str(isolated_config_path),
         ],
         capture_output=True,
         text=True,

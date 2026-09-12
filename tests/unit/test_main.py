@@ -46,7 +46,7 @@ class TestMainModule:
         # Assert
         assert result.exit_code == 0
         assert "validate" in result.output.lower()
-        assert "alert-filepath" in result.output.lower()
+        assert "workflow-filepath" in result.output.lower()
 
     def test_main_module__with_run_help__shows_run_command_help(self) -> None:
         """Test that __main__ can execute run command through CLI."""
@@ -60,7 +60,7 @@ class TestMainModule:
         # Assert
         assert result.exit_code == 0
         assert "run" in result.output.lower()
-        assert "alert-filepath" in result.output.lower()
+        assert "workflow-filepath" in result.output.lower()
 
     def test_main_module__with_export_schema_help__shows_export_schema_help(self) -> None:
         """Test that __main__ can execute export-schema command through CLI."""
