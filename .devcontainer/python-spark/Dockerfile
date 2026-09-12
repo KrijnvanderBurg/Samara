@@ -25,7 +25,7 @@ RUN apt-get update && \
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 # Arguments for Spark setup
-ARG SPARK_VERSION=4.1.1
+ARG SPARK_VERSION=4.2.0
 ARG HADOOP_VERSION=3
 
 # Set Spark environment variables
